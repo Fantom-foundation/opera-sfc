@@ -16,4 +16,4 @@ newStr = str.replace(r, str => {
 
 fs.writeFileSync('./accounts.json', newStr);
 
-//solc_5.11 --bin-runtime --allow-paths ~/repos/work/solidity/fantom_sfc_v1.1/contracts/ownership/ --combined-json abi,asm,ast,bin,bin-runtime,devdoc,interface,opcodes,srcmap,srcmap-runtime,userdoc contracts/sfc/Staker.sol > contracts.json
+//solc_5.11 --bin-runtime --allow-paths ~/repos/work/solidity/fantom_sfc_v1.1/contracts/ownership/ --combined-json abi,asm,ast,bin,bin-runtime,devdoc,interface,opcodes,srcmap,srcmap-runtime,userdoc contracts/sfc/SFC.sol > contracts.json
