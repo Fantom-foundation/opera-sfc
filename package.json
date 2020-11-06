@@ -3,16 +3,18 @@
   "version": "1.0.0",
   "description": "Special Fee Contract",
   "scripts": {
-    "lint": "npm run eslint && npm run solium",
-    "eslint": "eslint test/ migrations/",
-    "solium": "solium --dir contracts",
+    "lint:js": "eslint \"test/*.js\"",
+    "lint:js-fix": "eslint \"test/*.js\" --fix",
+    "lint": "npm run lint:sol",
+    "lint:sol": "solhint \"contracts/**/*.sol\"",
     "build": "truffle build",
     "test": "truffle test",
     "truffle": "truffle",
     "flatten": "rm -rf contracts/Flattened.sol && truffle-flattener contracts/sfc/SFC.sol >> contracts/Flattened.sol"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^2.3.0"
+    "@openzeppelin/contracts": "^2.5.1",
+    "@openzeppelin/upgrades": "^2.8.0"
   },
   "devDependencies": {
     "babel-polyfill": "^6.26.0",
@@ -33,6 +35,7 @@
     "karma": "^4.3.0",
     "lodash": "^4.17.15",
     "openzeppelin-test-helpers": "^0.4.3",
+    "solhint": "^3.3.1",
     "solidity-coverage": "^0.7.1",
     "truffle-flattener": "^1.4.0",
     "web3-utils": "^1.2.1"
