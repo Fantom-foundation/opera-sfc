@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "../common/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./StakerConstants.sol";
 import "../ownership/Ownable.sol";
 import "../version/Version.sol";

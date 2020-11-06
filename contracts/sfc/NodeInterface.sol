@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-contract NodeInterface {
+interface NodeInterface {
 
     event IncBalance(address indexed acc, uint256 value);
 //    event SetBalance(address indexed acc, uint256 value);
