@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "../common/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../common/Decimal.sol";
 
 contract StakersConstants {
