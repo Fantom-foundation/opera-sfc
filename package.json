@@ -1,6 +1,6 @@
 {
-  "name": "fantom-sfc",
-  "version": "1.0.0",
+  "name": "opera-sfc",
+  "version": "1.0.0-RC",
   "description": "Special Fee Contract",
   "scripts": {
     "lint:js": "eslint \"test/*.js\"",
@@ -12,12 +12,10 @@
     "truffle": "truffle",
     "flatten": "rm -rf contracts/Flattened.sol && truffle-flattener contracts/sfc/SFC.sol >> contracts/Flattened.sol"
   },
-  "dependencies": {
-    "@openzeppelin/contracts": "^2.5.1",
-    "@openzeppelin/upgrades": "^2.8.0"
-  },
   "devDependencies": {
     "babel-polyfill": "^6.26.0",
+    "@openzeppelin/contracts": "^2.5.1",
+    "@openzeppelin/upgrades": "^2.8.0",
     "babel-preset-env": "^1.7.0",
     "babel-register": "^6.26.0",
     "bignumber.js": "^9.0.0",
