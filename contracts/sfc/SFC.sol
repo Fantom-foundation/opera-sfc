@@ -111,7 +111,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
 
     function _createValidator(address auth, bytes memory pubkey) internal {
         uint256 validatorID = ++lastValidatorID;
-        _rawCreateValidator(auth, validatorID, pubkey, OK_STATUS, currentEpoch(), _now(), 0, 0);
+        _rawCreateValidator(auth, validatorID, pubkey, OK_STATUS, currentEpoch(), now, 0, 0);
     }
 
     function _rawCreateValidator(address auth, uint256 validatorID,  bytes memory pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) internal {
@@ -166,7 +166,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         if (status > getValidator[validatorID].status) {
             getValidator[validatorID].status = status;
             if (getValidator[validatorID].deactivatedEpoch == 0) {
-                getValidator[validatorID].deactivatedTime = _now();
+                getValidator[validatorID].deactivatedTime = now;
                 getValidator[validatorID].deactivatedEpoch = currentEpoch();
             }
         }
@@ -193,7 +193,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
 
         getUnstakingRequest[delegator][toValidatorID][urID].amount = amount;
         getUnstakingRequest[delegator][toValidatorID][urID].epoch = currentEpoch();
-        getUnstakingRequest[delegator][toValidatorID][urID].time = _now();
+        getUnstakingRequest[delegator][toValidatorID][urID].time = now;
 
         _syncValidator(toValidatorID);
     }
@@ -210,7 +210,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
             requestEpoch = getValidator[toValidatorID].deactivatedEpoch;
         }
 
-        require(_now() >= requestTime + unstakePeriodTime(), "not enough time passed");
+        require(now >= requestTime + unstakePeriodTime(), "not enough time passed");
         require(currentEpoch() >= requestEpoch + unstakePeriodEpochs(), "not enough epochs passed");
 
         uint256 amount = getUnstakingRequest[delegator][toValidatorID][urID].amount;
@@ -384,8 +384,8 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         EpochSnapshot storage prevSnapshot = getEpochSnapshot[currentEpoch().sub(1)];
 
         ctx.epochDuration = 1;
-        if (_now() > prevSnapshot.endTime) {
-            ctx.epochDuration = _now() - prevSnapshot.endTime;
+        if (now > prevSnapshot.endTime) {
+            ctx.epochDuration = now - prevSnapshot.endTime;
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
@@ -434,7 +434,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         _sealEpoch_rewards(snapshot, validatorIDs, uptimes, originatedTxsFee);
 
         currentSealedEpoch = currentEpoch();
-        snapshot.endTime = _now();
+        snapshot.endTime = now;
         snapshot.baseRewardPerSecond = baseRewardPerSecond;
         snapshot.totalSupply = totalSupply;
     }
@@ -458,9 +458,5 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
     function _sealEpochValidators(uint256[] calldata nextValidatorIDs) external {
         require(msg.sender == address(0), "not callable");
         __sealEpochValidators(nextValidatorIDs);
-    }
-
-    function _now() internal view returns (uint256) {
-        return block.timestamp;
     }
 }
