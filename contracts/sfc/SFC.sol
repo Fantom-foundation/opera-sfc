@@ -5,89 +5,24 @@ import "./StakerConstants.sol";
 import "../ownership/Ownable.sol";
 import "../version/Version.sol";
 import "./NodeInterface.sol";
+import "./Storage.sol";
 
 /**
  * @dev Stakers contract defines data structure and methods for validators / validators.
  */
-contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version {
+contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage, Version {
     using SafeMath for uint256;
-
-    /**
-     * @dev The staking for validation
-     */
-    struct Validator {
-        uint256 status;
-        uint256 deactivatedTime;
-        uint256 deactivatedEpoch;
-
-        uint256 receivedStake;
-        uint256 createdEpoch;
-        uint256 createdTime;
-
-        address auth;
-    }
-
-    uint256 public currentSealedEpoch;
-    mapping(uint256 => Validator) public getValidator;
-    mapping(address => uint256) public getValidatorID;
-    mapping(uint256 => bytes) public getValidatorPubkey;
-
-    uint256 public lastValidatorID;
-    uint256 public totalStake;
-    uint256 public totalSlashedStake;
-
-    mapping(uint256 => bytes) public validatorMetadata;
-
-    mapping(address => mapping(uint256 => uint256)) public rewardsStash; // addr, validatorID -> StashedRewards
-
-    struct UnstakingRequest {
-        uint256 epoch;
-        uint256 time;
-
-        uint256 amount;
-    }
-
-    mapping(address => mapping(uint256 => mapping(uint256 => UnstakingRequest))) public getUnstakingRequest;
-
-    mapping(address => mapping(uint256 => uint256)) public getDelegation;
-
-    struct EpochSnapshot {
-        mapping(uint256 => uint256) receivedStakes;
-        mapping(uint256 => uint256) accumulatedRewardPerToken;
-        mapping(uint256 => uint256) accumulatedUptimes;
-        mapping(uint256 => uint256) accumulatedOriginatedTxsFee;
-        mapping(uint256 => uint256) offlineTimes;
-        mapping(uint256 => uint256) offlineBlocks;
-
-        uint256[] validatorIDs;
-
-        uint256 endTime;
-        uint256 epochFee;
-        uint256 totalBaseRewardWeight;
-        uint256 totalTxRewardWeight;
-        uint256 baseRewardPerSecond;
-        uint256 totalStake;
-        uint256 totalSupply;
-    }
-
-    /*
-    Getters
-    */
 
     function currentEpoch() public view returns (uint256) {
         return currentSealedEpoch + 1;
     }
 
-    /*
-    Constructor
-    */
-
-    function _setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external notInitialized {
-        _rawCreateValidator(auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
-        if (validatorID > lastValidatorID) {
-            lastValidatorID = validatorID;
-        }
-    }
+//    function _setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external notInitialized {
+//        _rawCreateValidator(auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
+//        if (validatorID > lastValidatorID) {
+//            lastValidatorID = validatorID;
+//        }
+//    }
 
     function _setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 amount, uint256 rewards) external notInitialized {
         _rawStake(delegator, toValidatorID, amount);
@@ -99,10 +34,6 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         currentSealedEpoch = sealedEpoch;
     }
 
-    /*
-    Methods
-    */
-
     function createValidator(bytes calldata pubkey) external payable {
         require(msg.value >= minSelfStake(), "insufficient self-stake");
         _createValidator(msg.sender, pubkey);
@@ -111,20 +42,20 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
 
     function _createValidator(address auth, bytes memory pubkey) internal {
         uint256 validatorID = ++lastValidatorID;
-        _rawCreateValidator(auth, validatorID, pubkey, OK_STATUS, currentEpoch(), _now(), 0, 0);
+        require(getValidatorID[auth] == 0, "validator already exists");
+        getValidator[validatorID] = Validator(OK_STATUS, 0, 0, 0, currentEpoch(), now, auth, pubkey);
     }
 
-    function _rawCreateValidator(address auth, uint256 validatorID,  bytes memory pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) internal {
-        require(getValidatorID[auth] == 0, "validator already exists");
-        getValidatorID[auth] = validatorID;
-        getValidator[validatorID].status = status;
-        getValidator[validatorID].createdEpoch = createdEpoch;
-        getValidator[validatorID].createdTime = createdTime;
-        getValidator[validatorID].deactivatedTime = deactivatedTime;
-        getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
-        getValidator[validatorID].auth = auth;
-        getValidatorPubkey[validatorID] = pubkey;
-    }
+//    function _rawCreateValidator(address auth, uint256 validatorID,  bytes memory pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) internal {
+//        getValidatorID[auth] = validatorID;
+//        getValidator[validatorID].status = status;
+//        getValidator[validatorID].createdEpoch = createdEpoch;
+//        getValidator[validatorID].createdTime = createdTime;
+//        getValidator[validatorID].deactivatedTime = deactivatedTime;
+//        getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
+//        getValidator[validatorID].auth = auth;
+//        getValidator[validatorID].pubkey = pubkey;
+//    }
 
     function _isSelfStake(address delegator, uint256 toValidatorID) internal view returns (bool) {
         return getValidatorID[delegator] == toValidatorID;
@@ -166,7 +97,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         if (status > getValidator[validatorID].status) {
             getValidator[validatorID].status = status;
             if (getValidator[validatorID].deactivatedEpoch == 0) {
-                getValidator[validatorID].deactivatedTime = _now();
+                getValidator[validatorID].deactivatedTime = now;
                 getValidator[validatorID].deactivatedEpoch = currentEpoch();
             }
         }
@@ -193,7 +124,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
 
         getUnstakingRequest[delegator][toValidatorID][urID].amount = amount;
         getUnstakingRequest[delegator][toValidatorID][urID].epoch = currentEpoch();
-        getUnstakingRequest[delegator][toValidatorID][urID].time = _now();
+        getUnstakingRequest[delegator][toValidatorID][urID].time = now;
 
         _syncValidator(toValidatorID);
     }
@@ -210,7 +141,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
             requestEpoch = getValidator[toValidatorID].deactivatedEpoch;
         }
 
-        require(_now() >= requestTime + unstakePeriodTime(), "not enough time passed");
+        require(now >= requestTime + unstakePeriodTime(), "not enough time passed");
         require(currentEpoch() >= requestEpoch + unstakePeriodEpochs(), "not enough epochs passed");
 
         uint256 amount = getUnstakingRequest[delegator][toValidatorID][urID].amount;
@@ -228,7 +159,6 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         totalSlashedStake += slashingPenalty;
     }
 
-
     function _deactivateValidator(uint256 validatorID, uint256 status) external {
         require(msg.sender == address(0), "not callable");
         require(status != OK_STATUS, "wrong status");
@@ -236,7 +166,6 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         _setValidatorDeactivated(validatorID, status);
         _syncValidator(validatorID);
     }
-
 
     function _calcRawValidatorEpochBaseReward(uint256 epochDuration, uint256 baseRewardPerSecond, uint256 baseRewardWeight, uint256 totalBaseRewardWeight) internal pure returns (uint256) {
         if (baseRewardWeight == 0) {
@@ -258,8 +187,6 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
     function _calcValidatorCommission(uint256 rawReward, uint256 commission) internal pure returns (uint256)  {
         return rawReward.mul(commission).div(Decimal.unit());
     }
-
-    mapping(address => mapping(uint256 => uint256)) public claimedRewardUntilEpoch;
 
     function _highestPayableEpoch(uint256 validatorID) internal view returns (uint256) {
         if (getValidator[validatorID].deactivatedEpoch != 0) {
@@ -324,12 +251,6 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         return getValidator[validatorID].createdTime != 0;
     }
 
-    event UpdatedBaseRewardPerSec(uint256 value);
-    event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
-
-    uint256 offlinePenaltyThresholdBlocksNum;
-    uint256 offlinePenaltyThresholdTime;
-
     function offlinePenaltyThreshold() public view returns (uint256 blocksNum, uint256 time) {
         return (offlinePenaltyThresholdBlocksNum, offlinePenaltyThresholdTime);
     }
@@ -353,10 +274,6 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         emit UpdatedMinGasPrice(minGasPrice);
     }
 
-    uint256 public baseRewardPerSecond;
-    uint256 public totalSupply;
-    mapping(uint256 => EpochSnapshot) public getEpochSnapshot;
-
     function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTimes, uint256[] memory offlineBlocks) internal {
         // mark offline nodes
         for (uint256 i = 0; i < validatorIDs.length; i++) {
@@ -370,22 +287,13 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         }
     }
 
-    struct _SealEpochRewardsCtx {
-        uint256[] baseRewardWeights;
-        uint256 totalBaseRewardWeight;
-        uint256[] txRewardWeights;
-        uint256 totalTxRewardWeight;
-        uint256 epochDuration;
-        uint256 epochFee;
-    }
-
     function _sealEpoch_rewards(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory uptimes, uint256[] memory originatedTxsFee) internal {
         _SealEpochRewardsCtx memory ctx = _SealEpochRewardsCtx(new uint[](validatorIDs.length), 0, new uint[](validatorIDs.length), 0, 0, 0);
         EpochSnapshot storage prevSnapshot = getEpochSnapshot[currentEpoch().sub(1)];
 
         ctx.epochDuration = 1;
-        if (_now() > prevSnapshot.endTime) {
-            ctx.epochDuration = _now() - prevSnapshot.endTime;
+        if (now > prevSnapshot.endTime) {
+            ctx.epochDuration = now - prevSnapshot.endTime;
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
@@ -434,7 +342,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         _sealEpoch_rewards(snapshot, validatorIDs, uptimes, originatedTxsFee);
 
         currentSealedEpoch = currentEpoch();
-        snapshot.endTime = _now();
+        snapshot.endTime = now;
         snapshot.baseRewardPerSecond = baseRewardPerSecond;
         snapshot.totalSupply = totalSupply;
     }
@@ -458,9 +366,5 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
     function _sealEpochValidators(uint256[] calldata nextValidatorIDs) external {
         require(msg.sender == address(0), "not callable");
         __sealEpochValidators(nextValidatorIDs);
-    }
-
-    function _now() internal view returns (uint256) {
-        return block.timestamp;
     }
 }
