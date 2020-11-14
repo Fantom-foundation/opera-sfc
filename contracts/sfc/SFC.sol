@@ -134,7 +134,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         totalSlashedStake += slashingPenalty;
     }
 
-    function _deactivateValidator(uint256 validatorID, uint256 status) external {
+    function deactivateValidator(uint256 validatorID, uint256 status) external {
         require(msg.sender == address(0), "not callable");
         require(status != OK_STATUS, "wrong status");
 
