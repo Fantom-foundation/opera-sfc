@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-contract SFCInterface {
+interface SFCInterface {
     /**
  * @dev The staking for validation
  */

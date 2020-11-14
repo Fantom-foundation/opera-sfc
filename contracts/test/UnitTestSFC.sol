@@ -8,12 +8,12 @@ contract UnitTestSFC is SFC {
         return 3.175000 * 1e18;
     }
 
-    function _sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external {
-        __sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
+    function testSealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external {
+        _sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
     }
 
-    function _sealEpochValidators(uint256[] calldata nextValidatorIDs) external {
-        __sealEpochValidators(nextValidatorIDs);
+    function testSealEpochValidators(uint256[] calldata nextValidatorIDs) external {
+        _sealEpochValidators(nextValidatorIDs);
     }
 
     uint256 public time;

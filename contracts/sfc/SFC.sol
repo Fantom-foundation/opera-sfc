@@ -17,14 +17,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         return currentSealedEpoch + 1;
     }
 
-//    function _setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external notInitialized {
-//        _rawCreateValidator(auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
-//        if (validatorID > lastValidatorID) {
-//            lastValidatorID = validatorID;
-//        }
-//    }
-
-    function _setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 amount, uint256 rewards) external notInitialized {
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 amount, uint256 rewards) external notInitialized {
         _rawStake(delegator, toValidatorID, amount);
         rewardsStash[delegator][toValidatorID] = rewards;
     }
@@ -45,17 +38,6 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         require(getValidatorID[auth] == 0, "validator already exists");
         getValidator[validatorID] = Validator(OK_STATUS, 0, 0, 0, currentEpoch(), now, auth, pubkey);
     }
-
-//    function _rawCreateValidator(address auth, uint256 validatorID,  bytes memory pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) internal {
-//        getValidatorID[auth] = validatorID;
-//        getValidator[validatorID].status = status;
-//        getValidator[validatorID].createdEpoch = createdEpoch;
-//        getValidator[validatorID].createdTime = createdTime;
-//        getValidator[validatorID].deactivatedTime = deactivatedTime;
-//        getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
-//        getValidator[validatorID].auth = auth;
-//        getValidator[validatorID].pubkey = pubkey;
-//    }
 
     function _isSelfStake(address delegator, uint256 toValidatorID) internal view returns (bool) {
         return getValidatorID[delegator] == toValidatorID;
@@ -121,11 +103,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         if (_getSelfStake(toValidatorID) == 0) {
             _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
         }
-
-        getUnstakingRequest[delegator][toValidatorID][urID].amount = amount;
-        getUnstakingRequest[delegator][toValidatorID][urID].epoch = currentEpoch();
-        getUnstakingRequest[delegator][toValidatorID][urID].time = now;
-
+        getUnstakingRequest[delegator][toValidatorID][urID] = UnstakingRequest(currentEpoch(), now, amount);
         _syncValidator(toValidatorID);
     }
 
@@ -159,7 +137,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         totalSlashedStake += slashingPenalty;
     }
 
-    function _deactivateValidator(uint256 validatorID, uint256 status) external {
+    function deactivateValidator(uint256 validatorID, uint256 status) external {
         require(msg.sender == address(0), "not callable");
         require(status != OK_STATUS, "wrong status");
 
@@ -220,11 +198,6 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         return true;
     }
 
-    function _mintNativeToken(uint256 amount) internal {
-        // balance will be increased after the transaction is processed
-        emit IncBalance(address(this), amount);
-    }
-
     function claimRewards(uint256 toValidatorID) external {
         address payable delegator = msg.sender;
         uint256 pending = pendingRewards(delegator, toValidatorID);
@@ -233,7 +206,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         claimedRewardUntilEpoch[delegator][toValidatorID] = _highestPayableEpoch(toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         delegator.transfer(pending);
-        _mintNativeToken(pending);
+        emit IncBalance(address(this), pending);
     }
 
     // _syncValidator updates the validator data on node
@@ -255,23 +228,15 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         return (offlinePenaltyThresholdBlocksNum, offlinePenaltyThresholdTime);
     }
 
-    function _updateGasPowerAllocationRate(uint256 short, uint256 long) onlyOwner external {
-        emit UpdatedGasPowerAllocationRate(short, long);
-    }
-
-    function _updateBaseRewardPerSecond(uint256 value) onlyOwner external {
+    function updateBaseRewardPerSecond(uint256 value) onlyOwner external {
         baseRewardPerSecond = value;
         emit UpdatedBaseRewardPerSec(value);
     }
 
-    function _updateOfflinePenaltyThreshold(uint256 blocksNum, uint256 time) onlyOwner external {
+    function updateOfflinePenaltyThreshold(uint256 blocksNum, uint256 time) onlyOwner external {
         offlinePenaltyThresholdTime = time;
         offlinePenaltyThresholdBlocksNum = blocksNum;
         emit UpdatedOfflinePenaltyThreshold(blocksNum, time);
-    }
-
-    function _updateMinGasPrice(uint256 minGasPrice) onlyOwner external {
-        emit UpdatedMinGasPrice(minGasPrice);
     }
 
     function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTimes, uint256[] memory offlineBlocks) internal {
@@ -334,7 +299,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         snapshot.totalTxRewardWeight = ctx.totalTxRewardWeight;
     }
 
-    function __sealEpoch(uint256[] memory offlineTimes, uint256[] memory offlineBlocks, uint256[] memory uptimes, uint256[] memory originatedTxsFee) internal {
+    function _sealEpoch(uint256[] memory offlineTimes, uint256[] memory offlineBlocks, uint256[] memory uptimes, uint256[] memory originatedTxsFee) internal {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         uint256[] memory validatorIDs = snapshot.validatorIDs;
 
@@ -347,12 +312,12 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         snapshot.totalSupply = totalSupply;
     }
 
-    function _sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external {
+    function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external {
         require(msg.sender == address(0), "not callable");
-        __sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
+        _sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
     }
 
-    function __sealEpochValidators(uint256[] memory nextValidatorIDs) internal {
+    function _sealEpochValidators(uint256[] memory nextValidatorIDs) internal {
         // fill data for the next snapshot
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         for (uint256 i = 0; i < nextValidatorIDs.length; i++) {
@@ -363,8 +328,8 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Storage
         snapshot.validatorIDs = nextValidatorIDs;
     }
 
-    function _sealEpochValidators(uint256[] calldata nextValidatorIDs) external {
+    function sealEpochValidators(uint256[] calldata nextValidatorIDs) external {
         require(msg.sender == address(0), "not callable");
-        __sealEpochValidators(nextValidatorIDs);
+        _sealEpochValidators(nextValidatorIDs);
     }
 }
