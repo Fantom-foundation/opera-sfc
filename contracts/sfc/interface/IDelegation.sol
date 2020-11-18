@@ -7,4 +7,13 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  */
 interface IDelegation {
 
+    struct Delegation {
+        uint256 startedEpoch;
+        uint256 duration;
+        uint256 amount;
+    }
+
+//    struct DelegationStorage {
+//
+//    }
 }

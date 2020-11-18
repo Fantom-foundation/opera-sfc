@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 /**
  * @dev A registry for all validators
  */
-interface ValidatorRegistry {
+interface IValidatorRegistry {
     using SafeMath for uint256;
 
-    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 amount, uint256 rewards) external notInitialized;
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 amount, uint256 rewards) external;
 
     function createValidator(bytes calldata pubkey) external payable;
 
