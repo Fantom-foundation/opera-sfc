@@ -86,6 +86,18 @@ class BlockchainNode {
 
 const pubkey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
 
+contract('SFC', async([account1]) => {
+    beforeEach(async () => {
+        this.sfc = await UnitTestSFC.new();
+    });
+
+    describe('Test initializable', () => {
+        it('Should not be possible to call function with modifier NotInitialized if contract is not initialized', async() => {
+            await expect(this.sfc._setGenesisValidator(account1, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled
+        });
+    })
+})
+
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
@@ -140,6 +152,14 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 expect((await this.sfc.stakeLockPeriodTime()).toString()).to.equals('604800');
             });
 
+            it('Returns the number of Time that stake is locked', async () => {
+                expect((await this.sfc.unstakePeriodTime()).toString()).to.equals('604800');
+            });
+
+            it('Returns the number of epochs to lock a delegation', async () => {
+                expect((await this.sfc.delegationLockPeriodEpochs()).toString()).to.equals('3');
+            });
+
             it('Returns the version of the current implementation', async () => {
                 expect((await this.sfc.version()).toString()).to.equals('0x323032');
             });
@@ -172,41 +192,60 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 expect(lastValidatorID.toString()).to.equals('2');
             });
 
-            it('Should returns Delegation', async () => {
+            it('Should return Delegation', async () => {
                 await this.sfc.createValidator(pubkey, {
                     from: secondValidator,
                     value: amount18('10'),
                 });
-
                 (await this.sfc.stake(1, { from: secondValidator, value: 1 }));
-
-            // console.log((await this.sfc.getDelegation(secondValidator, 1)).toString());
-            // await time.increase(60 * 60 * 24);
-            // console.log((await this.sfc.getDelegation(secondValidator, 1)).toString());
-            // console.log((await this.sfc.getValidator(1)).receivedStake().toString());
-            //
-            // let validator = await this.sfc.getValidator(1);
-            // console.log(validator.receivedStake.toString());
-            // await time.increase(60 * 60 * 24);
-            // validator = await this.sfc.getValidator(1);
-            // console.log(validator.receivedStake.toString());
-            //
-            // console.log((await this.sfc.pendingRewards(secondValidator, 1)).toString());
             });
 
-            // it('CHECK IF AMOUNT LESS THAN MINSELFSTAKE', async () => {
-            //     expect((await this.sfc.minSelfStake()).toString()).to.equals('3175000000000000000');
-            //     await this.sfc.createValidator(pubkey, {
-            //         from: secondValidator,
-            //         value: amount18('10'),
-            //     });
-            // });
+            it('Should reject if amount is insufficient for self-stake', async () => {
+                expect((await this.sfc.minSelfStake()).toString()).to.equals('3175000000000000000');
+                await expect(this.sfc.createValidator(pubkey, {
+                    from: secondValidator,
+                    value: amount18('3'),
+                })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert insufficient self-stake -- Reason given: insufficient self-stake.');
+            });
         });
 
         describe('Initialize', () => {
             it('Should have been initialized with firstValidator', async () => {
                 expect(await this.sfc.owner()).to.equals(firstValidator);
             });
+        });
+
+        describe('Ownable', () => {
+            it('Should return the owner of the contract', async () => {
+                expect(await this.sfc.owner()).to.equals(firstValidator);
+            });
+
+            it('Should return true if the caller is the owner of the contract', async () => {
+                expect(await this.sfc.isOwner()).to.equals(true);
+                expect(await this.sfc.isOwner({ from: thirdValidator})).to.equals(false);
+            });
+
+
+            it('Should return address(0) if owner leaves the contract without owner', async () => {
+                expect(await this.sfc.owner()).to.equals(firstValidator);
+                expect(await this.sfc.renounceOwnership());
+                expect(await this.sfc.owner()).to.equals('0x0000000000000000000000000000000000000000');
+            });
+
+            it('Should transfer ownership to the new owner', async () => {
+                expect(await this.sfc.owner()).to.equals(firstValidator);
+                expect(await this.sfc.transferOwnership(secondValidator));
+                expect(await this.sfc.owner()).to.equals(secondValidator);
+            });
+
+            it('Should not be able to transfer ownership if not owner', async() => {
+                await expect( this.sfc.transferOwnership(secondValidator, {from: secondValidator})).to.be.rejectedWith(Error);
+            });
+
+            it('Should not be able to transfer ownership to address(0)', async() => {
+                await expect( this.sfc.transferOwnership('0x0000000000000000000000000000000000000000')).to.be.rejectedWith(Error);
+            });
+
         });
     });
 });
@@ -717,81 +756,81 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
 
 
-// contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
-//     beforeEach(async () => {
-//         this.firstEpoch = 10;
-//         this.sfc = await UnitTestSFC.new();
-//         await this.sfc.initialize(0);
-//         await this.sfc.rebaseTime();
-//         // this.node = new BlockchainNode(this.sfc, firstValidator);
-//         // this.validatorComission = new BN('150000'); // 0.15
-//         await this.sfc.createValidator(pubkey, {
-//             from: firstValidator,
-//             value: amount18('10'),
-//         });
-//         await this.sfc.createValidator(pubkey, {
-//             from: secondValidator,
-//             value: amount18('10'),
-//         });
-//         await this.sfc.createValidator(pubkey, {
-//             from: thirdValidator,
-//             value: amount18('10'),
-//         });
-//     });
-//
-//     describe('Basic functions', () => {
-//         it('Returns current Epoch', async () => {
-//             expect((await this.sfc.currentEpoch()).toString()).to.equals('1');
-//         });
-//
-//         it('Should create a Validator and return the ID', async () => {
-//             await this.sfc.createValidator(pubkey, {
-//                 from: secondValidator,
-//                 value: amount18('10'),
-//             });
-//             const lastValidatorID = await this.sfc.lastValidatorID();
-//
-//             expect(lastValidatorID.toString()).to.equals('1');
-//         });
-//
-//         it('Should create two Validators and return the correct last validator ID', async () => {
-//             let lastValidatorID;
-//             await this.sfc.createValidator(pubkey, {
-//                 from: secondValidator,
-//                 value: amount18('10'),
-//             });
-//             lastValidatorID = await this.sfc.lastValidatorID();
-//
-//             expect(lastValidatorID.toString()).to.equals('1');
-//
-//             await this.sfc.createValidator(pubkey, {
-//                 from: thirdValidator,
-//                 value: amount18('12'),
-//             });
-//             lastValidatorID = await this.sfc.lastValidatorID();
-//             expect(lastValidatorID.toString()).to.equals('2');
-//         });
-//
-//         it('Should returns Delegation', async () => {
-//             await this.sfc.createValidator(pubkey, {
-//                 from: secondValidator,
-//                 value: amount18('10'),
-//             });
-//
-//             (await this.sfc.stake(1, { from: secondValidator, value: 1 }));
-//
-//             console.log((await this.sfc.getDelegation(secondValidator, 1)).toString());
-//             await time.increase(60 * 60 * 24);
-//             console.log((await this.sfc.getDelegation(secondValidator, 1)).toString());
-//             // console.log((await this.sfc.getValidator(1)).receivedStake().toString());
-//
-//             let validator = await this.sfc.getValidator(1);
-//             console.log(validator.receivedStake.toString());
-//             await time.increase(60 * 60 * 24);
-//             validator = await this.sfc.getValidator(1);
-//             console.log(validator.receivedStake.toString());
-//
-//             console.log((await this.sfc.pendingRewards(secondValidator, 1)).toString());
-//         });
-//     });
-// });
+contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
+    beforeEach(async () => {
+        this.firstEpoch = 10;
+        this.sfc = await UnitTestSFC.new();
+        await this.sfc.initialize(0);
+        await this.sfc.rebaseTime();
+        // this.node = new BlockchainNode(this.sfc, firstValidator);
+        // this.validatorComission = new BN('150000'); // 0.15
+        await this.sfc.createValidator(pubkey, {
+            from: firstValidator,
+            value: amount18('10'),
+        });
+        await this.sfc.createValidator(pubkey, {
+            from: secondValidator,
+            value: amount18('10'),
+        });
+        await this.sfc.createValidator(pubkey, {
+            from: thirdValidator,
+            value: amount18('10'),
+        });
+    });
+
+    describe('Basic functions', () => {
+        it('Returns current Epoch', async () => {
+            expect((await this.sfc.currentEpoch()).toString()).to.equals('1');
+        });
+
+        // it('Should create a Validator and return the ID', async () => {
+        //     await this.sfc.createValidator(pubkey, {
+        //         from: secondValidator,
+        //         value: amount18('10'),
+        //     });
+        //     const lastValidatorID = await this.sfc.lastValidatorID();
+        //
+        //     expect(lastValidatorID.toString()).to.equals('1');
+        // });
+
+        // it('Should create two Validators and return the correct last validator ID', async () => {
+        //     let lastValidatorID;
+        //     await this.sfc.createValidator(pubkey, {
+        //         from: secondValidator,
+        //         value: amount18('10'),
+        //     });
+        //     lastValidatorID = await this.sfc.lastValidatorID();
+        //
+        //     expect(lastValidatorID.toString()).to.equals('1');
+        //
+        //     await this.sfc.createValidator(pubkey, {
+        //         from: thirdValidator,
+        //         value: amount18('12'),
+        //     });
+        //     lastValidatorID = await this.sfc.lastValidatorID();
+        //     expect(lastValidatorID.toString()).to.equals('2');
+        // });
+
+        // it('Should returns Delegation', async () => {
+        //     await this.sfc.createValidator(pubkey, {
+        //         from: secondValidator,
+        //         value: amount18('10'),
+        //     });
+        //
+        //     (await this.sfc.stake(1, { from: secondValidator, value: 1 }));
+        //
+        //     console.log((await this.sfc.getDelegation(secondValidator, 1)).toString());
+        //     await time.increase(60 * 60 * 24);
+        //     console.log((await this.sfc.getDelegation(secondValidator, 1)).toString());
+        //     // console.log((await this.sfc.getValidator(1)).receivedStake().toString());
+        //
+        //     let validator = await this.sfc.getValidator(1);
+        //     console.log(validator.receivedStake.toString());
+        //     await time.increase(60 * 60 * 24);
+        //     validator = await this.sfc.getValidator(1);
+        //     console.log(validator.receivedStake.toString());
+        //
+        //     console.log((await this.sfc.pendingRewards(secondValidator, 1)).toString());
+        // });
+    });
+});
