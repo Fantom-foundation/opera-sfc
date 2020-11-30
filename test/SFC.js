@@ -11,6 +11,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 chai.use(chaiAsPromised);
 const UnitTestSFC = artifacts.require('UnitTestSFC');
+const StakersConstants = artifacts.require('StakersConstants');
 
 function amount18(n) {
     return new BN(web3.utils.toWei(n, 'ether'));
@@ -86,6 +87,15 @@ class BlockchainNode {
 
 const pubkey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
 
+contract('SFC', async() => {
+    describe('Test minSelfStake from StakersConstants', () => {
+        it('Should not be possible to call function with modifier NotInitialized if contract is not initialized', async() => {
+            this.sfc = await StakersConstants.new();
+            expect((await this.sfc.minSelfStake()).toString()).to.equals('3175000000000000000000000');
+        });
+    });
+})
+
 contract('SFC', async([account1]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
@@ -95,8 +105,8 @@ contract('SFC', async([account1]) => {
         it('Should not be possible to call function with modifier NotInitialized if contract is not initialized', async() => {
             await expect(this.sfc._setGenesisValidator(account1, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled
         });
-    })
-})
+    });
+});
 
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
     beforeEach(async () => {
