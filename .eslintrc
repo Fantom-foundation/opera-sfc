@@ -13,7 +13,9 @@
      "rules": {
        "strict": 0,
        "indent": ["error", 4],
-       "func-names": "off"
+       "func-names": "off",
+       "max-len": "off",
+       "no-underscore-dangle": "off"
      }
 }
 
