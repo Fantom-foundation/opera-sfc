@@ -29,4 +29,11 @@ contract UnitTestSFC is SFC {
     function _now() internal view returns(uint256) {
         return time;
     }
+
+    function getTime() external view returns (uint256) {
+        return SFC._now();
+    }
+
 }
+
+
