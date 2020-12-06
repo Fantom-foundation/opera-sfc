@@ -11,6 +11,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 chai.use(chaiAsPromised);
 const UnitTestSFC = artifacts.require('UnitTestSFC');
+const SFC = artifacts.require('SFC');
 const StakersConstants = artifacts.require('StakersConstants');
 
 function amount18(n) {
@@ -133,7 +134,7 @@ contract('SFC', async () => {
 
 contract('SFC', async ([account1]) => {
     beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
+        this.sfc = await SFC.new();
     });
 
     describe('Test initializable', () => {
@@ -144,8 +145,30 @@ contract('SFC', async ([account1]) => {
 
 
     describe('Genesis Validator', () => {
-        it('Should ko', async () => {
-            await expect(this.sfc._setGenesisValidator(account1, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
+        beforeEach(async () => {
+            await expect(this.sfc._setGenesisValidator(account1, 1, pubkey, 1 << 3, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
+        });
+
+
+        it('Set Genesis Validator with bad Status', async () => {
+            // await expect(this.sfc._setGenesisValidator(account1, 1, pubkey, 1, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
+            await expect(this.sfc._syncValidator(1)).to.be.fulfilled;
+        });
+
+        it('should Seal epoch', async () => {
+            await expect(this.sfc._sealEpoch([1], [1], [1], [1], {
+                from: account1,
+            })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert not callable -- Reason given: not callable.');
+            // await expect(this.).to.be.fulfilled;
+            // await expect(this.sfc._syncValidator(1)).to.be.fulfilled;
+        });
+
+        it('should Seal epoch Validators', async () => {
+            await expect(this.sfc._sealEpochValidators([1], {
+                from: account1,
+            })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert not callable -- Reason given: not callable.');
+            // await expect(this.).to.be.fulfilled;
+            // await expect(this.sfc._syncValidator(1)).to.be.fulfilled;
         });
     });
 });
@@ -266,6 +289,11 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
 
             it('Should return current Sealed Epoch', async () => {
                 expect((await this.sfc.currentSealedEpoch()).toString()).to.equals('0');
+            });
+
+            it('Should return Now()', async () => {
+                const now = Math.trunc((Date.now()) / 1000);
+                expect((await this.sfc.getTime()).toNumber()).to.be.within(now - 10, now + 10);
             });
         });
 
@@ -968,7 +996,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                         offlineTime: new BN('0'),
                         offlineBlocks: new BN('0'),
                         uptime: new BN(24 * 60 * 60).toString(),
-                        originatedTxsFee: amount18('0'),
+                        originatedTxsFee: amount18('100'),
                     };
                 }
             }
@@ -1024,3 +1052,55 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
     });
 });
+
+
+// contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
+//     let firstValidatorID;
+//     let secondValidatorID;
+//     let thirdValidatorID;
+//
+//     beforeEach(async () => {
+//         this.sfc = await UnitTestSFC.new();
+//         await this.sfc.initialize(0);
+//         await this.sfc.rebaseTime();
+//
+//         await this.sfc.createValidator(pubkey, {
+//             from: firstValidator,
+//             value: amount18('4'),
+//         });
+//         firstValidatorID = await this.sfc.getValidatorID(firstValidator);
+//
+//         await this.sfc.createValidator(pubkey, {
+//             from: secondValidator,
+//             value: amount18('4'),
+//         });
+//         secondValidatorID = await this.sfc.getValidatorID(secondValidator);
+//
+//         await this.sfc.createValidator(pubkey, {
+//             from: thirdValidator,
+//             value: amount18('4'),
+//         });
+//         thirdValidatorID = await this.sfc.getValidatorID(thirdValidator);
+//         await this.sfc.stake(firstValidatorID, {
+//             from: firstValidator,
+//             value: amount18('4'),
+//         });
+//
+//         await this.sfc.stake(firstValidatorID, {
+//             from: firstDelegator,
+//             value: amount18('4'),
+//         });
+//
+//         await sealEpoch(this.sfc, (new BN(0)).toString());
+//     });
+//
+//     describe('Staking / Sealed Epoch functions', () => {
+//         it('Should deactivate Validator', async () => {
+//             await this.sfc._deactivateValidator(1, 1 << 3);
+//         });
+//
+//         it('Should fail to deactivate Validator if status OK', async () => {
+//             await this.sfc._deactivateValidator(1, 0);
+//         });
+//     });
+// });
