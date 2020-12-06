@@ -151,24 +151,19 @@ contract('SFC', async ([account1]) => {
 
 
         it('Set Genesis Validator with bad Status', async () => {
-            // await expect(this.sfc._setGenesisValidator(account1, 1, pubkey, 1, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
             await expect(this.sfc._syncValidator(1)).to.be.fulfilled;
         });
 
-        it('should Seal epoch', async () => {
+        it('should reject sealEpoch if not called by Node', async () => {
             await expect(this.sfc._sealEpoch([1], [1], [1], [1], {
                 from: account1,
             })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert not callable -- Reason given: not callable.');
-            // await expect(this.).to.be.fulfilled;
-            // await expect(this.sfc._syncValidator(1)).to.be.fulfilled;
         });
 
-        it('should Seal epoch Validators', async () => {
+        it('should reject SealEpochValidators if not called by Node', async () => {
             await expect(this.sfc._sealEpochValidators([1], {
                 from: account1,
             })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert not callable -- Reason given: not callable.');
-            // await expect(this.).to.be.fulfilled;
-            // await expect(this.sfc._syncValidator(1)).to.be.fulfilled;
         });
     });
 });
@@ -581,8 +576,6 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Returns claimedRewardUntilEpoch', async () => {
-            // await this.sfc._updateBaseRewardPerSecond(amount18('0.01'));
-
             expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('12'));
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('13'));
             await this.sfc._sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102]);
@@ -614,10 +607,6 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             );
             expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('17'));
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('18'));
-            // await this.sfc.advanceTime((24*60*60*30));
-            // await this.sfc.stashRewards(firstDelegator, 1);
-            // console.log(await this.sfc.pendingRewards(firstDelegator, 1));
-            // console.log((await this.sfc.claimedRewardUntilEpoch(firstDelegator, firstValidator)).toString());
         });
     });
     describe('Methods tests', async () => {
@@ -720,139 +709,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             expect(this.node.nextValidators[secondValidatorID.toString()]).to.be.bignumber.equal(amount18('6.825'));
             expect(this.node.nextValidators[thirdValidatorID.toString()]).to.be.bignumber.equal(amount18('4'));
         });
-
-        // it('checking pendingRewards function', async () => {
-        //     await this.sfc._updateBaseRewardPerSecond(amount18('0.01'));
-        //
-        //     await this.node.handle(await this.sfc.createValidator(pubkey, {
-        //         from: firstValidator,
-        //         value: amount18('3.175'),
-        //     }));
-        //
-        //     expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('10'));
-        //     expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('11'));
-        //     await this.node.sealEpoch(new BN('100'));
-        //     expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('11'));
-        //     expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('12'));
-        //
-        //     let firstValidatorID = await this.sfc.getValidatorID(firstValidator);
-        //     await this.node.handle(await this.sfc.stake(firstValidatorID, {
-        //         from: firstDelegator,
-        //         value: amount18('5.0'),
-        //     }));
-        //
-        //     const epochMetrics1 = {
-        //         1: {
-        //             offlineTime: new BN('0'),
-        //             offlineBlocks: new BN('0'),
-        //             uptime: new BN('100'),
-        //             originatedTxsFee: amount18('0.0234'),
-        //         },
-        //     };
-        //     console.log('1');
-        //     console.log((await this.sfc.pendingRewards.call(firstValidator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(firstDelegator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(secondDelegator, firstValidatorID)).toString());
-        //     console.log('----');
-        //     await this.node.sealEpoch(new BN('100'), epochMetrics1);
-        //     expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('12'));
-        //     expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('13'));
-        //     console.log('2');
-        //
-        //     console.log((await this.sfc.pendingRewards.call(firstValidator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(firstDelegator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(secondDelegator, firstValidatorID)).toString());
-        //     console.log('----');
-        //     console.log((await this.sfc.getEpochSnapshot.call(new BN('1'))));
-        //     console.log((await this.sfc.getEpochSnapshot.call(new BN('2'))));
-        //
-        //     await this.node.handle(await this.sfc.createValidator(pubkey, {
-        //         from: secondValidator,
-        //         value: amount18('3.175'),
-        //     }));
-        //     let secondValidatorID = await this.sfc.getValidatorID(secondValidator);
-        //
-        //     await this.node.handle(await this.sfc.createValidator(pubkey, {
-        //         from: thirdValidator,
-        //         value: amount18('10.0'),
-        //     }));
-        //     let thirdValidatorID = await this.sfc.getValidatorID(thirdValidator);
-        //
-        //     await this.node.handle(await this.sfc.stake(secondValidatorID, {
-        //         from: firstDelegator,
-        //         value: amount18('3.0'),
-        //     }));
-        //     await this.node.handle(await this.sfc.stake(firstValidatorID, {
-        //         from: secondDelegator,
-        //         value: amount18('10.0'),
-        //     }));
-        //
-        //     const epochMetrics2 = {
-        //         1: {
-        //             offlineTime: new BN('0'),
-        //             offlineBlocks: new BN('0'),
-        //             uptime: new BN('50'),
-        //             originatedTxsFee: amount18('0.0234'),
-        //         },
-        //     };
-        //     await this.node.sealEpoch(new BN('100'), epochMetrics2);
-        //     console.log('3');
-        //
-        //     console.log((await this.sfc.getEpochSnapshot.call(new BN('3'))));
-        //     console.log((await this.sfc.pendingRewards.call(firstValidator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(firstDelegator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(secondDelegator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(secondValidator, secondValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(thirdValidator, thirdValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(firstDelegator, secondValidatorID)).toString());
-        //     console.log('----');
-        //
-        //     // stash rewards
-        //     console.log('4', 'stashRewards');
-        //
-        //     await this.sfc.stashRewards(firstValidator, firstValidatorID);
-        //     await this.sfc.stashRewards(firstDelegator, firstValidatorID);
-        //     console.log((await this.sfc.pendingRewards.call(firstValidator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(firstDelegator, firstValidatorID)).toString());
-        //     console.log('----');
-        //
-        //     const epochMetrics3 = {
-        //         1: {
-        //             offlineTime: new BN('0'),
-        //             offlineBlocks: new BN('0'),
-        //             uptime: new BN('50'),
-        //             originatedTxsFee: amount18('0.01'),
-        //         },
-        //         2: {
-        //             offlineTime: new BN('0'),
-        //             offlineBlocks: new BN('0'),
-        //             uptime: new BN('500'),
-        //             originatedTxsFee: amount18('0.1'),
-        //         },
-        //         3: {
-        //             offlineTime: new BN('500'),
-        //             offlineBlocks: new BN('10'),
-        //             uptime: new BN('0'),
-        //             originatedTxsFee: amount18('0.0'),
-        //         },
-        //     };
-        //     await this.node.sealEpoch(new BN('500'), epochMetrics3);
-        //     console.log('5');
-        //
-        //     console.log((await this.sfc.getEpochSnapshot.call(new BN('4'))));
-        //     console.log((await this.sfc.pendingRewards.call(firstValidator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(firstDelegator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(secondDelegator, firstValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(secondValidator, secondValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(thirdValidator, thirdValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(firstDelegator, secondValidatorID)).toString());
-        //     console.log((await this.sfc.pendingRewards.call(secondDelegator, secondValidatorID)).toString());
-        //
-        // });
     });
 });
 
-contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
+contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator]) => {
     let firstValidatorID;
     let secondValidatorID;
     let thirdValidatorID;
@@ -938,14 +798,6 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await this.sfc.claimRewards(1, { from: firstDelegator });
 
             expect(new BN(firstDelegatorBalance + firstDelegatorPendingRewards)).to.be.bignumber.above(await web3.eth.getBalance(firstDelegator));
-
-
-            // console.log(await this.sfc.getUnstakingRequest(firstDelegator, 1, 0));
-            // await this.sfc.stashRewards(firstDelegator, 1);
-            //     expect(await web3.eth.getBalance(firstDelegator)).to.equal(firstDelegatorBalance(firstDelegatorPendingRewards));
-
-            // expect((await this.sfc.currentSealedEpoch()).toString()).to.equals('1');
-            // expect((await this.sfc.currentEpoch()).toString()).to.equals('2');
         });
 
         it('Should return stashed Rewards', async () => {
@@ -966,7 +818,6 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
 
-            //
             expect((await this.sfc.validatorMetadata(1))).to.equals(null);
             expect((await this.sfc.validatorMetadata(2))).to.equals(null);
         });
@@ -1054,53 +905,24 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 });
 
 
-// contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
-//     let firstValidatorID;
-//     let secondValidatorID;
-//     let thirdValidatorID;
-//
-//     beforeEach(async () => {
-//         this.sfc = await UnitTestSFC.new();
-//         await this.sfc.initialize(0);
-//         await this.sfc.rebaseTime();
-//
-//         await this.sfc.createValidator(pubkey, {
-//             from: firstValidator,
-//             value: amount18('4'),
-//         });
-//         firstValidatorID = await this.sfc.getValidatorID(firstValidator);
-//
-//         await this.sfc.createValidator(pubkey, {
-//             from: secondValidator,
-//             value: amount18('4'),
-//         });
-//         secondValidatorID = await this.sfc.getValidatorID(secondValidator);
-//
-//         await this.sfc.createValidator(pubkey, {
-//             from: thirdValidator,
-//             value: amount18('4'),
-//         });
-//         thirdValidatorID = await this.sfc.getValidatorID(thirdValidator);
-//         await this.sfc.stake(firstValidatorID, {
-//             from: firstValidator,
-//             value: amount18('4'),
-//         });
-//
-//         await this.sfc.stake(firstValidatorID, {
-//             from: firstDelegator,
-//             value: amount18('4'),
-//         });
-//
-//         await sealEpoch(this.sfc, (new BN(0)).toString());
-//     });
-//
-//     describe('Staking / Sealed Epoch functions', () => {
-//         it('Should deactivate Validator', async () => {
-//             await this.sfc._deactivateValidator(1, 1 << 3);
-//         });
-//
-//         it('Should fail to deactivate Validator if status OK', async () => {
-//             await this.sfc._deactivateValidator(1, 0);
-//         });
-//     });
-// });
+contract('SFC', async ([firstValidator, firstDelegator]) => {
+    let firstValidatorID;
+
+    beforeEach(async () => {
+        this.sfc = await UnitTestSFC.new();
+        await this.sfc._setGenesisValidator(firstValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0);
+        firstValidatorID = await this.sfc.getValidatorID(firstValidator);
+        await this.sfc.stake(firstValidatorID, {
+            from: firstValidator,
+            value: amount18('4'),
+        });
+        await sealEpoch(this.sfc, new BN(24 * 60 * 60));
+    });
+
+    describe('Staking / Sealed Epoch functions', () => {
+        it('Should setGenesisDelegation Validator', async () => {
+            await this.sfc._setGenesisDelegation(firstDelegator, firstValidatorID, amount18('1'), 100);
+            expect(await this.sfc.getDelegation(firstDelegator, firstValidatorID)).to.bignumber.equals(amount18('1'));
+        });
+    });
+});
