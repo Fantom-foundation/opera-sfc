@@ -124,6 +124,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
         getValidator[validatorID].auth = auth;
         getValidatorPubkey[validatorID] = pubkey;
+        emit UpdatedValidatorPubkey(validatorID, pubkey);
     }
 
     function _isSelfStake(address delegator, uint256 toValidatorID) internal view returns (bool) {
@@ -143,13 +144,14 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
     }
 
     function _stake(address delegator, uint256 toValidatorID, uint256 amount) internal {
+        require(_validatorExists(toValidatorID), "validator doesn't exist");
         require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
         _rawStake(delegator, toValidatorID, amount);
+        require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
     }
 
     function _rawStake(address delegator, uint256 toValidatorID, uint256 amount) internal {
         require(amount > 0, "zero amount");
-        require(_validatorExists(toValidatorID), "validator doesn't exist");
 
         _stashRewards(delegator, toValidatorID);
 
@@ -157,7 +159,6 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         getValidator[toValidatorID].receivedStake = getValidator[toValidatorID].receivedStake.add(amount);
         totalStake = totalStake.add(amount);
 
-        require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
         _syncValidator(toValidatorID);
     }
 
