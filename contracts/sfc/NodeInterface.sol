@@ -10,6 +10,7 @@ interface NodeInterface {
 //    event SetStorage(address indexed acc, uint256 key, uint256 value);
 
     event UpdatedValidatorWeight(uint256 indexed validatorID, uint256 weight);
+    event UpdatedValidatorPubkey(uint256 indexed validatorID, bytes pubey);
 
     event UpdatedGasPowerAllocationRate(uint256 short, uint256 long);
     event UpdatedMinGasPrice(uint256 minGasPrice);
