@@ -4,8 +4,8 @@ import "../sfc/SFC.sol";
 
 contract UnitTestSFC is SFC {
     function minSelfStake() public pure returns (uint256) {
-        // 3.175000 FTM
-        return 3.175000 * 1e18;
+        // 0.3175000 FTM
+        return 0.3175000 * 1e18;
     }
 
     function _sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external {
@@ -31,9 +31,16 @@ contract UnitTestSFC is SFC {
     }
 
     function getTime() external view returns (uint256) {
+        return time;
+    }
+
+    function getBlockTime() external view returns (uint256) {
         return SFC._now();
     }
 
+    function highestLockupEpoch(address delegator, uint256 validatorID) external view returns (uint256) {
+        return _highestLockupEpoch(delegator, validatorID);
+    }
 }
 
 
