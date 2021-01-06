@@ -267,7 +267,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                     from: secondValidator,
                     value: amount18('10'),
                 });
-                (await this.sfc.stake(1, { from: secondValidator, value: 1 }));
+                (await this.sfc.delegate(1, { from: secondValidator, value: 1 }));
             });
 
             it('Should reject if amount is insufficient for self-stake', async () => {
@@ -401,7 +401,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Should not be able to stake if Validator not created yet', async () => {
-            await expect(this.sfc.stake(1, {
+            await expect(this.sfc.delegate(1, {
                 from: firstDelegator,
                 value: amount18('10'),
             })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert validator doesn\'t exist -- Reason given: validator doesn\'t exist');
@@ -410,7 +410,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 value: amount18('10'),
             })).to.be.fulfilled;
 
-            await expect(this.sfc.stake(2, {
+            await expect(this.sfc.delegate(2, {
                 from: secondDelegator,
                 value: amount18('10'),
             })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert validator doesn\'t exist -- Reason given: validator doesn\'t exist');
@@ -419,7 +419,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 value: amount18('15'),
             })).to.be.fulfilled;
 
-            await expect(this.sfc.stake(3, {
+            await expect(this.sfc.delegate(3, {
                 from: thirdDelegator,
                 value: amount18('10'),
             })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert validator doesn\'t exist -- Reason given: validator doesn\'t exist');
@@ -434,20 +434,20 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 from: firstValidator,
                 value: amount18('10'),
             })).to.be.fulfilled;
-            expect(await this.sfc.stake(1, { from: firstDelegator, value: amount18('11') }));
+            expect(await this.sfc.delegate(1, { from: firstDelegator, value: amount18('11') }));
 
             await expect(this.sfc.createValidator(pubkey, {
                 from: secondValidator,
                 value: amount18('15'),
             })).to.be.fulfilled;
-            expect(await this.sfc.stake(2, { from: secondDelegator, value: amount18('10') }));
+            expect(await this.sfc.delegate(2, { from: secondDelegator, value: amount18('10') }));
 
             await expect(this.sfc.createValidator(pubkey, {
                 from: thirdValidator,
                 value: amount18('20'),
             })).to.be.fulfilled;
-            expect(await this.sfc.stake(3, { from: thirdDelegator, value: amount18('10') }));
-            expect(await this.sfc.stake(1, { from: firstDelegator, value: amount18('10') }));
+            expect(await this.sfc.delegate(3, { from: thirdDelegator, value: amount18('10') }));
+            expect(await this.sfc.delegate(1, { from: firstDelegator, value: amount18('10') }));
         });
 
         it('Should return the amount of delegated for each Delegator', async () => {
@@ -455,14 +455,14 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 from: firstValidator,
                 value: amount18('10'),
             })).to.be.fulfilled;
-            await this.sfc.stake(1, { from: firstDelegator, value: amount18('11') });
+            await this.sfc.delegate(1, { from: firstDelegator, value: amount18('11') });
             expect((await this.sfc.getStake(firstDelegator, await this.sfc.getValidatorID(firstValidator))).toString()).to.equals('11000000000000000000');
 
             await expect(this.sfc.createValidator(pubkey, {
                 from: secondValidator,
                 value: amount18('15'),
             })).to.be.fulfilled;
-            await this.sfc.stake(2, { from: secondDelegator, value: amount18('10') });
+            await this.sfc.delegate(2, { from: secondDelegator, value: amount18('10') });
             expect((await this.sfc.getStake(secondDelegator, await this.sfc.getValidatorID(firstValidator))).toString()).to.equals('0');
             expect((await this.sfc.getStake(secondDelegator, await this.sfc.getValidatorID(secondValidator))).toString()).to.equals('10000000000000000000');
 
@@ -471,14 +471,14 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 from: thirdValidator,
                 value: amount18('12'),
             })).to.be.fulfilled;
-            await this.sfc.stake(3, { from: thirdDelegator, value: amount18('10') });
+            await this.sfc.delegate(3, { from: thirdDelegator, value: amount18('10') });
             expect((await this.sfc.getStake(thirdDelegator, await this.sfc.getValidatorID(thirdValidator))).toString()).to.equals('10000000000000000000');
 
-            await this.sfc.stake(3, { from: firstDelegator, value: amount18('10') });
+            await this.sfc.delegate(3, { from: firstDelegator, value: amount18('10') });
 
             expect((await this.sfc.getStake(thirdDelegator, await this.sfc.getValidatorID(firstValidator))).toString()).to.equals('0');
             expect((await this.sfc.getStake(firstDelegator, await this.sfc.getValidatorID(thirdValidator))).toString()).to.equals('10000000000000000000');
-            await this.sfc.stake(3, { from: firstDelegator, value: amount18('1') });
+            await this.sfc.delegate(3, { from: firstDelegator, value: amount18('1') });
             expect((await this.sfc.getStake(firstDelegator, await this.sfc.getValidatorID(thirdValidator))).toString()).to.equals('11000000000000000000');
         });
 
@@ -487,9 +487,9 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 from: firstValidator,
                 value: amount18('10'),
             })).to.be.fulfilled;
-            await this.sfc.stake(1, { from: firstDelegator, value: amount18('11') });
-            await this.sfc.stake(1, { from: secondDelegator, value: amount18('8') });
-            await this.sfc.stake(1, { from: thirdDelegator, value: amount18('8') });
+            await this.sfc.delegate(1, { from: firstDelegator, value: amount18('11') });
+            await this.sfc.delegate(1, { from: secondDelegator, value: amount18('8') });
+            await this.sfc.delegate(1, { from: thirdDelegator, value: amount18('8') });
             const validator = await this.sfc.getValidator(1);
 
             expect(validator.receivedStake.toString()).to.equals('37000000000000000000');
@@ -500,9 +500,9 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 from: firstValidator,
                 value: amount18('10'),
             })).to.be.fulfilled;
-            await this.sfc.stake(1, { from: firstDelegator, value: amount18('11') });
-            await this.sfc.stake(1, { from: secondDelegator, value: amount18('8') });
-            await this.sfc.stake(1, { from: thirdDelegator, value: amount18('8') });
+            await this.sfc.delegate(1, { from: firstDelegator, value: amount18('11') });
+            await this.sfc.delegate(1, { from: secondDelegator, value: amount18('8') });
+            await this.sfc.delegate(1, { from: thirdDelegator, value: amount18('8') });
             const validator = await this.sfc.getValidator(1);
 
             expect(validator.receivedStake.toString()).to.equals('37000000000000000000');
@@ -525,9 +525,9 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await this.sfc.rebaseTime();
             this.node = new BlockchainNode(this.sfc, firstValidator);
             await expect(this.sfc.createValidator(pubkey, { from: firstValidator, value: amount18('10') })).to.be.fulfilled;
-            await this.sfc.stake(1, { from: firstDelegator, value: amount18('11') });
-            await this.sfc.stake(1, { from: secondDelegator, value: amount18('8') });
-            await this.sfc.stake(1, { from: thirdDelegator, value: amount18('8') });
+            await this.sfc.delegate(1, { from: firstDelegator, value: amount18('11') });
+            await this.sfc.delegate(1, { from: secondDelegator, value: amount18('8') });
+            await this.sfc.delegate(1, { from: thirdDelegator, value: amount18('8') });
             validator = await this.sfc.getValidator(1);
         });
 
@@ -569,9 +569,9 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await this.sfc.rebaseTime();
             this.node = new BlockchainNode(this.sfc, firstValidator);
             await expect(this.sfc.createValidator(pubkey, { from: firstValidator, value: amount18('10') })).to.be.fulfilled;
-            await this.sfc.stake(1, { from: firstDelegator, value: amount18('11') });
-            await this.sfc.stake(1, { from: secondDelegator, value: amount18('8') });
-            await this.sfc.stake(1, { from: thirdDelegator, value: amount18('8') });
+            await this.sfc.delegate(1, { from: firstDelegator, value: amount18('11') });
+            await this.sfc.delegate(1, { from: secondDelegator, value: amount18('8') });
+            await this.sfc.delegate(1, { from: thirdDelegator, value: amount18('8') });
             validator = await this.sfc.getValidator(1);
         });
 
@@ -690,7 +690,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             const firstValidatorObj = await this.sfc.getValidator.call(firstValidatorID);
             const secondValidatorObj = await this.sfc.getValidator.call(secondValidatorID);
 
-            await this.node.handle(await this.sfc.stake(firstValidatorID, {
+            await this.node.handle(await this.sfc.delegate(firstValidatorID, {
                 from: firstValidator,
                 value: amount18('0.1'),
             }));
@@ -739,16 +739,16 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             value: amount18('0.8'),
         });
         thirdValidatorID = await this.sfc.getValidatorID(thirdValidator);
-        await this.sfc.stake(firstValidatorID, {
+        await this.sfc.delegate(firstValidatorID, {
             from: firstValidator,
             value: amount18('0.4'),
         });
 
-        await this.sfc.stake(firstValidatorID, {
+        await this.sfc.delegate(firstValidatorID, {
             from: firstDelegator,
             value: amount18('0.4'),
         });
-        await this.sfc.stake(secondValidatorID, {
+        await this.sfc.delegate(secondValidatorID, {
             from: secondDelegator,
             value: amount18('0.4'),
         });
@@ -1053,7 +1053,7 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
         this.sfc = await UnitTestSFC.new();
         await this.sfc._setGenesisValidator(firstValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0);
         firstValidatorID = await this.sfc.getValidatorID(firstValidator);
-        await this.sfc.stake(firstValidatorID, {
+        await this.sfc.delegate(firstValidatorID, {
             from: firstValidator,
             value: amount18('4'),
         });
