@@ -38,14 +38,14 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
 
     mapping(address => mapping(uint256 => uint256)) public rewardsStash; // addr, validatorID -> StashedRewards
 
-    struct UnstakingRequest {
+    struct WithdrawalRequest {
         uint256 epoch;
         uint256 time;
 
         uint256 amount;
     }
 
-    mapping(address => mapping(uint256 => mapping(uint256 => UnstakingRequest))) public getUnstakingRequest;
+    mapping(address => mapping(uint256 => mapping(uint256 => WithdrawalRequest))) public getWithdrawalRequest;
 
     struct LockedDelegation {
         uint256 lockedStake;
@@ -98,7 +98,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
     }
 
     function _setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 amount, uint256 rewards) external notInitialized {
-        _rawStake(delegator, toValidatorID, amount);
+        _rawDelegate(delegator, toValidatorID, amount);
         rewardsStash[delegator][toValidatorID] = rewards;
     }
 
@@ -114,7 +114,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
     function createValidator(bytes calldata pubkey) external payable {
         require(msg.value >= minSelfStake(), "insufficient self-stake");
         _createValidator(msg.sender, pubkey);
-        _stake(msg.sender, lastValidatorID, msg.value);
+        _delegate(msg.sender, lastValidatorID, msg.value);
     }
 
     function _createValidator(address auth, bytes memory pubkey) internal {
@@ -147,18 +147,18 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         return getValidator[validatorID].receivedStake <= _getSelfStake(validatorID).mul(maxDelegatedRatio()).div(Decimal.unit());
     }
 
-    function stake(uint256 toValidatorID) external payable {
-        _stake(msg.sender, toValidatorID, msg.value);
+    function delegate(uint256 toValidatorID) external payable {
+        _delegate(msg.sender, toValidatorID, msg.value);
     }
 
-    function _stake(address delegator, uint256 toValidatorID, uint256 amount) internal {
+    function _delegate(address delegator, uint256 toValidatorID, uint256 amount) internal {
         require(_validatorExists(toValidatorID), "validator doesn't exist");
         require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
-        _rawStake(delegator, toValidatorID, amount);
+        _rawDelegate(delegator, toValidatorID, amount);
         require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
     }
 
-    function _rawStake(address delegator, uint256 toValidatorID, uint256 amount) internal {
+    function _rawDelegate(address delegator, uint256 toValidatorID, uint256 amount) internal {
         require(amount > 0, "zero amount");
 
         _stashRewards(delegator, toValidatorID);
@@ -181,7 +181,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         }
     }
 
-    function startUnstake(uint256 toValidatorID, uint256 urID, uint256 amount) external {
+    function undelegate(uint256 toValidatorID, uint256 wrID, uint256 amount) external {
         address delegator = msg.sender;
 
         _stashRewards(delegator, toValidatorID);
@@ -189,7 +189,7 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         require(amount > 0, "zero amount");
         require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough unlocked stake");
 
-        require(getUnstakingRequest[delegator][toValidatorID][urID].amount == 0, "urID already exists");
+        require(getWithdrawalRequest[delegator][toValidatorID][wrID].amount == 0, "wrID already exists");
 
         getStake[delegator][toValidatorID] -= amount;
         getValidator[toValidatorID].receivedStake = getValidator[toValidatorID].receivedStake.sub(amount);
@@ -200,16 +200,16 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
             _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
         }
 
-        getUnstakingRequest[delegator][toValidatorID][urID].amount = amount;
-        getUnstakingRequest[delegator][toValidatorID][urID].epoch = currentEpoch();
-        getUnstakingRequest[delegator][toValidatorID][urID].time = _now();
+        getWithdrawalRequest[delegator][toValidatorID][wrID].amount = amount;
+        getWithdrawalRequest[delegator][toValidatorID][wrID].epoch = currentEpoch();
+        getWithdrawalRequest[delegator][toValidatorID][wrID].time = _now();
 
         _syncValidator(toValidatorID);
     }
 
-    function finishUnstake(uint256 toValidatorID, uint256 urID) external {
+    function withdraw(uint256 toValidatorID, uint256 wrID) external {
         address payable delegator = msg.sender;
-        UnstakingRequest memory request = getUnstakingRequest[delegator][toValidatorID][urID];
+        WithdrawalRequest memory request = getWithdrawalRequest[delegator][toValidatorID][wrID];
         require(request.epoch != 0, "request doesn't exist");
 
         uint256 requestTime = request.time;
@@ -222,8 +222,8 @@ contract SFC is Initializable, NodeInterface, Ownable, StakersConstants, Version
         require(_now() >= requestTime + unstakePeriodTime(), "not enough time passed");
         require(currentEpoch() >= requestEpoch + unstakePeriodEpochs(), "not enough epochs passed");
 
-        uint256 amount = getUnstakingRequest[delegator][toValidatorID][urID].amount;
-        delete getUnstakingRequest[delegator][toValidatorID][urID];
+        uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID].amount;
+        delete getWithdrawalRequest[delegator][toValidatorID][wrID];
 
         uint256 slashingPenalty = 0;
         bool isCheater = getValidator[toValidatorID].status & CHEATER_MASK != 0;
