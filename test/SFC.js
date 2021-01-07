@@ -13,6 +13,8 @@ chai.use(chaiAsPromised);
 const UnitTestSFC = artifacts.require('UnitTestSFC');
 const SFC = artifacts.require('SFC');
 const StakersConstants = artifacts.require('StakersConstants');
+const NodeInterfaceAuth = artifacts.require('NodeInterfaceAuth');
+const NodeInterface = artifacts.require('NodeInterface');
 
 function amount18(n) {
     return new BN(web3.utils.toWei(n, 'ether'));
@@ -62,22 +64,16 @@ class BlockchainNode {
     }
 
     async handle(tx) {
-        for (let i = 0; i < tx.logs.length; i += 1) {
-            if (tx.logs[i].event === 'UpdatedValidatorWeight') {
-                if (tx.logs[i].args.weight.isZero()) {
-                    delete this.nextValidators[tx.logs[i].args.validatorID.toString()];
+        const logs = tx.receipt.rawLogs;
+        for (let i = 0; i < logs.length; i += 1) {
+            if (logs[i].topics[0] === web3.utils.sha3('UpdateValidatorWeight(uint256,uint256)')) {
+                const validatorID = web3.utils.toBN(logs[i].topics[1]);
+                const weight = web3.utils.toBN(logs[i].data);
+                if (weight.isZero()) {
+                    delete this.nextValidators[validatorID.toString()];
                 } else {
-                    this.nextValidators[tx.logs[i].args.validatorID.toString()] = tx.logs[i].args.weight;
+                    this.nextValidators[validatorID.toString()] = weight;
                 }
-            }
-            if (tx.logs[i].event === 'IncBalance') {
-                if (tx.logs[i].args.acc !== this.sfc.address) {
-                    throw 'unexpected IncBalance account';
-                }
-                await this.sfc.sendTransaction({
-                    from: this.minter,
-                    value: tx.logs[i].args.value,
-                });
             }
         }
     }
@@ -125,7 +121,7 @@ const pubkey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18
 
 contract('SFC', async () => {
     describe('Test minSelfStake from StakersConstants', () => {
-        it('Should not be possible to call function with modifier NotInitialized if contract is not initialized', async () => {
+        it('Check minSelfStake', async () => {
             this.sfc = await StakersConstants.new();
             expect((await this.sfc.minSelfStake()).toString()).to.equals('3175000000000000000000000');
         });
@@ -134,21 +130,18 @@ contract('SFC', async () => {
 
 contract('SFC', async ([account1]) => {
     beforeEach(async () => {
-        this.sfc = await SFC.new();
+        this.sfc = await UnitTestSFC.new();
+        this.nodeIAuth = await NodeInterfaceAuth.new();
+        this.nodeI = await NodeInterface.new();
+        await this.nodeI.initialize(12, this.sfc.address, this.nodeIAuth.address, account1);
     });
-
-    describe('Test initializable', () => {
-        it('Should be possible to call function with modifier NotInitialized if contract is not initialized', async () => {
-            await expect(this.sfc._setGenesisValidator(account1, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
-        });
-    });
-
 
     describe('Genesis Validator', () => {
         beforeEach(async () => {
+            await this.sfc.enableNonNodeCalls();
             await expect(this.sfc._setGenesisValidator(account1, 1, pubkey, 1 << 3, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
+            await this.sfc.disableNonNodeCalls();
         });
-
 
         it('Set Genesis Validator with bad Status', async () => {
             await expect(this.sfc._syncValidator(1)).to.be.fulfilled;
@@ -157,13 +150,13 @@ contract('SFC', async ([account1]) => {
         it('should reject sealEpoch if not called by Node', async () => {
             await expect(this.sfc._sealEpoch([1], [1], [1], [1], {
                 from: account1,
-            })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert not callable -- Reason given: not callable.');
+            })).to.be.rejectedWith('caller is not the NodeInterface contract');
         });
 
         it('should reject SealEpochValidators if not called by Node', async () => {
             await expect(this.sfc._sealEpochValidators([1], {
                 from: account1,
-            })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert not callable -- Reason given: not callable.');
+            })).to.be.rejectedWith('caller is not the NodeInterface contract');
         });
     });
 });
@@ -171,7 +164,9 @@ contract('SFC', async ([account1]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        await this.sfc.initialize(0);
+        this.nodeIAuth = await NodeInterfaceAuth.new();
+        this.nodeI = await NodeInterface.new();
+        await this.nodeI.initialize(0, this.sfc.address, this.nodeIAuth.address, firstValidator);
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
@@ -332,7 +327,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
 
         describe('Events emitters', () => {
             it('Should call updateGasPowerallocationRate', async () => {
-                await this.sfc._updateGasPowerAllocationRate(1, 10);
+                await this.nodeI.updateGasPowerAllocationRate(280000 * 5, 280000);
             });
 
             it('Should call updateOfflinePenaltyThreshold', async () => {
@@ -340,7 +335,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             });
 
             it('Should call updateMinGasPrice', async () => {
-                await this.sfc._updateMinGasPrice(10);
+                await this.nodeI.updateMinGasPrice(10);
             });
         });
     });
@@ -349,18 +344,20 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        await this.sfc.initialize(10);
+        this.nodeIAuth = await NodeInterfaceAuth.new();
+        this.nodeI = await NodeInterface.new();
+        await this.nodeI.initialize(10, this.sfc.address, this.nodeIAuth.address, firstValidator);
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
 
-    describe('Prevent Genesis Call if not Initialized', () => {
-        it('Should not be possible add a Genesis Validator if contract has been initialized', async () => {
-            await expect(this.sfc._setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert Contract instance has already been initialized -- Reason given: Contract instance has already been initialized.');
+    describe('Prevent Genesis Call if not node', () => {
+        it('Should not be possible add a Genesis Validator if called not by node', async () => {
+            await expect(this.sfc._setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('caller is not the NodeInterface contract');
         });
 
-        it('Should not be possible add a Genesis Delegation if contract has been initialized', async () => {
-            await expect(this.sfc._setGenesisDelegation(firstDelegator, 1, 100, 1000)).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert Contract instance has already been initialized -- Reason given: Contract instance has already been initialized.');
+        it('Should not be possible add a Genesis Delegation if called not by node', async () => {
+            await expect(this.sfc._setGenesisDelegation(firstDelegator, 1, 100, 1000)).to.be.rejectedWith('caller is not the NodeInterface contract');
         });
     });
 
@@ -511,18 +508,15 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 });
 
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
-    beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
-        await this.sfc.initialize(10);
-        await this.sfc.rebaseTime();
-        this.node = new BlockchainNode(this.sfc, firstValidator);
-    });
     describe('Returns Validator', () => {
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
-            await this.sfc.initialize(12);
+            this.nodeIAuth = await NodeInterfaceAuth.new();
+            this.nodeI = await NodeInterface.new();
+            await this.nodeI.initialize(12, this.sfc.address, this.nodeIAuth.address, firstValidator);
             await this.sfc.rebaseTime();
+            await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
             await expect(this.sfc.createValidator(pubkey, { from: firstValidator, value: amount18('10') })).to.be.fulfilled;
             await this.sfc.delegate(1, { from: firstDelegator, value: amount18('11') });
@@ -565,8 +559,11 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
-            await this.sfc.initialize(12);
+            this.nodeIAuth = await NodeInterfaceAuth.new();
+            this.nodeI = await NodeInterface.new();
+            await this.nodeI.initialize(12, this.sfc.address, this.nodeIAuth.address, firstValidator);
             await this.sfc.rebaseTime();
+            await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
             await expect(this.sfc.createValidator(pubkey, { from: firstValidator, value: amount18('10') })).to.be.fulfilled;
             await this.sfc.delegate(1, { from: firstDelegator, value: amount18('11') });
@@ -610,6 +607,15 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
     });
     describe('Methods tests', async () => {
+        beforeEach(async () => {
+            this.sfc = await UnitTestSFC.new();
+            this.nodeIAuth = await NodeInterfaceAuth.new();
+            this.nodeI = await NodeInterface.new();
+            await this.nodeI.initialize(10, this.sfc.address, this.nodeIAuth.address, firstValidator);
+            await this.sfc.rebaseTime();
+            await this.sfc.enableNonNodeCalls();
+            this.node = new BlockchainNode(this.sfc, firstValidator);
+        });
         it('checking createValidator function', async () => {
             expect(await this.sfc.lastValidatorID.call()).to.be.bignumber.equal(new BN('0'));
             await expectRevert(this.sfc.createValidator(pubkey, {
@@ -719,8 +725,11 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        await this.sfc.initialize(0);
+        this.nodeIAuth = await NodeInterfaceAuth.new();
+        this.nodeI = await NodeInterface.new();
+        await this.nodeI.initialize(0, this.sfc.address, this.nodeIAuth.address, firstValidator);
         await this.sfc.rebaseTime();
+        await this.sfc.enableNonNodeCalls();
 
         await this.sfc.createValidator(pubkey, {
             from: firstValidator,
@@ -827,7 +836,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Should not be able to deactivate validator if not Node', async () => {
-            await expect(this.sfc._deactivateValidator(1, 0)).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert not callable -- Reason given: not callable.');
+            await this.sfc.disableNonNodeCalls();
+            await expect(this.sfc._deactivateValidator(1, 0)).to.be.rejectedWith('caller is not the NodeInterface contract');
         });
 
         it('Should seal Epochs', async () => {
@@ -1051,6 +1061,10 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        this.nodeIAuth = await NodeInterfaceAuth.new();
+        this.nodeI = await NodeInterface.new();
+        await this.nodeI.initialize(0, this.sfc.address, this.nodeIAuth.address, firstValidator);
+        await this.sfc.enableNonNodeCalls();
         await this.sfc._setGenesisValidator(firstValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0);
         firstValidatorID = await this.sfc.getValidatorID(firstValidator);
         await this.sfc.delegate(firstValidatorID, {

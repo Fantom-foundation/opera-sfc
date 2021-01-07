@@ -25,12 +25,6 @@ contract Initializable {
    */
   bool private initializing;
 
-  modifier notInitialized() {
-    require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
-
-    _;
-  }
-
   /**
    * @dev Modifier to use in the initializer function of a contract.
    */
