@@ -13,8 +13,8 @@ chai.use(chaiAsPromised);
 const UnitTestSFC = artifacts.require('UnitTestSFC');
 const SFC = artifacts.require('SFC');
 const StakersConstants = artifacts.require('StakersConstants');
-const NodeInterfaceAuth = artifacts.require('NodeInterfaceAuth');
-const NodeInterface = artifacts.require('NodeInterface');
+const NodeDriverAuth = artifacts.require('NodeDriverAuth');
+const NodeDriver = artifacts.require('NodeDriver');
 
 function amount18(n) {
     return new BN(web3.utils.toWei(n, 'ether'));
@@ -131,8 +131,8 @@ contract('SFC', async () => {
 contract('SFC', async ([account1]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeInterfaceAuth.new();
-        this.nodeI = await NodeInterface.new();
+        this.nodeIAuth = await NodeDriverAuth.new();
+        this.nodeI = await NodeDriver.new();
         await this.nodeI.initialize(12, this.sfc.address, this.nodeIAuth.address, account1);
     });
 
@@ -150,13 +150,13 @@ contract('SFC', async ([account1]) => {
         it('should reject sealEpoch if not called by Node', async () => {
             await expect(this.sfc._sealEpoch([1], [1], [1], [1], {
                 from: account1,
-            })).to.be.rejectedWith('caller is not the NodeInterface contract');
+            })).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
 
         it('should reject SealEpochValidators if not called by Node', async () => {
             await expect(this.sfc._sealEpochValidators([1], {
                 from: account1,
-            })).to.be.rejectedWith('caller is not the NodeInterface contract');
+            })).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
     });
 });
@@ -164,8 +164,8 @@ contract('SFC', async ([account1]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeInterfaceAuth.new();
-        this.nodeI = await NodeInterface.new();
+        this.nodeIAuth = await NodeDriverAuth.new();
+        this.nodeI = await NodeDriver.new();
         await this.nodeI.initialize(0, this.sfc.address, this.nodeIAuth.address, firstValidator);
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -344,8 +344,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeInterfaceAuth.new();
-        this.nodeI = await NodeInterface.new();
+        this.nodeIAuth = await NodeDriverAuth.new();
+        this.nodeI = await NodeDriver.new();
         await this.nodeI.initialize(10, this.sfc.address, this.nodeIAuth.address, firstValidator);
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -353,11 +353,11 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
     describe('Prevent Genesis Call if not node', () => {
         it('Should not be possible add a Genesis Validator if called not by node', async () => {
-            await expect(this.sfc._setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('caller is not the NodeInterface contract');
+            await expect(this.sfc._setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
 
         it('Should not be possible add a Genesis Delegation if called not by node', async () => {
-            await expect(this.sfc._setGenesisDelegation(firstDelegator, 1, 100, 1000)).to.be.rejectedWith('caller is not the NodeInterface contract');
+            await expect(this.sfc._setGenesisDelegation(firstDelegator, 1, 100, 1000)).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
     });
 
@@ -512,8 +512,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
-            this.nodeIAuth = await NodeInterfaceAuth.new();
-            this.nodeI = await NodeInterface.new();
+            this.nodeIAuth = await NodeDriverAuth.new();
+            this.nodeI = await NodeDriver.new();
             await this.nodeI.initialize(12, this.sfc.address, this.nodeIAuth.address, firstValidator);
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
@@ -559,8 +559,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
-            this.nodeIAuth = await NodeInterfaceAuth.new();
-            this.nodeI = await NodeInterface.new();
+            this.nodeIAuth = await NodeDriverAuth.new();
+            this.nodeI = await NodeDriver.new();
             await this.nodeI.initialize(12, this.sfc.address, this.nodeIAuth.address, firstValidator);
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
@@ -609,8 +609,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
     describe('Methods tests', async () => {
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
-            this.nodeIAuth = await NodeInterfaceAuth.new();
-            this.nodeI = await NodeInterface.new();
+            this.nodeIAuth = await NodeDriverAuth.new();
+            this.nodeI = await NodeDriver.new();
             await this.nodeI.initialize(10, this.sfc.address, this.nodeIAuth.address, firstValidator);
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
@@ -725,8 +725,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeInterfaceAuth.new();
-        this.nodeI = await NodeInterface.new();
+        this.nodeIAuth = await NodeDriverAuth.new();
+        this.nodeI = await NodeDriver.new();
         await this.nodeI.initialize(0, this.sfc.address, this.nodeIAuth.address, firstValidator);
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
@@ -837,7 +837,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
         it('Should not be able to deactivate validator if not Node', async () => {
             await this.sfc.disableNonNodeCalls();
-            await expect(this.sfc._deactivateValidator(1, 0)).to.be.rejectedWith('caller is not the NodeInterface contract');
+            await expect(this.sfc._deactivateValidator(1, 0)).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
 
         it('Should seal Epochs', async () => {
@@ -1061,8 +1061,8 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeInterfaceAuth.new();
-        this.nodeI = await NodeInterface.new();
+        this.nodeIAuth = await NodeDriverAuth.new();
+        this.nodeI = await NodeDriver.new();
         await this.nodeI.initialize(0, this.sfc.address, this.nodeIAuth.address, firstValidator);
         await this.sfc.enableNonNodeCalls();
         await this.sfc._setGenesisValidator(firstValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0);
