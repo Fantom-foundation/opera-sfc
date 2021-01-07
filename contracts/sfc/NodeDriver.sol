@@ -2,7 +2,7 @@ pragma solidity ^0.5.0;
 
 import "./SFC.sol";
 
-contract NodeInterfaceAuth is Initializable {
+contract NodeDriverAuth is Initializable {
     address public sfc;
     address public owner;
 
@@ -74,14 +74,14 @@ contract NodeInterfaceAuth is Initializable {
     }
 }
 
-contract NodeInterface is Initializable, Ownable {
+contract NodeDriver is Initializable, Ownable {
 
-    NodeInterfaceAuth internal auth;
+    NodeDriverAuth internal auth;
 
     SFC internal sfc;
 
     function setAuth(address _auth) external onlyOwner {
-        auth = NodeInterfaceAuth(_auth);
+        auth = NodeDriverAuth(_auth);
     }
 
     function setSFC(address _sfc) external onlyOwner {
@@ -160,7 +160,7 @@ contract NodeInterface is Initializable, Ownable {
 
     function initialize(uint256 sealedEpoch, address _sfc, address _auth, address _owner) external initializer {
         Ownable.initialize(_owner);
-        auth = NodeInterfaceAuth(_auth);
+        auth = NodeDriverAuth(_auth);
         auth.initialize(_sfc, _owner);
         sfc = SFC(_sfc);
         sfc.initialize(sealedEpoch, address(this), _owner);

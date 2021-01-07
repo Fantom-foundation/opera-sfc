@@ -4,7 +4,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./StakerConstants.sol";
 import "../ownership/Ownable.sol";
 import "../version/Version.sol";
-import "./NodeInterface.sol";
+import "./NodeDriver.sol";
 
 /**
  * @dev Stakers contract defines data structure and methods for validators / validators.
@@ -27,7 +27,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         address auth;
     }
 
-    NodeInterface public node;
+    NodeDriver public node;
 
     uint256 public currentSealedEpoch;
     mapping(uint256 => Validator) public getValidator;
@@ -85,7 +85,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
     modifier onlyNode() {
-        require(isNode(msg.sender), "caller is not the NodeInterface contract");
+        require(isNode(msg.sender), "caller is not the NodeDriver contract");
         _;
     }
 
@@ -101,10 +101,10 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     Constructor
     */
 
-    function initialize(uint256 sealedEpoch, address nodeInterface, address owner) external initializer {
+    function initialize(uint256 sealedEpoch, address nodeDriver, address owner) external initializer {
         Ownable.initialize(owner);
         currentSealedEpoch = sealedEpoch;
-        node = NodeInterface(nodeInterface);
+        node = NodeDriver(nodeDriver);
     }
 
     function _setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyNode {
