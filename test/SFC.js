@@ -144,7 +144,7 @@ contract('SFC', async ([account1]) => {
         });
 
         it('Set Genesis Validator with bad Status', async () => {
-            await expect(this.sfc._syncValidator(1)).to.be.fulfilled;
+            await expect(this.sfc._syncValidator(1, false)).to.be.fulfilled;
         });
 
         it('should reject sealEpoch if not called by Node', async () => {
