@@ -8,14 +8,6 @@ contract UnitTestSFC is SFC {
         return 0.3175000 * 1e18;
     }
 
-    function _sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external {
-        __sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
-    }
-
-    function _sealEpochValidators(uint256[] calldata nextValidatorIDs) external {
-        __sealEpochValidators(nextValidatorIDs);
-    }
-
     uint256 public time;
 
     function rebaseTime() external {
@@ -26,7 +18,7 @@ contract UnitTestSFC is SFC {
         time += diff;
     }
 
-    function _now() internal view returns(uint256) {
+    function _now() internal view returns (uint256) {
         return time;
     }
 
@@ -40,6 +32,23 @@ contract UnitTestSFC is SFC {
 
     function highestLockupEpoch(address delegator, uint256 validatorID) external view returns (uint256) {
         return _highestLockupEpoch(delegator, validatorID);
+    }
+
+    bool public allowedNonNodeCalls;
+
+    function enableNonNodeCalls() external {
+        allowedNonNodeCalls = true;
+    }
+
+    function disableNonNodeCalls() external {
+        allowedNonNodeCalls = false;
+    }
+
+    function isNode(address addr) internal view returns (bool) {
+        if (allowedNonNodeCalls) {
+            return true;
+        }
+        return SFC.isNode(addr);
     }
 }
 
