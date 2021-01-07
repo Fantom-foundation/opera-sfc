@@ -144,7 +144,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
         getValidator[validatorID].auth = auth;
         getValidatorPubkey[validatorID] = pubkey;
-        node.updateValidatorPubkey(validatorID, pubkey);
     }
 
     function _isSelfStake(address delegator, uint256 toValidatorID) internal view returns (bool) {
@@ -176,10 +175,11 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         _stashRewards(delegator, toValidatorID);
 
         getStake[delegator][toValidatorID] = getStake[delegator][toValidatorID].add(amount);
-        getValidator[toValidatorID].receivedStake = getValidator[toValidatorID].receivedStake.add(amount);
+        uint256 origStake = getValidator[toValidatorID].receivedStake;
+        getValidator[toValidatorID].receivedStake = origStake.add(amount);
         totalStake = totalStake.add(amount);
 
-        _syncValidator(toValidatorID);
+        _syncValidator(toValidatorID, origStake == 0);
     }
 
     function _setValidatorDeactivated(uint256 validatorID, uint256 status) internal {
@@ -216,7 +216,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         getWithdrawalRequest[delegator][toValidatorID][wrID].epoch = currentEpoch();
         getWithdrawalRequest[delegator][toValidatorID][wrID].time = _now();
 
-        _syncValidator(toValidatorID);
+        _syncValidator(toValidatorID, false);
     }
 
     function withdraw(uint256 toValidatorID, uint256 wrID) external {
@@ -254,7 +254,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         require(status != OK_STATUS, "wrong status");
 
         _setValidatorDeactivated(validatorID, status);
-        _syncValidator(validatorID);
+        _syncValidator(validatorID, false);
     }
 
 
@@ -404,7 +404,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
     // _syncValidator updates the validator data on node
-    function _syncValidator(uint256 validatorID) public {
+    function _syncValidator(uint256 validatorID, bool syncPubkey) public {
         require(_validatorExists(validatorID), "validator doesn't exist");
         // emit special log for node
         uint256 weight = getValidator[validatorID].receivedStake;
@@ -412,6 +412,9 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             weight = 0;
         }
         node.updateValidatorWeight(validatorID, weight);
+        if (syncPubkey && weight != 0) {
+            node.updateValidatorPubkey(validatorID, getValidatorPubkey[validatorID]);
+        }
     }
 
     function _validatorExists(uint256 validatorID) view internal returns (bool) {
@@ -448,7 +451,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             if (offlineBlocks[i] > offlinePenaltyThresholdBlocksNum && offlineTimes[i] >= offlinePenaltyThresholdTime) {
                 _setValidatorDeactivated(validatorIDs[i], OFFLINE_BIT);
-                _syncValidator(validatorIDs[i]);
+                _syncValidator(validatorIDs[i], false);
             }
             // log data
             snapshot.offlineTimes[validatorIDs[i]] = offlineTimes[i];
