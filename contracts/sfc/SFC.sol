@@ -318,8 +318,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return r - 1;
     }
 
-    function _scaleLockupReward(uint256 fullReward, bool isLockedUp, uint256 lockupDuration) private pure returns (uint256 reward, uint256 penalty) {
-        if (isLockedUp) {
+    function _scaleLockupReward(uint256 fullReward, uint256 lockupDuration) private pure returns (uint256 reward, uint256 penalty) {
+        if (lockupDuration != 0) {
             uint256 maxLockupExtraRatio = Decimal.unit() - unlockedRewardRatio();
             uint256 lockupExtraRatio = maxLockupExtraRatio.mul(lockupDuration).div(maxLockupDuration());
             reward = fullReward.mul(unlockedRewardRatio() + lockupExtraRatio).div(Decimal.unit());
@@ -349,13 +349,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         // count reward for locked stake during lockup epochs
         fullReward = _nonStashedRewardsOf(ld.lockedStake, toValidatorID, claimedUntil, lockedUntil);
-        (uint256 plReward, uint256 plPenalty) = _scaleLockupReward(fullReward, true, ld.duration);
+        (uint256 plReward, uint256 plPenalty) = _scaleLockupReward(fullReward, ld.duration);
         // count reward for unlocked stake during lockup epochs
         fullReward = _nonStashedRewardsOf(unlockedStake, toValidatorID, claimedUntil, lockedUntil);
-        (uint256 puReward, uint256 puPenalty) = _scaleLockupReward(fullReward, false, ld.duration);
+        (uint256 puReward, uint256 puPenalty) = _scaleLockupReward(fullReward, 0);
         // count lockup reward for unlocked stake during unlocked epochs
         fullReward = _nonStashedRewardsOf(wholeStake, toValidatorID, lockedUntil, payableUntil);
-        (uint256 wuReward, uint256 wuPenalty) = _scaleLockupReward(fullReward, false, ld.duration);
+        (uint256 wuReward, uint256 wuPenalty) = _scaleLockupReward(fullReward, 0);
 
         return (plReward.add(puReward).add(wuReward), plPenalty.add(puPenalty).add(wuPenalty));
     }
@@ -504,8 +504,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             {
                 uint256 lCommissionRewardFull = commissionRewardFull * getLockedStake(validatorAddr, validatorID) / getStake[validatorAddr][validatorID];
                 uint256 uCommissionRewardFull = commissionRewardFull - lCommissionRewardFull;
-                (uint256 lCommissionReward, uint256 lCommissionPenalty) = _scaleLockupReward(lCommissionRewardFull, true, ld.duration);
-                (uint256 uCommissionReward, uint256 uCommissionPenalty) = _scaleLockupReward(uCommissionRewardFull, false, ld.duration);
+                (uint256 lCommissionReward, uint256 lCommissionPenalty) = _scaleLockupReward(lCommissionRewardFull, ld.duration);
+                (uint256 uCommissionReward, uint256 uCommissionPenalty) = _scaleLockupReward(uCommissionRewardFull, 0);
                 rewardsStash[validatorAddr][validatorID] = rewardsStash[validatorAddr][validatorID].add(lCommissionReward).add(uCommissionReward);
                 ld.earlyUnlockPenalty = ld.earlyUnlockPenalty.add(lCommissionPenalty).add(uCommissionPenalty);
             }
