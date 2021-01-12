@@ -128,6 +128,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     function _setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyDriver {
         _rawDelegate(delegator, toValidatorID, stake);
         rewardsStash[delegator][toValidatorID] = rewards;
+        _mintNativeToken(stake);
         if (lockedStake != 0) {
             require(lockedStake <= stake, "locked stake is greater than the whole stake");
             LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
