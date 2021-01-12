@@ -36,6 +36,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     uint256 public lastValidatorID;
     uint256 public totalStake;
+    uint256 public totalActiveStake;
     uint256 public totalSlashedStake;
 
     mapping(address => mapping(uint256 => uint256)) public rewardsStash; // addr, validatorID -> StashedRewards
@@ -200,11 +201,17 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 origStake = getValidator[toValidatorID].receivedStake;
         getValidator[toValidatorID].receivedStake = origStake.add(amount);
         totalStake = totalStake.add(amount);
+        if (getValidator[toValidatorID].status == OK_STATUS) {
+            totalActiveStake = totalActiveStake.add(amount);
+        }
 
         _syncValidator(toValidatorID, origStake == 0);
     }
 
     function _setValidatorDeactivated(uint256 validatorID, uint256 status) internal {
+        if (getValidator[validatorID].status == OK_STATUS && status != OK_STATUS) {
+            totalActiveStake = totalActiveStake.sub(getValidator[validatorID].receivedStake);
+        }
         // status as a number is proportional to severity
         if (status > getValidator[validatorID].status) {
             getValidator[validatorID].status = status;
@@ -228,6 +235,9 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         getStake[delegator][toValidatorID] -= amount;
         getValidator[toValidatorID].receivedStake = getValidator[toValidatorID].receivedStake.sub(amount);
         totalStake = totalStake.sub(amount);
+        if (getValidator[toValidatorID].status == OK_STATUS) {
+            totalActiveStake = totalActiveStake.sub(amount);
+        }
 
         require(_checkDelegatedStakeLimit(toValidatorID) || _getSelfStake(toValidatorID) == 0, "validator's delegations limit is exceeded");
         if (_getSelfStake(toValidatorID) == 0) {
