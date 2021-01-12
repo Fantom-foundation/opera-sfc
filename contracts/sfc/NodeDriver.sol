@@ -1,91 +1,118 @@
 pragma solidity ^0.5.0;
 
+import "../common/Initializable.sol";
+import "../ownership/Ownable.sol";
 import "./SFC.sol";
 
-contract NodeDriverAuth is Initializable {
-    address public sfc;
-    address public owner;
+contract NodeDriverAuth is Initializable, Ownable {
+    SFC internal sfc;
+    NodeDriver internal driver;
 
-    function initialize(address _sfc, address _owner) external initializer {
-        owner = _owner;
-        sfc = _sfc;
+    // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
+    function initialize(address _sfc, address _driver, address _owner) external initializer {
+        Ownable.initialize(_owner);
+        driver = NodeDriver(_driver);
+        sfc = SFC(_sfc);
     }
 
-    function authorizeIncBalance(address sender, address acc, uint256 /*diff*/) external {
-        silenceMutabilityWarning();
-        require(sender == sfc, "caller is not the SFC contract");
-        require(acc == sfc, "recipient is not the SFC contract");
+    modifier onlySFC() {
+        require(msg.sender == address(sfc), "caller is not the SFC contract");
+        _;
     }
 
-    function authorizeSetBalance(address /*sender*/, address /*acc*/, uint256 /*value*/) external {
-        silenceMutabilityWarning();
-        revert("method is disabled");
+    modifier onlyDriver() {
+        require(msg.sender == address(driver), "caller is not the NodeDriver contract");
+        _;
     }
 
-    function authorizeSubBalance(address /*sender*/, address /*acc*/, uint256 /*diff*/) external {
-        silenceMutabilityWarning();
-        revert("method is disabled");
+    function migrateTo(address newDriverAuth) external onlyOwner {
+        driver.setBackend(newDriverAuth);
+        driver.transferOwnership(newDriverAuth);
     }
 
-    function authorizeSetCode(address /*sender*/, address /*acc*/, address /*from*/) external {
-        silenceMutabilityWarning();
-        revert("method is disabled");
+    function incBalance(address acc, uint256 diff) external onlySFC {
+        require(acc == address(sfc), "recipient is not the SFC contract");
+        driver.incBalance(acc, diff);
     }
 
-    function authorizeSwapCode(address /*sender*/, address /*acc*/, address /*with*/) external {
-        silenceMutabilityWarning();
-        revert("method is disabled");
-    }
-
-    function authorizeSetStorage(address /*sender*/, address /*acc*/, uint256 /*key*/, uint256 /*value*/) external {
-        silenceMutabilityWarning();
-        revert("method is disabled");
-    }
-
-    function authorizeUpdateGasPowerAllocationRate(address sender, uint256 short, uint256 long) external {
-        silenceMutabilityWarning();
-        require(sender == owner, "caller is not the owner");
-        require(long <= 280000000, "too large long gas power allocation rate");
-        require(short <= 280000000 * 5, "too large short gas power allocation rate");
-        require(long >= 280000, "too small long gas power allocation rate");
-        require(short >= 280000 * 5, "too small short gas power allocation rate");
-    }
-
-    function authorizeUpdateMinGasPrice(address sender, uint256 value) external {
-        silenceMutabilityWarning();
-        require(sender == owner, "caller is not the owner");
-        require(value <= 32.967977168935185184 * 1e18, "too large reward per second");
-    }
-
-    function authorizeUpdateValidatorWeight(address sender, uint256 /*validatorID*/, uint256 /*value*/) external {
-        silenceMutabilityWarning();
-        require(sender == sfc, "caller is not the SFC contract");
-    }
-
-    function authorizeUpdateValidatorPubkey(address sender, uint256 /*validatorID*/, bytes calldata /*pubkey*/) external {
-        silenceMutabilityWarning();
-        require(sender == sfc, "caller is not the SFC contract");
-    }
-
-    function silenceMutabilityWarning() internal {
+    function setBalance(address acc, uint256 value) external {
         if (false) {
-            address(0).transfer(1);
+            driver.setBalance(acc, value);
         }
+        revert("method is disabled");
+    }
+
+    function subBalance(address acc, uint256 diff) external {
+        if (false) {
+            driver.subBalance(acc, diff);
+        }
+        revert("method is disabled");
+    }
+
+    function setCode(address acc, address from) external {
+        if (false) {
+            driver.setCode(acc, from);
+        }
+        revert("method is disabled");
+    }
+
+    function swapCode(address acc, address with) external {
+        if (false) {
+            driver.swapCode(acc, with);
+        }
+        revert("method is disabled");
+    }
+
+    function setStorage(address acc, uint256 key, uint256 value) external {
+        if (false) {
+            driver.setStorage(acc, key, value);
+        }
+        revert("method is disabled");
+    }
+
+    function updateRules(bytes calldata diff) external onlyOwner {
+        driver.updateRules(diff);
+    }
+
+    function updateNetworkVersion(uint256 version) external onlyOwner {
+        driver.updateNetworkVersion(version);
+    }
+
+    function updateValidatorWeight(uint256 validatorID, uint256 value) external onlySFC {
+        driver.updateValidatorWeight(validatorID, value);
+    }
+
+    function updateValidatorPubkey(uint256 validatorID, bytes calldata pubkey) external onlySFC {
+        driver.updateValidatorPubkey(validatorID, pubkey);
+    }
+
+    function setGenesisValidator(address _auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyDriver {
+        sfc._setGenesisValidator(_auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
+    }
+
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyDriver {
+        sfc._setGenesisDelegation(delegator, toValidatorID, stake, lockedStake, lockupFromEpoch, lockupEndTime, lockupDuration, earlyUnlockPenalty, rewards);
+    }
+
+    function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
+        sfc._deactivateValidator(validatorID, status);
+    }
+
+    function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
+        sfc._sealEpochValidators(nextValidatorIDs);
+    }
+
+    function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
+        sfc._sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
     }
 }
 
 contract NodeDriver is Initializable, Ownable {
-
-    NodeDriverAuth internal auth;
-
     SFC internal sfc;
+    NodeDriver internal backend;
 
-    function setAuth(address _auth) external onlyOwner {
-        auth = NodeDriverAuth(_auth);
-    }
-
-    function setSFC(address _sfc) external onlyOwner {
-        sfc = SFC(_sfc);
+    function setBackend(address _backend) external onlyOwner {
+        backend = NodeDriver(_backend);
     }
 
     event IncBalance(address indexed acc, uint256 value);
@@ -98,56 +125,51 @@ contract NodeDriver is Initializable, Ownable {
     event UpdateValidatorWeight(uint256 indexed validatorID, uint256 weight);
     event UpdateValidatorPubkey(uint256 indexed validatorID, bytes pubkey);
 
-    event UpdateGasPowerAllocationRate(uint256 short, uint256 long);
-    event UpdateMinGasPrice(uint256 minGasPrice);
+    event UpdateRules(bytes diff);
+    event UpdateNetworkVersion(uint256 version);
 
-    function incBalance(address acc, uint256 diff) external {
-        auth.authorizeIncBalance(msg.sender, acc, diff);
+    function initialize(address _backend, address _owner) external initializer {
+        Ownable.initialize(_owner);
+        backend = NodeDriver(_backend);
+    }
+
+    function incBalance(address acc, uint256 diff) external onlyOwner {
         emit IncBalance(acc, diff);
     }
 
-    function setBalance(address acc, uint256 value) external {
-        auth.authorizeSetBalance(msg.sender, acc, value);
+    function setBalance(address acc, uint256 value) external onlyOwner {
         emit SetBalance(acc, value);
     }
 
-    function subBalance(address acc, uint256 diff) external {
-        auth.authorizeSubBalance(msg.sender, acc, diff);
+    function subBalance(address acc, uint256 diff) external onlyOwner {
         emit SubBalance(acc, diff);
     }
 
-    function setCode(address acc, address from) external {
-        auth.authorizeSetCode(msg.sender, acc, from);
+    function setCode(address acc, address from) external onlyOwner {
         emit SetCode(acc, from);
     }
 
-    function swapCode(address acc, address with) external {
-        auth.authorizeSwapCode(msg.sender, acc, with);
+    function swapCode(address acc, address with) external onlyOwner {
         emit SwapCode(acc, with);
     }
 
-    function setStorage(address acc, uint256 key, uint256 value) external {
-        auth.authorizeSetStorage(msg.sender, acc, key, value);
+    function setStorage(address acc, uint256 key, uint256 value) external onlyOwner {
         emit SetStorage(acc, key, value);
     }
 
-    function updateGasPowerAllocationRate(uint256 short, uint256 long) external {
-        auth.authorizeUpdateGasPowerAllocationRate(msg.sender, short, long);
-        emit UpdateGasPowerAllocationRate(short, long);
+    function updateRules(bytes calldata diff) external onlyOwner {
+        emit UpdateRules(diff);
     }
 
-    function updateMinGasPrice(uint256 value) external {
-        auth.authorizeUpdateMinGasPrice(msg.sender, value);
-        emit UpdateMinGasPrice(value);
+    function updateNetworkVersion(uint256 version) external onlyOwner {
+        emit UpdateNetworkVersion(version);
     }
 
-    function updateValidatorWeight(uint256 validatorID, uint256 value) external {
-        auth.authorizeUpdateValidatorWeight(msg.sender, validatorID, value);
+    function updateValidatorWeight(uint256 validatorID, uint256 value) external onlyOwner {
         emit UpdateValidatorWeight(validatorID, value);
     }
 
-    function updateValidatorPubkey(uint256 validatorID, bytes calldata pubkey) external {
-        auth.authorizeUpdateValidatorPubkey(msg.sender, validatorID, pubkey);
+    function updateValidatorPubkey(uint256 validatorID, bytes calldata pubkey) external onlyOwner {
         emit UpdateValidatorPubkey(validatorID, pubkey);
     }
 
@@ -158,31 +180,23 @@ contract NodeDriver is Initializable, Ownable {
 
     // Methods which are called only by the node
 
-    function initialize(uint256 sealedEpoch, address _sfc, address _auth, address _owner) external initializer {
-        Ownable.initialize(_owner);
-        auth = NodeDriverAuth(_auth);
-        auth.initialize(_sfc, _owner);
-        sfc = SFC(_sfc);
-        sfc.initialize(sealedEpoch, address(this), _owner);
-    }
-
     function setGenesisValidator(address _auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyNode {
-        sfc._setGenesisValidator(_auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
+        backend.setGenesisValidator(_auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
     }
 
-    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 amount, uint256 rewards) external onlyNode {
-        sfc._setGenesisDelegation(delegator, toValidatorID, amount, rewards);
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyNode {
+        backend.setGenesisDelegation(delegator, toValidatorID, stake, lockedStake, lockupFromEpoch, lockupEndTime, lockupDuration, earlyUnlockPenalty, rewards);
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyNode {
-        sfc._deactivateValidator(validatorID, status);
+        backend.deactivateValidator(validatorID, status);
     }
 
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyNode {
-        sfc._sealEpochValidators(nextValidatorIDs);
+        backend.sealEpochValidators(nextValidatorIDs);
     }
 
     function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyNode {
-        sfc._sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
+        backend.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
     }
 }

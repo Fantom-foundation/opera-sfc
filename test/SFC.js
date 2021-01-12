@@ -15,6 +15,7 @@ const SFC = artifacts.require('SFC');
 const StakersConstants = artifacts.require('StakersConstants');
 const NodeDriverAuth = artifacts.require('NodeDriverAuth');
 const NodeDriver = artifacts.require('NodeDriver');
+const NetworkInitializer = artifacts.require('NetworkInitializer');
 
 function amount18(n) {
     return new BN(web3.utils.toWei(n, 'ether'));
@@ -131,9 +132,10 @@ contract('SFC', async () => {
 contract('SFC', async ([account1]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeDriverAuth.new();
-        this.nodeI = await NodeDriver.new();
-        await this.nodeI.initialize(12, this.sfc.address, this.nodeIAuth.address, account1);
+        const nodeIRaw = await NodeDriver.new();
+        this.nodeI = await NodeDriverAuth.new();
+        const initializer = await NetworkInitializer.new();
+        await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, account1);
     });
 
     describe('Genesis Validator', () => {
@@ -164,9 +166,10 @@ contract('SFC', async ([account1]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeDriverAuth.new();
-        this.nodeI = await NodeDriver.new();
-        await this.nodeI.initialize(0, this.sfc.address, this.nodeIAuth.address, firstValidator);
+        const nodeIRaw = await NodeDriver.new();
+        this.nodeI = await NodeDriverAuth.new();
+        const initializer = await NetworkInitializer.new();
+        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, firstValidator);
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
@@ -326,16 +329,12 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
         });
 
         describe('Events emitters', () => {
-            it('Should call updateGasPowerallocationRate', async () => {
-                await this.nodeI.updateGasPowerAllocationRate(280000 * 5, 280000);
+            it('Should call updateRules', async () => {
+                await this.nodeI.updateRules('0x7b22446167223a7b224d6178506172656e7473223a357d2c2245636f6e6f6d79223a7b22426c6f636b4d6973736564536c61636b223a377d2c22426c6f636b73223a7b22426c6f636b476173486172644c696d6974223a313030307d7d');
             });
 
             it('Should call updateOfflinePenaltyThreshold', async () => {
                 await this.sfc._updateOfflinePenaltyThreshold(1, 10);
-            });
-
-            it('Should call updateMinGasPrice', async () => {
-                await this.nodeI.updateMinGasPrice(10);
             });
         });
     });
@@ -344,9 +343,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeDriverAuth.new();
-        this.nodeI = await NodeDriver.new();
-        await this.nodeI.initialize(10, this.sfc.address, this.nodeIAuth.address, firstValidator);
+        const nodeIRaw = await NodeDriver.new();
+        this.nodeI = await NodeDriverAuth.new();
+        const initializer = await NetworkInitializer.new();
+        await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, firstValidator);
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
@@ -357,7 +357,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Should not be possible add a Genesis Delegation if called not by node', async () => {
-            await expect(this.sfc._setGenesisDelegation(firstDelegator, 1, 100, 1000)).to.be.rejectedWith('caller is not the NodeDriver contract');
+            await expect(this.sfc._setGenesisDelegation(firstDelegator, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
     });
 
@@ -512,9 +512,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
-            this.nodeIAuth = await NodeDriverAuth.new();
-            this.nodeI = await NodeDriver.new();
-            await this.nodeI.initialize(12, this.sfc.address, this.nodeIAuth.address, firstValidator);
+            const nodeIRaw = await NodeDriver.new();
+            this.nodeI = await NodeDriverAuth.new();
+            const initializer = await NetworkInitializer.new();
+            await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, firstValidator);
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -559,9 +560,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
-            this.nodeIAuth = await NodeDriverAuth.new();
-            this.nodeI = await NodeDriver.new();
-            await this.nodeI.initialize(12, this.sfc.address, this.nodeIAuth.address, firstValidator);
+            const nodeIRaw = await NodeDriver.new();
+            this.nodeI = await NodeDriverAuth.new();
+            const initializer = await NetworkInitializer.new();
+            await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, firstValidator);
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -609,9 +611,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
     describe('Methods tests', async () => {
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
-            this.nodeIAuth = await NodeDriverAuth.new();
-            this.nodeI = await NodeDriver.new();
-            await this.nodeI.initialize(10, this.sfc.address, this.nodeIAuth.address, firstValidator);
+            const nodeIRaw = await NodeDriver.new();
+            this.nodeI = await NodeDriverAuth.new();
+            const initializer = await NetworkInitializer.new();
+            await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, firstValidator);
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -725,9 +728,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeDriverAuth.new();
-        this.nodeI = await NodeDriver.new();
-        await this.nodeI.initialize(0, this.sfc.address, this.nodeIAuth.address, firstValidator);
+        const nodeIRaw = await NodeDriver.new();
+        this.nodeI = await NodeDriverAuth.new();
+        const initializer = await NetworkInitializer.new();
+        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, firstValidator);
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
 
@@ -1061,9 +1065,10 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
-        this.nodeIAuth = await NodeDriverAuth.new();
-        this.nodeI = await NodeDriver.new();
-        await this.nodeI.initialize(0, this.sfc.address, this.nodeIAuth.address, firstValidator);
+        const nodeIRaw = await NodeDriver.new();
+        this.nodeI = await NodeDriverAuth.new();
+        const initializer = await NetworkInitializer.new();
+        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, firstValidator);
         await this.sfc.enableNonNodeCalls();
         await this.sfc._setGenesisValidator(firstValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0);
         firstValidatorID = await this.sfc.getValidatorID(firstValidator);
@@ -1076,7 +1081,7 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
 
     describe('Staking / Sealed Epoch functions', () => {
         it('Should setGenesisDelegation Validator', async () => {
-            await this.sfc._setGenesisDelegation(firstDelegator, firstValidatorID, amount18('1'), 100);
+            await this.sfc._setGenesisDelegation(firstDelegator, firstValidatorID, amount18('1'), 0, 0, 0, 0, 0, 100);
             expect(await this.sfc.getStake(firstDelegator, firstValidatorID)).to.bignumber.equals(amount18('1'));
         });
     });
