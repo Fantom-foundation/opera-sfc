@@ -80,6 +80,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 totalSupply;
     }
 
+    uint256 public baseRewardPerSecond;
+    uint256 public totalSupply;
+    mapping(uint256 => EpochSnapshot) public getEpochSnapshot;
+
+    uint256 offlinePenaltyThresholdBlocksNum;
+    uint256 offlinePenaltyThresholdTime;
+
     function isNode(address addr) internal view returns (bool) {
         return addr == address(node);
     }
@@ -101,10 +108,14 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     Constructor
     */
 
-    function initialize(uint256 sealedEpoch, address nodeDriver, address owner) external initializer {
+    function initialize(uint256 sealedEpoch, uint256 _totalSupply, address nodeDriver, address owner) external initializer {
         Ownable.initialize(owner);
         currentSealedEpoch = sealedEpoch;
         node = NodeDriver(nodeDriver);
+        totalSupply = _totalSupply;
+        baseRewardPerSecond = 6.183414351851851852 * 1e18;
+        offlinePenaltyThresholdBlocksNum = 1000;
+        offlinePenaltyThresholdTime = 3 days;
     }
 
     function _setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyNode {
@@ -424,14 +435,12 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     event UpdatedBaseRewardPerSec(uint256 value);
     event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
 
-    uint256 offlinePenaltyThresholdBlocksNum;
-    uint256 offlinePenaltyThresholdTime;
-
     function offlinePenaltyThreshold() public view returns (uint256 blocksNum, uint256 time) {
         return (offlinePenaltyThresholdBlocksNum, offlinePenaltyThresholdTime);
     }
 
     function _updateBaseRewardPerSecond(uint256 value) onlyOwner external {
+        require(value <= 32.967977168935185184 * 1e18, "too large reward per second");
         baseRewardPerSecond = value;
         emit UpdatedBaseRewardPerSec(value);
     }
@@ -441,10 +450,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         offlinePenaltyThresholdBlocksNum = blocksNum;
         emit UpdatedOfflinePenaltyThreshold(blocksNum, time);
     }
-
-    uint256 public baseRewardPerSecond;
-    uint256 public totalSupply;
-    mapping(uint256 => EpochSnapshot) public getEpochSnapshot;
 
     function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTimes, uint256[] memory offlineBlocks) internal {
         // mark offline nodes
