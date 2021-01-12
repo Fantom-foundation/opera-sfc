@@ -27,7 +27,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         address auth;
     }
 
-    NodeDriver public node;
+    NodeDriver internal node;
 
     uint256 public currentSealedEpoch;
     mapping(uint256 => Validator) public getValidator;
@@ -91,7 +91,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return addr == address(node);
     }
 
-    modifier onlyNode() {
+    modifier onlyDriver() {
         require(isNode(msg.sender), "caller is not the NodeDriver contract");
         _;
     }
@@ -118,16 +118,26 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         offlinePenaltyThresholdTime = 3 days;
     }
 
-    function _setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyNode {
+    function _setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyDriver {
         _rawCreateValidator(auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
         if (validatorID > lastValidatorID) {
             lastValidatorID = validatorID;
         }
     }
 
-    function _setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 amount, uint256 rewards) external onlyNode {
-        _rawDelegate(delegator, toValidatorID, amount);
+    function _setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyDriver {
+        _rawDelegate(delegator, toValidatorID, stake);
         rewardsStash[delegator][toValidatorID] = rewards;
+        if (lockedStake != 0) {
+            require(lockedStake <= stake, "locked stake is greater than the whole stake");
+            LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
+            ld.lockedStake = lockedStake;
+            ld.fromEpoch = lockupFromEpoch;
+            ld.endTime = lockupEndTime;
+            ld.duration = lockupDuration;
+            ld.earlyUnlockPenalty = earlyUnlockPenalty;
+            emit LockedUpStake(delegator, toValidatorID, lockupDuration, lockedStake);
+        }
     }
 
     /*
@@ -261,7 +271,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
 
-    function _deactivateValidator(uint256 validatorID, uint256 status) external onlyNode {
+    function _deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
         require(status != OK_STATUS, "wrong status");
 
         _setValidatorDeactivated(validatorID, status);
@@ -269,11 +279,11 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
 
-    function _calcRawValidatorEpochBaseReward(uint256 epochDuration, uint256 baseRewardPerSecond, uint256 baseRewardWeight, uint256 totalBaseRewardWeight) internal pure returns (uint256) {
+    function _calcRawValidatorEpochBaseReward(uint256 epochDuration, uint256 _baseRewardPerSecond, uint256 baseRewardWeight, uint256 totalBaseRewardWeight) internal pure returns (uint256) {
         if (baseRewardWeight == 0) {
             return 0;
         }
-        uint256 totalReward = epochDuration.mul(baseRewardPerSecond);
+        uint256 totalReward = epochDuration.mul(_baseRewardPerSecond);
         return totalReward.mul(baseRewardWeight).div(totalBaseRewardWeight);
     }
 
@@ -528,7 +538,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         snapshot.totalTxRewardWeight = ctx.totalTxRewardWeight;
     }
 
-    function _sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyNode {
+    function _sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         uint256[] memory validatorIDs = snapshot.validatorIDs;
 
@@ -541,7 +551,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         snapshot.totalSupply = totalSupply;
     }
 
-    function _sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyNode {
+    function _sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
         // fill data for the next snapshot
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         for (uint256 i = 0; i < nextValidatorIDs.length; i++) {
