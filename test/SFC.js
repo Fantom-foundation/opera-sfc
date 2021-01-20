@@ -51,8 +51,8 @@ async function sealEpoch(sfc, duration, _validatorsMetrics = undefined) {
     }
 
     await sfc.advanceTime(duration);
-    await sfc._sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees);
-    await sfc._sealEpochValidators(allValidators);
+    await sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees);
+    await sfc.sealEpochValidators(allValidators);
 }
 
 
@@ -107,8 +107,8 @@ class BlockchainNode {
         }
 
         await this.sfc.advanceTime(duration);
-        await this.handle(await this.sfc._sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees));
-        await this.handle(await this.sfc._sealEpochValidators(nextValidatorIDs));
+        await this.handle(await this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees));
+        await this.handle(await this.sfc.sealEpochValidators(nextValidatorIDs));
         this.validators = this.nextValidators;
         // clone this.nextValidators
         this.nextValidators = {};
@@ -141,7 +141,7 @@ contract('SFC', async ([account1]) => {
     describe('Genesis Validator', () => {
         beforeEach(async () => {
             await this.sfc.enableNonNodeCalls();
-            await expect(this.sfc._setGenesisValidator(account1, 1, pubkey, 1 << 3, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
+            await expect(this.sfc.setGenesisValidator(account1, 1, pubkey, 1 << 3, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
             await this.sfc.disableNonNodeCalls();
         });
 
@@ -150,13 +150,13 @@ contract('SFC', async ([account1]) => {
         });
 
         it('should reject sealEpoch if not called by Node', async () => {
-            await expect(this.sfc._sealEpoch([1], [1], [1], [1], {
+            await expect(this.sfc.sealEpoch([1], [1], [1], [1], {
                 from: account1,
             })).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
 
         it('should reject SealEpochValidators if not called by Node', async () => {
-            await expect(this.sfc._sealEpochValidators([1], {
+            await expect(this.sfc.sealEpochValidators([1], {
                 from: account1,
             })).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
@@ -334,7 +334,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             });
 
             it('Should call updateOfflinePenaltyThreshold', async () => {
-                await this.sfc._updateOfflinePenaltyThreshold(1, 10);
+                await this.sfc.updateOfflinePenaltyThreshold(1, 10);
             });
         });
     });
@@ -353,11 +353,11 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
     describe('Prevent Genesis Call if not node', () => {
         it('Should not be possible add a Genesis Validator if called not by node', async () => {
-            await expect(this.sfc._setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('caller is not the NodeDriver contract');
+            await expect(this.sfc.setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
 
         it('Should not be possible add a Genesis Delegation if called not by node', async () => {
-            await expect(this.sfc._setGenesisDelegation(firstDelegator, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.rejectedWith('caller is not the NodeDriver contract');
+            await expect(this.sfc.setGenesisDelegation(firstDelegator, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
     });
 
@@ -577,28 +577,28 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         it('Returns claimedRewardUntilEpoch', async () => {
             expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('12'));
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('13'));
-            await this.sfc._sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102]);
+            await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102]);
             expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('13'));
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('14'));
-            await this.sfc._sealEpoch(
+            await this.sfc.sealEpoch(
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
             );
-            await this.sfc._sealEpoch(
+            await this.sfc.sealEpoch(
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
             );
-            await this.sfc._sealEpoch(
+            await this.sfc.sealEpoch(
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
             );
-            await this.sfc._sealEpoch(
+            await this.sfc.sealEpoch(
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
@@ -771,7 +771,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
     describe('Staking / Sealed Epoch functions', () => {
         it('Should return claimed Rewards until Epoch', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             expect(await this.sfc.claimedRewardUntilEpoch(firstDelegator, 1)).to.bignumber.equal(new BN(0));
@@ -780,7 +780,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Check pending Rewards of delegators', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('0');
             expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('0');
@@ -792,7 +792,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Check if pending Rewards have been increased after sealing Epoch', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('3523');
@@ -804,7 +804,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Should increase balances after claiming Rewards', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -818,7 +818,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Should return stashed Rewards', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -830,7 +830,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Should update the validator on node', async () => {
-            await this.sfc._updateOfflinePenaltyThreshold(1000, 500);
+            await this.sfc.updateOfflinePenaltyThreshold(1000, 500);
             const tx = (await this.sfc.offlinePenaltyThreshold());
 
             const offlinePenaltyThresholdBlocksNum = (tx[0]);
@@ -841,7 +841,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
         it('Should not be able to deactivate validator if not Node', async () => {
             await this.sfc.disableNonNodeCalls();
-            await expect(this.sfc._deactivateValidator(1, 0)).to.be.rejectedWith('caller is not the NodeDriver contract');
+            await expect(this.sfc.deactivateValidator(1, 0)).to.be.rejectedWith('caller is not the NodeDriver contract');
         });
 
         it('Should seal Epochs', async () => {
@@ -873,8 +873,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             }
 
             await expect(this.sfc.advanceTime(new BN(24 * 60 * 60).toString())).to.be.fulfilled;
-            await expect(this.sfc._sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees)).to.be.fulfilled;
-            await expect(this.sfc._sealEpochValidators(allValidators)).to.be.fulfilled;
+            await expect(this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees)).to.be.fulfilled;
+            await expect(this.sfc.sealEpochValidators(allValidators)).to.be.fulfilled;
         });
 
         it('Should seal Epoch on Validators', async () => {
@@ -906,8 +906,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             }
 
             await expect(this.sfc.advanceTime(new BN(24 * 60 * 60).toString())).to.be.fulfilled;
-            await expect(this.sfc._sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees)).to.be.fulfilled;
-            await expect(this.sfc._sealEpochValidators(allValidators)).to.be.fulfilled;
+            await expect(this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees)).to.be.fulfilled;
+            await expect(this.sfc.sealEpochValidators(allValidators)).to.be.fulfilled;
         });
     });
 
@@ -927,7 +927,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
         // note: copied from the non-lockup tests
         it('Check pending Rewards of delegators', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('0');
             expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('0');
@@ -940,7 +940,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
         // note: copied from the non-lockup tests
         it('Check if pending Rewards have been increased after sealing Epoch', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('7221');
@@ -953,7 +953,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
         // note: copied from the non-lockup tests
         it('Should increase balances after claiming Rewards', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -968,7 +968,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
         // note: copied from the non-lockup tests
         it('Should return stashed Rewards', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -980,7 +980,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Should return pending rewards after unlocking and re-locking', async () => {
-            await this.sfc._updateBaseRewardPerSecond(new BN('1'));
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             for (let i = 0; i < 2; i++) {
                 const epoch = await this.sfc.currentSealedEpoch();
@@ -1070,7 +1070,7 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
         const initializer = await NetworkInitializer.new();
         await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, firstValidator);
         await this.sfc.enableNonNodeCalls();
-        await this.sfc._setGenesisValidator(firstValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0);
+        await this.sfc.setGenesisValidator(firstValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0);
         firstValidatorID = await this.sfc.getValidatorID(firstValidator);
         await this.sfc.delegate(firstValidatorID, {
             from: firstValidator,
@@ -1081,7 +1081,7 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
 
     describe('Staking / Sealed Epoch functions', () => {
         it('Should setGenesisDelegation Validator', async () => {
-            await this.sfc._setGenesisDelegation(firstDelegator, firstValidatorID, amount18('1'), 0, 0, 0, 0, 0, 100);
+            await this.sfc.setGenesisDelegation(firstDelegator, firstValidatorID, amount18('1'), 0, 0, 0, 0, 0, 100);
             expect(await this.sfc.getStake(firstDelegator, firstValidatorID)).to.bignumber.equals(amount18('1'));
         });
     });

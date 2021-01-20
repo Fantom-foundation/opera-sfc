@@ -121,14 +121,14 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         offlinePenaltyThresholdTime = 3 days;
     }
 
-    function _setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyDriver {
+    function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyDriver {
         _rawCreateValidator(auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
         if (validatorID > lastValidatorID) {
             lastValidatorID = validatorID;
         }
     }
 
-    function _setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyDriver {
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyDriver {
         _rawDelegate(delegator, toValidatorID, stake);
         rewardsStash[delegator][toValidatorID] = rewards;
         _mintNativeToken(stake);
@@ -296,7 +296,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
 
-    function _deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
+    function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
         require(status != OK_STATUS, "wrong status");
 
         _setValidatorDeactivated(validatorID, status);
@@ -475,13 +475,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return (offlinePenaltyThresholdBlocksNum, offlinePenaltyThresholdTime);
     }
 
-    function _updateBaseRewardPerSecond(uint256 value) onlyOwner external {
+    function updateBaseRewardPerSecond(uint256 value) onlyOwner external {
         require(value <= 32.967977168935185184 * 1e18, "too large reward per second");
         baseRewardPerSecond = value;
         emit UpdatedBaseRewardPerSec(value);
     }
 
-    function _updateOfflinePenaltyThreshold(uint256 blocksNum, uint256 time) onlyOwner external {
+    function updateOfflinePenaltyThreshold(uint256 blocksNum, uint256 time) onlyOwner external {
         offlinePenaltyThresholdTime = time;
         offlinePenaltyThresholdBlocksNum = blocksNum;
         emit UpdatedOfflinePenaltyThreshold(blocksNum, time);
@@ -571,7 +571,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         snapshot.totalTxRewardWeight = ctx.totalTxRewardWeight;
     }
 
-    function _sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
+    function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         uint256[] memory validatorIDs = snapshot.validatorIDs;
 
@@ -584,7 +584,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         snapshot.totalSupply = totalSupply;
     }
 
-    function _sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
+    function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
         // fill data for the next snapshot
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         for (uint256 i = 0; i < nextValidatorIDs.length; i++) {
