@@ -87,23 +87,23 @@ contract NodeDriverAuth is Initializable, Ownable {
     }
 
     function setGenesisValidator(address _auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyDriver {
-        sfc._setGenesisValidator(_auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
+        sfc.setGenesisValidator(_auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
     }
 
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyDriver {
-        sfc._setGenesisDelegation(delegator, toValidatorID, stake, lockedStake, lockupFromEpoch, lockupEndTime, lockupDuration, earlyUnlockPenalty, rewards);
+        sfc.setGenesisDelegation(delegator, toValidatorID, stake, lockedStake, lockupFromEpoch, lockupEndTime, lockupDuration, earlyUnlockPenalty, rewards);
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
-        sfc._deactivateValidator(validatorID, status);
+        sfc.deactivateValidator(validatorID, status);
     }
 
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
-        sfc._sealEpochValidators(nextValidatorIDs);
+        sfc.sealEpochValidators(nextValidatorIDs);
     }
 
     function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
-        sfc._sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
+        sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
     }
 }
 
