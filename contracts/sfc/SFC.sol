@@ -88,6 +88,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     uint256 offlinePenaltyThresholdBlocksNum;
     uint256 offlinePenaltyThresholdTime;
 
+    mapping(uint256 => uint256) public slashingRefundRatio; // validator ID -> (slashing refund ratio)
+
     function isNode(address addr) internal view returns (bool) {
         return addr == address(node);
     }
@@ -251,6 +253,22 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         _syncValidator(toValidatorID, false);
     }
 
+    function isSlashed(uint256 validatorID) view public returns (bool) {
+        return getValidator[validatorID].status & CHEATER_MASK != 0;
+    }
+
+    function getSlashingPenalty(uint256 amount, bool isCheater, uint256 refundRatio) internal pure returns(uint256 penalty) {
+        if (!isCheater || refundRatio >= Decimal.unit()) {
+            return 0;
+        }
+        // round penalty upwards (ceiling) to prevent dust amount attacks
+        penalty = amount.mul(Decimal.unit() - refundRatio).div(Decimal.unit()).add(1);
+        if (penalty > amount) {
+            return amount;
+        }
+        return penalty;
+    }
+
     function withdraw(uint256 toValidatorID, uint256 wrID) external {
         address payable delegator = msg.sender;
         WithdrawalRequest memory request = getWithdrawalRequest[delegator][toValidatorID][wrID];
@@ -267,18 +285,14 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         require(currentEpoch() >= requestEpoch + unstakePeriodEpochs(), "not enough epochs passed");
 
         uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID].amount;
+        bool isCheater = isSlashed(toValidatorID);
+        uint256 penalty = getSlashingPenalty(amount, isCheater, slashingRefundRatio[toValidatorID]);
         delete getWithdrawalRequest[delegator][toValidatorID][wrID];
 
-        uint256 slashingPenalty = 0;
-        bool isCheater = getValidator[toValidatorID].status & CHEATER_MASK != 0;
-
+        totalSlashedStake += penalty;
+        require(amount > penalty, "stake is fully slashed");
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        if (isCheater == false) {
-            delegator.transfer(amount);
-        } else {
-            slashingPenalty = amount;
-        }
-        totalSlashedStake += slashingPenalty;
+        delegator.transfer(amount.sub(penalty));
     }
 
 
@@ -455,6 +469,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     event UpdatedBaseRewardPerSec(uint256 value);
     event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
+    event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
 
     function offlinePenaltyThreshold() public view returns (uint256 blocksNum, uint256 time) {
         return (offlinePenaltyThresholdBlocksNum, offlinePenaltyThresholdTime);
@@ -470,6 +485,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         offlinePenaltyThresholdTime = time;
         offlinePenaltyThresholdBlocksNum = blocksNum;
         emit UpdatedOfflinePenaltyThreshold(blocksNum, time);
+    }
+
+    function updateSlashingRefundRatio(uint256 validatorID, uint256 refundRatio) onlyOwner external {
+        require(isSlashed(validatorID), "validator isn't slashed");
+        require(refundRatio <= Decimal.unit(), "must be less than or equal to 1.0");
+        slashingRefundRatio[validatorID] = refundRatio;
+        emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
     }
 
     function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTimes, uint256[] memory offlineBlocks) internal {
