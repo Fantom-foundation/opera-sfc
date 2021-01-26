@@ -78,6 +78,10 @@ contract NodeDriverAuth is Initializable, Ownable {
         driver.updateNetworkVersion(version);
     }
 
+    function advanceEpochs(uint256 num) external onlyOwner {
+        driver.advanceEpochs(num);
+    }
+
     function updateValidatorWeight(uint256 validatorID, uint256 value) external onlySFC {
         driver.updateValidatorWeight(validatorID, value);
     }
@@ -127,6 +131,7 @@ contract NodeDriver is Initializable, Ownable {
 
     event UpdateNetworkRules(bytes diff);
     event UpdateNetworkVersion(uint256 version);
+    event AdvanceEpochs(uint256 num);
 
     function initialize(address _backend, address _owner) external initializer {
         Ownable.initialize(_owner);
@@ -163,6 +168,10 @@ contract NodeDriver is Initializable, Ownable {
 
     function updateNetworkVersion(uint256 version) external onlyOwner {
         emit UpdateNetworkVersion(version);
+    }
+
+    function advanceEpochs(uint256 num) external onlyOwner {
+        emit AdvanceEpochs(num);
     }
 
     function updateValidatorWeight(uint256 validatorID, uint256 value) external onlyOwner {
