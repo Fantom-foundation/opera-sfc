@@ -329,8 +329,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
         });
 
         describe('Events emitters', () => {
-            it('Should call updateRules', async () => {
-                await this.nodeI.updateRules('0x7b22446167223a7b224d6178506172656e7473223a357d2c2245636f6e6f6d79223a7b22426c6f636b4d6973736564536c61636b223a377d2c22426c6f636b73223a7b22426c6f636b476173486172644c696d6974223a313030307d7d');
+            it('Should call updateNetworkRules', async () => {
+                await this.nodeI.updateNetworkRules('0x7b22446167223a7b224d6178506172656e7473223a357d2c2245636f6e6f6d79223a7b22426c6f636b4d6973736564536c61636b223a377d2c22426c6f636b73223a7b22426c6f636b476173486172644c696d6974223a313030307d7d');
             });
 
             it('Should call updateOfflinePenaltyThreshold', async () => {

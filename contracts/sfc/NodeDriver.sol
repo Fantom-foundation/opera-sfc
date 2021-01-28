@@ -70,12 +70,16 @@ contract NodeDriverAuth is Initializable, Ownable {
         revert("method is disabled");
     }
 
-    function updateRules(bytes calldata diff) external onlyOwner {
-        driver.updateRules(diff);
+    function updateNetworkRules(bytes calldata diff) external onlyOwner {
+        driver.updateNetworkRules(diff);
     }
 
     function updateNetworkVersion(uint256 version) external onlyOwner {
         driver.updateNetworkVersion(version);
+    }
+
+    function advanceEpochs(uint256 num) external onlyOwner {
+        driver.advanceEpochs(num);
     }
 
     function updateValidatorWeight(uint256 validatorID, uint256 value) external onlySFC {
@@ -125,8 +129,9 @@ contract NodeDriver is Initializable, Ownable {
     event UpdateValidatorWeight(uint256 indexed validatorID, uint256 weight);
     event UpdateValidatorPubkey(uint256 indexed validatorID, bytes pubkey);
 
-    event UpdateRules(bytes diff);
+    event UpdateNetworkRules(bytes diff);
     event UpdateNetworkVersion(uint256 version);
+    event AdvanceEpochs(uint256 num);
 
     function initialize(address _backend, address _owner) external initializer {
         Ownable.initialize(_owner);
@@ -157,12 +162,16 @@ contract NodeDriver is Initializable, Ownable {
         emit SetStorage(acc, key, value);
     }
 
-    function updateRules(bytes calldata diff) external onlyOwner {
-        emit UpdateRules(diff);
+    function updateNetworkRules(bytes calldata diff) external onlyOwner {
+        emit UpdateNetworkRules(diff);
     }
 
     function updateNetworkVersion(uint256 version) external onlyOwner {
         emit UpdateNetworkVersion(version);
+    }
+
+    function advanceEpochs(uint256 num) external onlyOwner {
+        emit AdvanceEpochs(num);
     }
 
     function updateValidatorWeight(uint256 validatorID, uint256 value) external onlyOwner {
