@@ -63,11 +63,11 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     mapping(address => mapping(uint256 => LockedDelegation)) public getLockupInfo;
 
     struct EpochSnapshot {
-        mapping(uint256 => uint256) receivedStakes;
+        mapping(uint256 => uint256) receivedStake;
         mapping(uint256 => uint256) accumulatedRewardPerToken;
-        mapping(uint256 => uint256) accumulatedUptimes;
+        mapping(uint256 => uint256) accumulatedUptime;
         mapping(uint256 => uint256) accumulatedOriginatedTxsFee;
-        mapping(uint256 => uint256) offlineTimes;
+        mapping(uint256 => uint256) offlineTime;
         mapping(uint256 => uint256) offlineBlocks;
 
         uint256[] validatorIDs;
@@ -105,6 +105,34 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     function currentEpoch() public view returns (uint256) {
         return currentSealedEpoch + 1;
+    }
+
+    function getEpochSnapshotValidatorIDs(uint256 epoch) public view returns (uint256[] memory) {
+        return getEpochSnapshot[epoch].validatorIDs;
+    }
+
+    function getEpochSnapshotReceivedStake(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].receivedStake[validatorID];
+    }
+
+    function getEpochSnapshotAccumulatedRewardPerToken(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].accumulatedRewardPerToken[validatorID];
+    }
+
+    function getEpochSnapshotAccumulatedUptime(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].accumulatedUptime[validatorID];
+    }
+
+    function getEpochSnapshotAccumulatedOriginatedTxsFee(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].accumulatedOriginatedTxsFee[validatorID];
+    }
+
+    function getEpochSnapshotOfflineTime(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].offlineTime[validatorID];
+    }
+
+    function getEpochSnapshotOfflineBlocks(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].offlineBlocks[validatorID];
     }
 
     /*
@@ -494,15 +522,15 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
     }
 
-    function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTimes, uint256[] memory offlineBlocks) internal {
+    function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTime, uint256[] memory offlineBlocks) internal {
         // mark offline nodes
         for (uint256 i = 0; i < validatorIDs.length; i++) {
-            if (offlineBlocks[i] > offlinePenaltyThresholdBlocksNum && offlineTimes[i] >= offlinePenaltyThresholdTime) {
+            if (offlineBlocks[i] > offlinePenaltyThresholdBlocksNum && offlineTime[i] >= offlinePenaltyThresholdTime) {
                 _setValidatorDeactivated(validatorIDs[i], OFFLINE_BIT);
                 _syncValidator(validatorIDs[i], false);
             }
             // log data
-            snapshot.offlineTimes[validatorIDs[i]] = offlineTimes[i];
+            snapshot.offlineTime[validatorIDs[i]] = offlineTime[i];
             snapshot.offlineBlocks[validatorIDs[i]] = offlineBlocks[i];
         }
     }
@@ -536,7 +564,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             // baseRewardWeight = {stake} * {uptime ^ 2}
-            ctx.baseRewardWeights[i] = snapshot.receivedStakes[validatorIDs[i]].mul(uptimes[i]).div(ctx.epochDuration).mul(uptimes[i]).div(ctx.epochDuration);
+            ctx.baseRewardWeights[i] = snapshot.receivedStake[validatorIDs[i]].mul(uptimes[i]).div(ctx.epochDuration).mul(uptimes[i]).div(ctx.epochDuration);
             ctx.totalBaseRewardWeight = ctx.totalBaseRewardWeight.add(ctx.baseRewardWeights[i]);
         }
 
@@ -563,7 +591,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             snapshot.accumulatedRewardPerToken[validatorID] = prevSnapshot.accumulatedRewardPerToken[validatorID].add(rewardPerToken);
             //
             snapshot.accumulatedOriginatedTxsFee[validatorID] = prevSnapshot.accumulatedOriginatedTxsFee[validatorID].add(originatedTxsFee[i]);
-            snapshot.accumulatedUptimes[validatorID] = prevSnapshot.accumulatedUptimes[validatorID].add(uptimes[i]);
+            snapshot.accumulatedUptime[validatorID] = prevSnapshot.accumulatedUptime[validatorID].add(uptimes[i]);
         }
 
         snapshot.epochFee = ctx.epochFee;
@@ -571,11 +599,11 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         snapshot.totalTxRewardWeight = ctx.totalTxRewardWeight;
     }
 
-    function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
+    function sealEpoch(uint256[] calldata offlineTime, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         uint256[] memory validatorIDs = snapshot.validatorIDs;
 
-        _sealEpoch_offline(snapshot, validatorIDs, offlineTimes, offlineBlocks);
+        _sealEpoch_offline(snapshot, validatorIDs, offlineTime, offlineBlocks);
         _sealEpoch_rewards(snapshot, validatorIDs, uptimes, originatedTxsFee);
 
         currentSealedEpoch = currentEpoch();
@@ -589,7 +617,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         for (uint256 i = 0; i < nextValidatorIDs.length; i++) {
             uint256 receivedStake = getValidator[nextValidatorIDs[i]].receivedStake;
-            snapshot.receivedStakes[nextValidatorIDs[i]] = receivedStake;
+            snapshot.receivedStake[nextValidatorIDs[i]] = receivedStake;
             snapshot.totalStake = snapshot.totalStake.add(receivedStake);
         }
         snapshot.validatorIDs = nextValidatorIDs;
