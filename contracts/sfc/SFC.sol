@@ -27,7 +27,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         address auth;
     }
 
-    NodeDriver internal node;
+    NodeDriverAuth internal node;
 
     uint256 public currentSealedEpoch;
     mapping(uint256 => Validator) public getValidator;
@@ -95,7 +95,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
     modifier onlyDriver() {
-        require(isNode(msg.sender), "caller is not the NodeDriver contract");
+        require(isNode(msg.sender), "caller is not the NodeDriverAuth contract");
         _;
     }
 
@@ -142,7 +142,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     function initialize(uint256 sealedEpoch, uint256 _totalSupply, address nodeDriver, address owner) external initializer {
         Ownable.initialize(owner);
         currentSealedEpoch = sealedEpoch;
-        node = NodeDriver(nodeDriver);
+        node = NodeDriverAuth(nodeDriver);
         totalSupply = _totalSupply;
         baseRewardPerSecond = 6.183414351851851852 * 1e18;
         offlinePenaltyThresholdBlocksNum = 1000;
@@ -473,8 +473,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         require(rewards != 0, "zero rewards");
         delete rewardsStash[delegator][toValidatorID];
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        delegator.transfer(rewards);
         _mintNativeToken(rewards);
+        delegator.transfer(rewards);
     }
 
     // _syncValidator updates the validator data on node
