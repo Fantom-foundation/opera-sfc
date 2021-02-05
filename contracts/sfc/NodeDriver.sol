@@ -1,10 +1,13 @@
 pragma solidity ^0.5.0;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../common/Initializable.sol";
 import "../ownership/Ownable.sol";
 import "./SFC.sol";
 
 contract NodeDriverAuth is Initializable, Ownable {
+    using SafeMath for uint256;
+
     SFC internal sfc;
     NodeDriver internal driver;
 
@@ -27,47 +30,11 @@ contract NodeDriverAuth is Initializable, Ownable {
 
     function migrateTo(address newDriverAuth) external onlyOwner {
         driver.setBackend(newDriverAuth);
-        driver.transferOwnership(newDriverAuth);
     }
 
     function incBalance(address acc, uint256 diff) external onlySFC {
         require(acc == address(sfc), "recipient is not the SFC contract");
-        driver.incBalance(acc, diff);
-    }
-
-    function setBalance(address acc, uint256 value) external {
-        if (false) {
-            driver.setBalance(acc, value);
-        }
-        revert("method is disabled");
-    }
-
-    function subBalance(address acc, uint256 diff) external {
-        if (false) {
-            driver.subBalance(acc, diff);
-        }
-        revert("method is disabled");
-    }
-
-    function setCode(address acc, address from) external {
-        if (false) {
-            driver.setCode(acc, from);
-        }
-        revert("method is disabled");
-    }
-
-    function swapCode(address acc, address with) external {
-        if (false) {
-            driver.swapCode(acc, with);
-        }
-        revert("method is disabled");
-    }
-
-    function setStorage(address acc, uint256 key, uint256 value) external {
-        if (false) {
-            driver.setStorage(acc, key, value);
-        }
-        revert("method is disabled");
+        driver.setBalance(acc, address(acc).balance.add(diff));
     }
 
     function updateNetworkRules(bytes calldata diff) external onlyOwner {
@@ -111,20 +78,22 @@ contract NodeDriverAuth is Initializable, Ownable {
     }
 }
 
-contract NodeDriver is Initializable, Ownable {
+contract NodeDriver is Initializable {
     SFC internal sfc;
     NodeDriver internal backend;
+    EVMWriter internal evmWriter;
 
-    function setBackend(address _backend) external onlyOwner {
+    event UpdatedBackend(address indexed backend);
+
+    function setBackend(address _backend) external onlyBackend {
+        emit UpdatedBackend(_backend);
         backend = NodeDriver(_backend);
     }
 
-    event IncBalance(address indexed acc, uint256 value);
-    event SetBalance(address indexed acc, uint256 value);
-    event SubBalance(address indexed acc, uint256 value);
-    event SetCode(address indexed acc, address indexed from);
-    event SwapCode(address indexed acc, address indexed with);
-    event SetStorage(address indexed acc, uint256 key, uint256 value);
+    modifier onlyBackend() {
+        require(msg.sender == address(backend), "caller is not the backend");
+        _;
+    }
 
     event UpdateValidatorWeight(uint256 indexed validatorID, uint256 weight);
     event UpdateValidatorPubkey(uint256 indexed validatorID, bytes pubkey);
@@ -133,52 +102,45 @@ contract NodeDriver is Initializable, Ownable {
     event UpdateNetworkVersion(uint256 version);
     event AdvanceEpochs(uint256 num);
 
-    function initialize(address _backend, address _owner) external initializer {
-        Ownable.initialize(_owner);
+    function initialize(address _backend, address _evmWriterAddress) external initializer {
         backend = NodeDriver(_backend);
+        emit UpdatedBackend(_backend);
+        evmWriter = EVMWriter(_evmWriterAddress);
     }
 
-    function incBalance(address acc, uint256 diff) external onlyOwner {
-        emit IncBalance(acc, diff);
+    function setBalance(address acc, uint256 value) external onlyBackend {
+        evmWriter.setBalance(acc, value);
     }
 
-    function setBalance(address acc, uint256 value) external onlyOwner {
-        emit SetBalance(acc, value);
+    function copyCode(address acc, address from) external onlyBackend {
+        evmWriter.copyCode(acc, from);
     }
 
-    function subBalance(address acc, uint256 diff) external onlyOwner {
-        emit SubBalance(acc, diff);
+    function swapCode(address acc, address with) external onlyBackend {
+        evmWriter.swapCode(acc, with);
     }
 
-    function setCode(address acc, address from) external onlyOwner {
-        emit SetCode(acc, from);
+    function setStorage(address acc, bytes32 key, bytes32 value) external onlyBackend {
+        evmWriter.setStorage(acc, key, value);
     }
 
-    function swapCode(address acc, address with) external onlyOwner {
-        emit SwapCode(acc, with);
-    }
-
-    function setStorage(address acc, uint256 key, uint256 value) external onlyOwner {
-        emit SetStorage(acc, key, value);
-    }
-
-    function updateNetworkRules(bytes calldata diff) external onlyOwner {
+    function updateNetworkRules(bytes calldata diff) external onlyBackend {
         emit UpdateNetworkRules(diff);
     }
 
-    function updateNetworkVersion(uint256 version) external onlyOwner {
+    function updateNetworkVersion(uint256 version) external onlyBackend {
         emit UpdateNetworkVersion(version);
     }
 
-    function advanceEpochs(uint256 num) external onlyOwner {
+    function advanceEpochs(uint256 num) external onlyBackend {
         emit AdvanceEpochs(num);
     }
 
-    function updateValidatorWeight(uint256 validatorID, uint256 value) external onlyOwner {
+    function updateValidatorWeight(uint256 validatorID, uint256 value) external onlyBackend {
         emit UpdateValidatorWeight(validatorID, value);
     }
 
-    function updateValidatorPubkey(uint256 validatorID, bytes calldata pubkey) external onlyOwner {
+    function updateValidatorPubkey(uint256 validatorID, bytes calldata pubkey) external onlyBackend {
         emit UpdateValidatorPubkey(validatorID, pubkey);
     }
 
@@ -208,4 +170,14 @@ contract NodeDriver is Initializable, Ownable {
     function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyNode {
         backend.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
     }
+}
+
+interface EVMWriter {
+    function setBalance(address acc, uint256 value) external;
+
+    function copyCode(address acc, address from) external;
+
+    function swapCode(address acc, address with) external;
+
+    function setStorage(address acc, bytes32 key, bytes32 value) external;
 }
