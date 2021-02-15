@@ -99,6 +99,19 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         _;
     }
 
+    event CreatedValidator(uint256 indexed validatorID, address indexed auth, bytes pubkey, uint256 createdEpoch, uint256 createdTime);
+    event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
+    event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
+    event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
+    event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
+    event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
+    event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
+    event LockedUpStake(address indexed delegator, uint256 indexed validatorID, uint256 duration, uint256 amount);
+    event UnlockedStake(address indexed delegator, uint256 indexed validatorID, uint256 amount, uint256 penalty);
+    event UpdatedBaseRewardPerSec(uint256 value);
+    event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
+    event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
+
     /*
     Getters
     */
@@ -197,6 +210,14 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
         getValidator[validatorID].auth = auth;
         getValidatorPubkey[validatorID] = pubkey;
+
+        emit CreatedValidator(validatorID, auth, pubkey, createdEpoch, createdTime);
+        if (deactivatedEpoch != 0) {
+            emit DeactivatedValidator(validatorID, deactivatedEpoch, deactivatedTime);
+        }
+        if (status != 0) {
+            emit ChangedValidatorStatus(validatorID, status);
+        }
     }
 
     function _isSelfStake(address delegator, uint256 toValidatorID) internal view returns (bool) {
@@ -236,6 +257,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         }
 
         _syncValidator(toValidatorID, origStake == 0);
+
+        emit Delegated(delegator, toValidatorID, amount);
     }
 
     function _setValidatorDeactivated(uint256 validatorID, uint256 status) internal {
@@ -246,9 +269,11 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         if (status > getValidator[validatorID].status) {
             getValidator[validatorID].status = status;
             if (getValidator[validatorID].deactivatedEpoch == 0) {
-                getValidator[validatorID].deactivatedTime = _now();
                 getValidator[validatorID].deactivatedEpoch = currentEpoch();
+                getValidator[validatorID].deactivatedTime = _now();
+                emit DeactivatedValidator(validatorID, getValidator[validatorID].deactivatedEpoch, getValidator[validatorID].deactivatedTime);
             }
+            emit ChangedValidatorStatus(validatorID, status);
         }
     }
 
@@ -279,6 +304,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         getWithdrawalRequest[delegator][toValidatorID][wrID].time = _now();
 
         _syncValidator(toValidatorID, false);
+
+        emit Undelegated(delegator, toValidatorID, wrID, amount);
     }
 
     function isSlashed(uint256 validatorID) view public returns (bool) {
@@ -321,6 +348,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         require(amount > penalty, "stake is fully slashed");
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         delegator.transfer(amount.sub(penalty));
+
+        emit Withdrawn(delegator, toValidatorID, wrID, amount);
     }
 
 
@@ -475,6 +504,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         _mintNativeToken(rewards);
         delegator.transfer(rewards);
+
+        emit ClaimedRewards(delegator, toValidatorID, rewards);
     }
 
     // _syncValidator updates the validator data on node
@@ -494,10 +525,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     function _validatorExists(uint256 validatorID) view internal returns (bool) {
         return getValidator[validatorID].createdTime != 0;
     }
-
-    event UpdatedBaseRewardPerSec(uint256 value);
-    event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
-    event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
 
     function offlinePenaltyThreshold() public view returns (uint256 blocksNum, uint256 time) {
         return (offlinePenaltyThresholdBlocksNum, offlinePenaltyThresholdTime);
@@ -653,8 +680,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return getLockupInfo[delegator][toValidatorID].lockedStake;
     }
 
-    event LockedUpStake(address indexed delegator, uint256 indexed validatorID, uint256 duration, uint256 amount);
-
     function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) external {
         address delegator = msg.sender;
 
@@ -689,8 +714,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         }
         return penalty;
     }
-
-    event UnlockedStake(address indexed delegator, uint256 indexed validatorID, uint256 amount, uint256 penalty);
 
     function unlockStake(uint256 toValidatorID, uint256 amount) external returns (uint256) {
         address delegator = msg.sender;
