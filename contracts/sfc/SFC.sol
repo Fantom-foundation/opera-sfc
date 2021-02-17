@@ -89,7 +89,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     mapping(uint256 => uint256) public slashingRefundRatio; // validator ID -> (slashing refund ratio)
 
-    function isNode(address addr) internal view returns (bool) {
+    function isNode(address addr) internal virtual view returns (bool) {
         return addr == address(node);
     }
 
@@ -649,7 +649,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         snapshot.validatorIDs = nextValidatorIDs;
     }
 
-    function _now() internal view returns (uint256) {
+    function _now() internal view virtual returns (uint256) {
         return block.timestamp;
     }
 

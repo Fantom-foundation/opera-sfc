@@ -44,7 +44,7 @@ contract UnitTestSFC is SFC {
         allowedNonNodeCalls = false;
     }
 
-    function isNode(address addr) internal view returns (bool) {
+    function isNode(address addr) internal view override returns (bool) {
         if (allowedNonNodeCalls) {
             return true;
         }
