@@ -14,7 +14,7 @@ contract StakersConstants {
     /**
      * @dev Minimum amount of stake for a validator, i.e., 3175000 FTM
      */
-    function minSelfStake() public pure returns (uint256) {
+    function minSelfStake() public pure virtual returns (uint256) {
         // 3175000 FTM
         return 3175000 * 1e18;
     }

@@ -7,10 +7,10 @@ contract UnitTestSFC is SFC {
     uint256 public time;
     bool public allowedNonNodeCalls;
 
-//    function minSelfStake() public pure returns (uint256) {
-//        // 0.3175000 FTM
-//        return 0.3175000 * 1e18;
-//    }
+    function minSelfStake() public pure override returns (uint256) {
+        // 0.3175000 FTM
+        return 0.3175000 * 1e18;
+    }
 
     function rebaseTime() external {
         time = block.timestamp;
