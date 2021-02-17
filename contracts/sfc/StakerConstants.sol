@@ -1,10 +1,9 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.1;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../common/Decimal.sol";
 
 contract StakersConstants {
-    using SafeMath for uint256;
 
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;

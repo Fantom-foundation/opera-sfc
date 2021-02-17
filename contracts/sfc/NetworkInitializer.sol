@@ -1,4 +1,5 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.1;
 
 import "./SFC.sol";
 import "./NodeDriver.sol";
@@ -9,6 +10,6 @@ contract NetworkInitializer {
         NodeDriver(_driver).initialize(_auth, _evmWriter);
         NodeDriverAuth(_auth).initialize(_sfc, _driver, _owner);
         SFC(_sfc).initialize(sealedEpoch, totalSupply, _auth, _owner);
-        selfdestruct(address(0));
+        selfdestruct(payable(0));
     }
 }

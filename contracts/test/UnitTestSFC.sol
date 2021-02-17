@@ -1,14 +1,16 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.1;
 
 import "../sfc/SFC.sol";
 
 contract UnitTestSFC is SFC {
-    function minSelfStake() public pure returns (uint256) {
-        // 0.3175000 FTM
-        return 0.3175000 * 1e18;
-    }
-
     uint256 public time;
+    bool public allowedNonNodeCalls;
+
+//    function minSelfStake() public pure returns (uint256) {
+//        // 0.3175000 FTM
+//        return 0.3175000 * 1e18;
+//    }
 
     function rebaseTime() external {
         time = block.timestamp;
@@ -18,7 +20,7 @@ contract UnitTestSFC is SFC {
         time += diff;
     }
 
-    function _now() internal view returns (uint256) {
+    function _now() internal view override returns (uint256) {
         return time;
     }
 
@@ -33,8 +35,6 @@ contract UnitTestSFC is SFC {
     function highestLockupEpoch(address delegator, uint256 validatorID) external view returns (uint256) {
         return _highestLockupEpoch(delegator, validatorID);
     }
-
-    bool public allowedNonNodeCalls;
 
     function enableNonNodeCalls() external {
         allowedNonNodeCalls = true;

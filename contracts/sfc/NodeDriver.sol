@@ -1,12 +1,11 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.1;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../common/Initializable.sol";
 import "../ownership/Ownable.sol";
 import "./SFC.sol";
 
 contract NodeDriverAuth is Initializable, Ownable {
-    using SafeMath for uint256;
 
     SFC internal sfc;
     NodeDriver internal driver;
@@ -34,7 +33,7 @@ contract NodeDriverAuth is Initializable, Ownable {
 
     function incBalance(address acc, uint256 diff) external onlySFC {
         require(acc == address(sfc), "recipient is not the SFC contract");
-        driver.setBalance(acc, address(acc).balance.add(diff));
+        driver.setBalance(acc, address(acc).balance + (diff));
     }
 
     function updateNetworkRules(bytes calldata diff) external onlyOwner {
@@ -81,7 +80,7 @@ contract NodeDriverAuth is Initializable, Ownable {
 contract NodeDriver is Initializable {
     SFC internal sfc;
     NodeDriver internal backend;
-    EVMWriter internal evmWriter;
+    IEVMWriter internal evmWriter;
 
     event UpdatedBackend(address indexed backend);
 
@@ -105,7 +104,7 @@ contract NodeDriver is Initializable {
     function initialize(address _backend, address _evmWriterAddress) external initializer {
         backend = NodeDriver(_backend);
         emit UpdatedBackend(_backend);
-        evmWriter = EVMWriter(_evmWriterAddress);
+        evmWriter = IEVMWriter(_evmWriterAddress);
     }
 
     function setBalance(address acc, uint256 value) external onlyBackend {
@@ -172,7 +171,7 @@ contract NodeDriver is Initializable {
     }
 }
 
-interface EVMWriter {
+interface IEVMWriter {
     function setBalance(address acc, uint256 value) external;
 
     function copyCode(address acc, address from) external;
