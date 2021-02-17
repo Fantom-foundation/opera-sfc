@@ -289,7 +289,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
 
             it('Should return Now()', async () => {
                 const now = Math.trunc((Date.now()) / 1000);
-                expect((await this.sfc.getBlockTime()).toNumber()).to.be.within(now - 10, now + 10);
+                expect((await this.sfc.getBlockTime()).toNumber()).to.be.within(now - 15, now + 15);
             });
         });
 
@@ -553,7 +553,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
         it('Should returns Validator\'s Created Time', async () => {
             const now = Math.trunc((Date.now()) / 1000);
-            expect(validator.createdTime.toNumber()).to.be.within(now - 2, now + 2);
+            expect(validator.createdTime.toNumber()).to.be.within(now - 15, now + 15);
         });
 
         it('Should returns Validator\'s Auth (address)', async () => {
