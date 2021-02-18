@@ -99,7 +99,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         _;
     }
 
-    event CreatedValidator(uint256 indexed validatorID, address indexed auth, bytes pubkey, uint256 createdEpoch, uint256 createdTime);
+    event CreatedValidator(uint256 indexed validatorID, address indexed auth, uint256 createdEpoch, uint256 createdTime);
     event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
     event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
@@ -211,7 +211,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         getValidator[validatorID].auth = auth;
         getValidatorPubkey[validatorID] = pubkey;
 
-        emit CreatedValidator(validatorID, auth, pubkey, createdEpoch, createdTime);
+        emit CreatedValidator(validatorID, auth, createdEpoch, createdTime);
         if (deactivatedEpoch != 0) {
             emit DeactivatedValidator(validatorID, deactivatedEpoch, deactivatedTime);
         }
