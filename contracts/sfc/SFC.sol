@@ -729,7 +729,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return getLockupInfo[delegator][toValidatorID].lockedStake;
     }
 
-    function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) external {
+    function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) public {
         address delegator = msg.sender;
 
         require(amount > 0, "zero amount");
