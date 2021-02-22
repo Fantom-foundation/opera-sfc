@@ -812,17 +812,66 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Should increase balances after claiming Rewards', async () => {
+            await this.sfc.updateBaseRewardPerSecond(new BN('100000000000000'));
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            const firstDelegatorPendingRewards = await this.sfc.pendingRewards(firstDelegator, firstValidatorID);
+            expect(firstDelegatorPendingRewards).to.be.bignumber.equal(amount18('0.103275'));
+            const firstDelegatorBalance = new BN(await web3.eth.getBalance(firstDelegator));
+
+            await this.sfc.claimRewards(1, { from: firstDelegator });
+
+            const delegatorBalance = new BN(await web3.eth.getBalance(firstDelegator));
+            expect(firstDelegatorBalance.add(firstDelegatorPendingRewards)).to.be.bignumber.above(delegatorBalance);
+            expect(firstDelegatorBalance.add(firstDelegatorPendingRewards)).to.be.bignumber.below(delegatorBalance.add(amount18('0.01')));
+        });
+
+        it('Should increase stake after restaking Rewards', async () => {
             await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
 
             const firstDelegatorPendingRewards = await this.sfc.pendingRewards(firstDelegator, firstValidatorID);
-            const firstDelegatorBalance = await web3.eth.getBalance(firstDelegator);
+            expect(firstDelegatorPendingRewards).to.be.bignumber.equal(new BN('1032'));
+            const firstDelegatorStake = await this.sfc.getStake(firstDelegator, firstValidatorID);
+            const firstDelegatorLockupInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
 
-            await this.sfc.claimRewards(1, { from: firstDelegator });
+            await this.sfc.restakeRewards(1, { from: firstDelegator });
 
-            expect(new BN(firstDelegatorBalance + firstDelegatorPendingRewards)).to.be.bignumber.above(await web3.eth.getBalance(firstDelegator));
+            const delegatorStake = await this.sfc.getStake(firstDelegator, firstValidatorID);
+            const delegatorLockupInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
+            expect(delegatorStake).to.be.bignumber.equal(firstDelegatorStake.add(firstDelegatorPendingRewards));
+            expect(delegatorLockupInfo.lockedStake).to.be.bignumber.equal(firstDelegatorLockupInfo.lockedStake);
+        });
+
+        it('Should increase locked stake after restaking Rewards', async () => {
+            await this.sfc.lockStake(firstValidatorID, new BN(86400 * 219 + 10), amount18('0.2'), {
+                from: firstValidator,
+            });
+            await this.sfc.lockStake(firstValidatorID, new BN(86400 * 219), amount18('0.2'), {
+                from: firstDelegator,
+            });
+
+            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            const firstDelegatorPendingRewards = await this.sfc.pendingRewards(firstDelegator, firstValidatorID);
+            expect(firstDelegatorPendingRewards).to.be.bignumber.equal(new BN('1755'));
+            const firstDelegatorPendingLockupRewards = new BN('1239');
+            const firstDelegatorStake = await this.sfc.getStake(firstDelegator, firstValidatorID);
+            const firstDelegatorLockupInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
+
+            await this.sfc.restakeRewards(1, { from: firstDelegator });
+
+            const delegatorStake = await this.sfc.getStake(firstDelegator, firstValidatorID);
+            const delegatorLockupInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
+            expect(delegatorStake).to.be.bignumber.equal(firstDelegatorStake.add(firstDelegatorPendingRewards));
+            expect(delegatorLockupInfo.lockedStake).to.be.bignumber.equal(firstDelegatorLockupInfo.lockedStake.add(firstDelegatorPendingLockupRewards));
         });
 
         it('Should return stashed Rewards', async () => {
