@@ -67,29 +67,14 @@ contract StakersConstants {
     }
 
     /**
-     * @dev the period of time that stake is locked
-     */
-    function stakeLockPeriodTime() public pure returns (uint256) {
-        // 7 days
-        return 60 * 60 * 24 * 7;
-    }
-
-    /**
      * @dev the number of epochs that stake is locked
      */
-    function unstakePeriodEpochs() public pure returns (uint256) {
+    function withdrawalPeriodEpochs() public pure returns (uint256) {
         return 3;
     }
 
-    function unstakePeriodTime() public pure returns (uint256) {
+    function withdrawalPeriodTime() public pure returns (uint256) {
         // 7 days
         return 60 * 60 * 24 * 7;
-    }
-
-    /**
-     * @dev number of epochs to lock a delegation
-     */
-    function delegationLockPeriodEpochs() public pure returns (uint256) {
-        return 3;
     }
 }
