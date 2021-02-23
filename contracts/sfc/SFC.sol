@@ -39,13 +39,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     uint256 public totalActiveStake;
     uint256 public totalSlashedStake;
 
-    struct StashedRewards {
+    struct Rewards {
         uint256 lockupExtraReward;
         uint256 lockupBaseReward;
         uint256 unlockedReward;
     }
 
-    mapping(address => mapping(uint256 => StashedRewards)) public _rewardsStash; // addr, validatorID -> StashedRewards
+    mapping(address => mapping(uint256 => Rewards)) public _rewardsStash; // addr, validatorID -> Rewards
 
     mapping(address => mapping(uint256 => uint256)) public stashedRewardUntilEpoch;
 
@@ -63,12 +63,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 fromEpoch;
         uint256 endTime;
         uint256 duration;
-        uint256 earlyUnlockPenalty;
     }
 
     mapping(address => mapping(uint256 => uint256)) public getStake;
 
     mapping(address => mapping(uint256 => LockedDelegation)) public getLockupInfo;
+
+    mapping(address => mapping(uint256 => Rewards)) public getStashedLockupRewards;
 
     struct EpochSnapshot {
         mapping(uint256 => uint256) receivedStake;
@@ -158,7 +159,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
     function rewardsStash(address delegator, uint256 validatorID) public view returns (uint256) {
-        StashedRewards memory stash = _rewardsStash[delegator][validatorID];
+        Rewards memory stash = _rewardsStash[delegator][validatorID];
         return stash.lockupBaseReward.add(stash.lockupExtraReward).add(stash.unlockedReward);
     }
 
@@ -194,7 +195,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             ld.fromEpoch = lockupFromEpoch;
             ld.endTime = lockupEndTime;
             ld.duration = lockupDuration;
-            ld.earlyUnlockPenalty = earlyUnlockPenalty;
+            getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward = earlyUnlockPenalty;
             emit LockedUpStake(delegator, toValidatorID, lockupDuration, lockedStake);
         }
     }
@@ -437,31 +438,29 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return r - 1;
     }
 
-    function _scaleLockupReward(uint256 fullReward, uint256 lockupDuration) private pure returns (StashedRewards memory reward, uint256 penalty) {
-        reward = StashedRewards(0, 0, 0);
+    function _scaleLockupReward(uint256 fullReward, uint256 lockupDuration) private pure returns (Rewards memory reward) {
+        reward = Rewards(0, 0, 0);
         if (lockupDuration != 0) {
             uint256 maxLockupExtraRatio = Decimal.unit() - unlockedRewardRatio();
             uint256 lockupExtraRatio = maxLockupExtraRatio.mul(lockupDuration).div(maxLockupDuration());
             uint256 totalScaledReward = fullReward.mul(unlockedRewardRatio() + lockupExtraRatio).div(Decimal.unit());
             reward.lockupBaseReward = fullReward.mul(unlockedRewardRatio()).div(Decimal.unit());
             reward.lockupExtraReward = totalScaledReward - reward.lockupBaseReward;
-            penalty = reward.lockupExtraReward + reward.lockupBaseReward / 2;
         } else {
             reward.unlockedReward = fullReward.mul(unlockedRewardRatio()).div(Decimal.unit());
-            penalty = 0;
         }
-        return (reward, penalty);
+        return reward;
     }
 
-    function sumStashedRewards(StashedRewards memory a, StashedRewards memory b) internal pure returns(StashedRewards memory) {
-        return StashedRewards(a.lockupExtraReward.add(b.lockupExtraReward), a.lockupBaseReward.add(b.lockupBaseReward), a.unlockedReward.add(b.unlockedReward));
+    function sumRewards(Rewards memory a, Rewards memory b) internal pure returns (Rewards memory) {
+        return Rewards(a.lockupExtraReward.add(b.lockupExtraReward), a.lockupBaseReward.add(b.lockupBaseReward), a.unlockedReward.add(b.unlockedReward));
     }
 
-    function sumStashedRewards(StashedRewards memory a, StashedRewards memory b, StashedRewards memory c) internal pure returns(StashedRewards memory) {
-        return sumStashedRewards(sumStashedRewards(a, b), c);
+    function sumRewards(Rewards memory a, Rewards memory b, Rewards memory c) internal pure returns (Rewards memory) {
+        return sumRewards(sumRewards(a, b), c);
     }
 
-    function _nonStashedRewards(address delegator, uint256 toValidatorID) internal view returns (StashedRewards memory reward, uint256 penalty) {
+    function _newRewards(address delegator, uint256 toValidatorID) internal view returns (Rewards memory) {
         uint256 claimedUntil = stashedRewardUntilEpoch[delegator][toValidatorID];
         uint256 payableUntil = _highestPayableEpoch(toValidatorID);
         uint256 lockedUntil = _highestLockupEpoch(delegator, toValidatorID);
@@ -478,19 +477,19 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 fullReward;
 
         // count reward for locked stake during lockup epochs
-        fullReward = _nonStashedRewardsOf(ld.lockedStake, toValidatorID, claimedUntil, lockedUntil);
-        (StashedRewards memory plReward, uint256 plPenalty) = _scaleLockupReward(fullReward, ld.duration);
+        fullReward = _newRewardsOf(ld.lockedStake, toValidatorID, claimedUntil, lockedUntil);
+        Rewards memory plReward = _scaleLockupReward(fullReward, ld.duration);
         // count reward for unlocked stake during lockup epochs
-        fullReward = _nonStashedRewardsOf(unlockedStake, toValidatorID, claimedUntil, lockedUntil);
-        (StashedRewards memory puReward, uint256 puPenalty) = _scaleLockupReward(fullReward, 0);
+        fullReward = _newRewardsOf(unlockedStake, toValidatorID, claimedUntil, lockedUntil);
+        Rewards memory puReward = _scaleLockupReward(fullReward, 0);
         // count lockup reward for unlocked stake during unlocked epochs
-        fullReward = _nonStashedRewardsOf(wholeStake, toValidatorID, lockedUntil, payableUntil);
-        (StashedRewards memory wuReward, uint256 wuPenalty) = _scaleLockupReward(fullReward, 0);
+        fullReward = _newRewardsOf(wholeStake, toValidatorID, lockedUntil, payableUntil);
+        Rewards memory wuReward = _scaleLockupReward(fullReward, 0);
 
-        return (sumStashedRewards(plReward, puReward, wuReward), plPenalty.add(puPenalty).add(wuPenalty));
+        return sumRewards(plReward, puReward, wuReward);
     }
 
-    function _nonStashedRewardsOf(uint256 stakeAmount, uint256 toValidatorID, uint256 fromEpoch, uint256 toEpoch) public view returns (uint256) {
+    function _newRewardsOf(uint256 stakeAmount, uint256 toValidatorID, uint256 fromEpoch, uint256 toEpoch) public view returns (uint256) {
         if (fromEpoch >= toEpoch) {
             return 0;
         }
@@ -499,13 +498,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return currentRate.sub(claimedRate).mul(stakeAmount).div(Decimal.unit());
     }
 
-    function _pendingRewards(address delegator, uint256 toValidatorID) internal view returns (StashedRewards memory) {
-        (StashedRewards memory reward,) = _nonStashedRewards(delegator, toValidatorID);
-        return sumStashedRewards(_rewardsStash[delegator][toValidatorID], reward);
+    function _pendingRewards(address delegator, uint256 toValidatorID) internal view returns (Rewards memory) {
+        Rewards memory reward = _newRewards(delegator, toValidatorID);
+        return sumRewards(_rewardsStash[delegator][toValidatorID], reward);
     }
 
     function pendingRewards(address delegator, uint256 toValidatorID) public view returns (uint256) {
-        StashedRewards memory reward = _pendingRewards(delegator, toValidatorID);
+        Rewards memory reward = _pendingRewards(delegator, toValidatorID);
         return reward.unlockedReward.add(reward.lockupBaseReward).add(reward.lockupExtraReward);
     }
 
@@ -514,11 +513,10 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
     function _stashRewards(address delegator, uint256 toValidatorID) internal returns (bool updated) {
-        (StashedRewards memory nonStashedReward, uint256 nonStashedPenalty) = _nonStashedRewards(delegator, toValidatorID);
+        Rewards memory nonStashedReward = _newRewards(delegator, toValidatorID);
         stashedRewardUntilEpoch[delegator][toValidatorID] = _highestPayableEpoch(toValidatorID);
-        _rewardsStash[delegator][toValidatorID] = sumStashedRewards(_rewardsStash[delegator][toValidatorID], nonStashedReward);
-        LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
-        ld.earlyUnlockPenalty = ld.earlyUnlockPenalty.add(nonStashedPenalty);
+        _rewardsStash[delegator][toValidatorID] = sumRewards(_rewardsStash[delegator][toValidatorID], nonStashedReward);
+        getStashedLockupRewards[delegator][toValidatorID] = sumRewards(getStashedLockupRewards[delegator][toValidatorID], nonStashedReward);
         return true;
     }
 
@@ -527,7 +525,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         node.incBalance(address(this), amount);
     }
 
-    function _claimRewards(address delegator, uint256 toValidatorID) internal returns (StashedRewards memory rewards) {
+    function _claimRewards(address delegator, uint256 toValidatorID) internal returns (Rewards memory rewards) {
         _stashRewards(delegator, toValidatorID);
         rewards = _rewardsStash[delegator][toValidatorID];
         uint256 totalReward = rewards.unlockedReward.add(rewards.lockupBaseReward).add(rewards.lockupExtraReward);
@@ -540,7 +538,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     function claimRewards(uint256 toValidatorID) public {
         address payable delegator = msg.sender;
-        StashedRewards memory rewards = _claimRewards(delegator, toValidatorID);
+        Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         delegator.transfer(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward));
 
@@ -549,7 +547,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     function restakeRewards(uint256 toValidatorID) public {
         address delegator = msg.sender;
-        StashedRewards memory rewards = _claimRewards(delegator, toValidatorID);
+        Rewards memory rewards = _claimRewards(delegator, toValidatorID);
 
         uint256 lockupReward = rewards.lockupExtraReward.add(rewards.lockupBaseReward);
         _delegate(delegator, toValidatorID, lockupReward.add(rewards.unlockedReward));
@@ -656,10 +654,10 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             {
                 uint256 lCommissionRewardFull = commissionRewardFull * getLockedStake(validatorAddr, validatorID) / getStake[validatorAddr][validatorID];
                 uint256 uCommissionRewardFull = commissionRewardFull - lCommissionRewardFull;
-                (StashedRewards memory lCommissionReward, uint256 lCommissionPenalty) = _scaleLockupReward(lCommissionRewardFull, ld.duration);
-                (StashedRewards memory uCommissionReward, uint256 uCommissionPenalty) = _scaleLockupReward(uCommissionRewardFull, 0);
-                _rewardsStash[validatorAddr][validatorID] = sumStashedRewards(_rewardsStash[validatorAddr][validatorID], lCommissionReward, uCommissionReward);
-                ld.earlyUnlockPenalty = ld.earlyUnlockPenalty.add(lCommissionPenalty).add(uCommissionPenalty);
+                Rewards memory lCommissionReward = _scaleLockupReward(lCommissionRewardFull, ld.duration);
+                Rewards memory uCommissionReward = _scaleLockupReward(uCommissionRewardFull, 0);
+                _rewardsStash[validatorAddr][validatorID] = sumRewards(_rewardsStash[validatorAddr][validatorID], lCommissionReward, uCommissionReward);
+                getStashedLockupRewards[validatorAddr][validatorID] = sumRewards(getStashedLockupRewards[validatorAddr][validatorID], lCommissionReward, uCommissionReward);
             }
             // accounting reward per token for delegators
             uint256 delegatorsReward = rawReward - commissionRewardFull;
@@ -751,13 +749,18 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         ld.fromEpoch = currentEpoch();
         ld.endTime = endTime;
         ld.duration = lockupDuration;
-        ld.earlyUnlockPenalty = 0;
+        delete getStashedLockupRewards[delegator][toValidatorID];
 
         emit LockedUpStake(delegator, toValidatorID, lockupDuration, amount);
     }
 
-    function _calcDelegationUnlockPenalty(uint256 totalPenaltyAmount, uint256 unlockAmount, uint256 totalAmount) internal pure returns (uint256) {
+    function _popDelegationUnlockPenalty(address delegator, uint256 toValidatorID, uint256 unlockAmount, uint256 totalAmount) internal returns (uint256) {
+        uint256 lockupExtraRewardShare = getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward.mul(unlockAmount).div(totalAmount);
+        uint256 lockupBaseRewardShare = getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward.mul(unlockAmount).div(totalAmount);
+        uint256 totalPenaltyAmount = lockupExtraRewardShare + lockupBaseRewardShare / 2;
         uint256 penalty = totalPenaltyAmount.mul(unlockAmount).div(totalAmount);
+        getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward = getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward.sub(lockupExtraRewardShare);
+        getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward = getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward.sub(lockupBaseRewardShare);
         if (penalty >= unlockAmount) {
             penalty = unlockAmount;
         }
@@ -774,9 +777,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         _stashRewards(delegator, toValidatorID);
 
-        uint256 penalty = _calcDelegationUnlockPenalty(ld.earlyUnlockPenalty, amount, ld.lockedStake);
+        uint256 penalty = _popDelegationUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
 
-        ld.earlyUnlockPenalty -= penalty;
         ld.lockedStake -= amount;
         getStake[delegator][toValidatorID] -= penalty;
 
