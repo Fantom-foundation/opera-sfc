@@ -162,7 +162,7 @@ contract LegacySfcWrapper is SFC {
         revert("use SFCv3 withdraw() function");
     }
 
-    function prepareToWithdrawDelegation(uint256 toStakerID) external {
+    function prepareToWithdrawDelegation(uint256 /*toStakerID*/) external {
         if (false) {
             address(0).transfer(0);
         }
@@ -173,7 +173,7 @@ contract LegacySfcWrapper is SFC {
         undelegate(toStakerID, wrID, amount);
     }
 
-    function withdrawDelegation(uint256 toStakerID) external {
+    function withdrawDelegation(uint256 /*toStakerID*/) external {
         if (false) {
             address(0).transfer(0);
         }
