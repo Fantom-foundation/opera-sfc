@@ -568,7 +568,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             validator = await this.sfc.getValidator(1);
         });
 
-        it('Returns stashedRewardUntilEpoch', async () => {
+        it('Returns stashedRewardsUntilEpoch', async () => {
             expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('12'));
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('13'));
             await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102]);
@@ -770,9 +770,9 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await this.sfc.updateBaseRewardPerSecond(new BN('1'));
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
-            expect(await this.sfc.stashedRewardUntilEpoch(firstDelegator, 1)).to.bignumber.equal(new BN(0));
+            expect(await this.sfc.stashedRewardsUntilEpoch(firstDelegator, 1)).to.bignumber.equal(new BN(0));
             await this.sfc.claimRewards(1, { from: firstDelegator });
-            expect(await this.sfc.stashedRewardUntilEpoch(firstDelegator, 1)).to.bignumber.equal(await this.sfc.currentSealedEpoch());
+            expect(await this.sfc.stashedRewardsUntilEpoch(firstDelegator, 1)).to.bignumber.equal(await this.sfc.currentSealedEpoch());
         });
 
         it('Check pending Rewards of delegators', async () => {
