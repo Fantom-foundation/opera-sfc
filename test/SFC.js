@@ -783,20 +783,20 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
 
-            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('3523');
-            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('1032');
+            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('6966');
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('2754');
         });
 
         it('Check if pending Rewards have been increased after sealing Epoch', async () => {
             await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
-            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('3523');
-            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('1032');
+            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('6966');
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('2754');
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
-            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('7046');
-            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('2065');
+            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('13932');
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('5508');
         });
 
         it('Should increase balances after claiming Rewards', async () => {
@@ -806,7 +806,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
 
             const firstDelegatorPendingRewards = await this.sfc.pendingRewards(firstDelegator, firstValidatorID);
-            expect(firstDelegatorPendingRewards).to.be.bignumber.equal(amount18('0.103275'));
+            expect(firstDelegatorPendingRewards).to.be.bignumber.equal(amount18('0.2754'));
             const firstDelegatorBalance = new BN(await web3.eth.getBalance(firstDelegator));
 
             await this.sfc.claimRewards(1, { from: firstDelegator });
@@ -823,7 +823,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
 
             const firstDelegatorPendingRewards = await this.sfc.pendingRewards(firstDelegator, firstValidatorID);
-            expect(firstDelegatorPendingRewards).to.be.bignumber.equal(new BN('1032'));
+            expect(firstDelegatorPendingRewards).to.be.bignumber.equal(new BN('2754'));
             const firstDelegatorStake = await this.sfc.getStake(firstDelegator, firstValidatorID);
             const firstDelegatorLockupInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
 
@@ -849,8 +849,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
 
             const firstDelegatorPendingRewards = await this.sfc.pendingRewards(firstDelegator, firstValidatorID);
-            expect(firstDelegatorPendingRewards).to.be.bignumber.equal(new BN('1755'));
-            const firstDelegatorPendingLockupRewards = new BN('1239');
+            expect(firstDelegatorPendingRewards).to.be.bignumber.equal(new BN('4681'));
+            const firstDelegatorPendingLockupRewards = new BN('3304');
             const firstDelegatorStake = await this.sfc.getStake(firstDelegator, firstValidatorID);
             const firstDelegatorLockupInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
 
@@ -871,7 +871,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             expect((await this.sfc.rewardsStash(firstDelegator, 1)).toString()).to.equals('0');
 
             await this.sfc.stashRewards(firstDelegator, 1);
-            expect((await this.sfc.rewardsStash(firstDelegator, 1)).toString()).to.equals('1032');
+            expect((await this.sfc.rewardsStash(firstDelegator, 1)).toString()).to.equals('2754');
         });
 
         it('Should update the validator on node', async () => {
@@ -979,8 +979,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
 
-            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('7221');
-            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('1152');
+            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('14279');
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('3074');
         });
 
         // note: copied from the non-lockup tests
@@ -988,12 +988,12 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await this.sfc.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
-            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('7221');
-            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('1152');
+            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('14279');
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('3074');
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
-            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('14443');
-            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('2305');
+            expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('28558');
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('6150');
         });
 
         // note: copied from the non-lockup tests
@@ -1021,7 +1021,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             expect((await this.sfc.rewardsStash(firstDelegator, 1)).toString()).to.equals('0');
 
             await this.sfc.stashRewards(firstDelegator, 1);
-            expect((await this.sfc.rewardsStash(firstDelegator, 1)).toString()).to.equals('1152');
+            expect((await this.sfc.rewardsStash(firstDelegator, 1)).toString()).to.equals('3074');
         });
 
         it('Should return pending rewards after unlocking and re-locking', async () => {
@@ -1034,10 +1034,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 // validator 1 should receive more rewards than validator 2
                 await sealEpoch(this.sfc, (new BN(86400 * (73))).toString());
 
-                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(84185));
-                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(75390));
-                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(527290));
-                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(257215));
+                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(224496));
+                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(201042));
+                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(1042461));
+                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(508518));
 
                 expect(await this.sfc.highestLockupEpoch(firstDelegator, 1)).to.be.bignumber.equal(epoch.add(new BN(1)));
                 expect(await this.sfc.highestLockupEpoch(secondDelegator, 2)).to.be.bignumber.equal(new BN(0));
@@ -1049,10 +1049,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 // validator 1 should receive more rewards than validator 2
                 await sealEpoch(this.sfc, (new BN(86400 * (1))).toString());
 
-                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(84185 + 1032));
-                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(75390 + 1033));
-                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(527290 + 7222));
-                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(257215 + 3523));
+                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(224496 + 2754));
+                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(201042 + 2754));
+                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(1042461 + 14279));
+                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(508518 + 6966));
                 expect(await this.sfc.highestLockupEpoch(firstDelegator, 1)).to.be.bignumber.equal(epoch.add(new BN(1)));
                 expect(await this.sfc.highestLockupEpoch(firstValidator, 1)).to.be.bignumber.equal(epoch.add(new BN(2)));
 
@@ -1061,10 +1061,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 // validator 1 should receive more rewards than validator 2
                 await sealEpoch(this.sfc, (new BN(86400 * (145))).toString());
 
-                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(84185 + 1032 + 149749));
-                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(75390 + 1033 + 149749));
-                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(527290 + 7222 + 1047359));
-                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(257215 + 3523 + 510908));
+                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(224496 + 2754 + 399330));
+                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(201042 + 2754 + 399330));
+                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(1042461 + 14279 + 2070643));
+                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(508518 + 6966 + 1010070));
                 expect(await this.sfc.highestLockupEpoch(firstDelegator, 1)).to.be.bignumber.equal(epoch.add(new BN(1)));
                 expect(await this.sfc.highestLockupEpoch(firstValidator, 1)).to.be.bignumber.equal(epoch.add(new BN(3)));
 
@@ -1073,10 +1073,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 // validator 1 should receive the same reward as validator 2
                 await sealEpoch(this.sfc, (new BN(86400 * (1))).toString());
 
-                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(84185 + 1032 + 149749 + 1033));
-                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(75390 + 1033 + 149749 + 1032));
-                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(527290 + 7222 + 1047359 + 3523));
-                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(257215 + 3523 + 510908 + 3523));
+                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(224496 + 2754 + 399330 + 2754));
+                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(201042 + 2754 + 399330 + 2754));
+                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(1042461 + 14279 + 2070643 + 6966));
+                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(508518 + 6966 + 1010070 + 6966));
                 expect(await this.sfc.highestLockupEpoch(firstDelegator, 1)).to.be.bignumber.equal(epoch.add(new BN(1)));
                 expect(await this.sfc.highestLockupEpoch(firstValidator, 1)).to.be.bignumber.equal(epoch.add(new BN(3)));
 
@@ -1088,10 +1088,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                     from: firstDelegator,
                 });
                 // check rewards didn't change after re-locking
-                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(84185 + 1032 + 149749 + 1033));
-                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(75390 + 1033 + 149749 + 1032));
-                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(527290 + 7222 + 1047359 + 3523));
-                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(257215 + 3523 + 510908 + 3523));
+                expect(await this.sfc.pendingRewards(firstDelegator, 1)).to.be.bignumber.equal(new BN(224496 + 2754 + 399330 + 2754));
+                expect(await this.sfc.pendingRewards(secondDelegator, 2)).to.be.bignumber.equal(new BN(201042 + 2754 + 399330 + 2754));
+                expect(await this.sfc.pendingRewards(firstValidator, 1)).to.be.bignumber.equal(new BN(1042461 + 14279 + 2070643 + 6966));
+                expect(await this.sfc.pendingRewards(secondValidator, 2)).to.be.bignumber.equal(new BN(508518 + 6966 + 1010070 + 6966));
                 expect(await this.sfc.highestLockupEpoch(firstDelegator, 1)).to.be.bignumber.equal(new BN(0));
                 expect(await this.sfc.highestLockupEpoch(firstValidator, 1)).to.be.bignumber.equal(new BN(0));
                 // claim rewards to reset pending rewards
