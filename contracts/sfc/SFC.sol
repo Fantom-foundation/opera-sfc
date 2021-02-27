@@ -669,7 +669,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             }
             // accounting reward per token for delegators
             uint256 delegatorsReward = rawReward - commissionRewardFull;
-            uint256 receivedStake = snapshot.receivedStake[validatorIDs[i]];
+            // note: use latest stake for the sake of rewards distribution accuracy, not snapshot.receivedStake
+            uint256 receivedStake = getValidator[validatorID].receivedStake;
             uint256 rewardPerToken = 0;
             if (receivedStake != 0) {
                 rewardPerToken = (delegatorsReward * Decimal.unit()) / receivedStake;
