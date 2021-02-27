@@ -37,6 +37,11 @@ contract NodeDriverAuth is Initializable, Ownable {
         driver.setBalance(acc, address(acc).balance.add(diff));
     }
 
+    function copyCode(address acc, address from) external onlyOwner {
+        require(acc == address(sfc) || acc == address(this), "not SFC or self address");
+        driver.copyCode(acc, from);
+    }
+
     function updateNetworkRules(bytes calldata diff) external onlyOwner {
         driver.updateNetworkRules(diff);
     }
