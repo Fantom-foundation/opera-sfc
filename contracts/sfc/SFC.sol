@@ -182,6 +182,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         baseRewardPerSecond = 6.183414351851851852 * 1e18;
         offlinePenaltyThresholdBlocksNum = 1000;
         offlinePenaltyThresholdTime = 3 days;
+        getEpochSnapshot[sealedEpoch].endTime = _now();
     }
 
     function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyDriver {
@@ -668,7 +669,11 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             }
             // accounting reward per token for delegators
             uint256 delegatorsReward = rawReward - commissionRewardFull;
-            uint256 rewardPerToken = (delegatorsReward * Decimal.unit()) / snapshot.totalStake;
+            uint256 receivedStake = snapshot.receivedStake[validatorIDs[i]];
+            uint256 rewardPerToken = 0;
+            if (receivedStake != 0) {
+                rewardPerToken = (delegatorsReward * Decimal.unit()) / receivedStake;
+            }
             snapshot.accumulatedRewardPerToken[validatorID] = prevSnapshot.accumulatedRewardPerToken[validatorID] + rewardPerToken;
             //
             snapshot.accumulatedOriginatedTxsFee[validatorID] = prevSnapshot.accumulatedOriginatedTxsFee[validatorID] + originatedTxsFee[i];
