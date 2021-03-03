@@ -9,23 +9,23 @@ contract LegacySfcWrapper is SFC {
     }
 
     function minStakeIncrease() public pure returns (uint256) {
-        return 0;
+        return 1;
     }
 
     function minStakeDecrease() public pure returns (uint256) {
-        return 0;
+        return 1;
     }
 
     function minDelegation() public pure returns (uint256) {
-        return 0;
+        return 1;
     }
 
     function minDelegationIncrease() public pure returns (uint256) {
-        return 0;
+        return 1;
     }
 
     function minDelegationDecrease() public pure returns (uint256) {
-        return 0;
+        return 1;
     }
 
     function stakeLockPeriodTime() public pure returns (uint256) {
@@ -114,29 +114,33 @@ contract LegacySfcWrapper is SFC {
     }
 
     function calcDelegationRewards(address delegator, uint256 toStakerID, uint256 /*_fromEpoch*/, uint256 /*maxEpochs*/) public view returns (uint256, uint256, uint256) {
-        return (pendingRewards(delegator, toStakerID), currentSealedEpoch, currentSealedEpoch);
+        uint256 rewards = pendingRewards(delegator, toStakerID);
+        if (rewards == 0) {
+            return (0, 1, 0);
+        }
+        return (rewards, currentSealedEpoch, currentSealedEpoch);
     }
 
     function calcValidatorRewards(uint256 stakerID, uint256 /*_fromEpoch*/, uint256 /*maxEpochs*/) public view returns (uint256, uint256, uint256) {
-        return (pendingRewards(getValidator[stakerID].auth, stakerID), currentSealedEpoch, currentSealedEpoch);
+        uint256 rewards = pendingRewards(getValidator[stakerID].auth, stakerID);
+        if (rewards == 0) {
+            return (0, 1, 0);
+        }
+        return (rewards, currentSealedEpoch, currentSealedEpoch);
     }
-
 
     function claimDelegationRewards(uint256 /*maxEpochs*/, uint256 toStakerID) external {
         claimRewards(toStakerID);
     }
 
-
     function claimDelegationCompoundRewards(uint256 /*maxEpochs*/, uint256 toStakerID) external {
         restakeRewards(toStakerID);
     }
-
 
     function claimValidatorRewards(uint256 /*maxEpochs*/) external {
         uint256 validatorID = getValidatorID[msg.sender];
         claimRewards(validatorID);
     }
-
 
     function claimValidatorCompoundRewards(uint256 /*maxEpochs*/) external {
         uint256 validatorID = getValidatorID[msg.sender];
