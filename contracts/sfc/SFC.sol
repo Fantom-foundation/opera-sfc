@@ -45,7 +45,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 unlockedReward;
     }
 
-    mapping(address => mapping(uint256 => Rewards)) public _rewardsStash; // addr, validatorID -> Rewards
+    mapping(address => mapping(uint256 => Rewards)) internal _rewardsStash; // addr, validatorID -> Rewards
 
     mapping(address => mapping(uint256 => uint256)) public stashedRewardsUntilEpoch;
 
