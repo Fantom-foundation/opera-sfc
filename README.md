@@ -11,9 +11,13 @@ It distributes the rewards, based on internal transaction created by the Opera n
 3. `npm update`
 4. `truffle build`
 
+Build output can be found in `build/`
+
 # Compile in docker
 
 1. `make`
+
+Build output can be found in `build/`
 
 # Test
 
