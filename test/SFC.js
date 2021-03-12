@@ -1329,7 +1329,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
     describe('Test Rewards Calculation', () => {
 
-        it("Should calculation of validators rewards should be equal to 30%", async () => {
+        it("Calculation of validators rewards should be equal to 30%", async () => {
             await sealEpoch(this.sfc, (new BN(1000)).toString());
 
             let rewardAcc1 = (await this.sfc.pendingRewards(account1, testValidator1ID)).toString().slice(0, -16);
