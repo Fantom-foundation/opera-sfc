@@ -1889,10 +1889,6 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
     });
 
     describe('Test Rewards with lockup Calculation', () => {
-        it('Should not stash if nothing to stash', async () => {
-            await expectRevert(this.sfc.stashRewards(thirdDelegator, testValidator3ID, { from: thirdDelegator }), 'nothing to stash');
-        });
-
         it('Should not update slashing refund ratio', async () => {
             await sealEpoch(this.sfc, (new BN(1000)).toString());
 
@@ -1906,5 +1902,6 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         it('Should not sync if validator does not exist', async () => {
             await expectRevert(this.sfc._syncValidator(33, false), "validator doesn't exist");
         });
+
     });
 });
