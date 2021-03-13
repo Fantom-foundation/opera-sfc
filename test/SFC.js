@@ -1902,6 +1902,5 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         it('Should not sync if validator does not exist', async () => {
             await expectRevert(this.sfc._syncValidator(33, false), "validator doesn't exist");
         });
-
     });
 });
