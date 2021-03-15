@@ -132,27 +132,27 @@ contract('SFC', async (accounts) => {
 
         it('Should return minStakeIncrease', async () => {
             const minStakeIncrease = (await legacySfcWrapper.minStakeIncrease());
-            expect(minStakeIncrease.toString()).to.equal('0');
+            expect(minStakeIncrease.toString()).to.equal('1');
         });
 
         it('Should return minStakeDecrease', async () => {
             const minStakeDecrease = (await legacySfcWrapper.minStakeDecrease());
-            expect(minStakeDecrease.toString()).to.equal('0');
+            expect(minStakeDecrease.toString()).to.equal('1');
         });
 
         it('Should return minDelegation', async () => {
             const minDelegation = (await legacySfcWrapper.minDelegation());
-            expect(minDelegation.toString()).to.equal('0');
+            expect(minDelegation.toString()).to.equal('1');
         });
 
         it('Should return minDelegationIncrease', async () => {
             const minDelegationIncrease = (await legacySfcWrapper.minDelegationIncrease());
-            expect(minDelegationIncrease.toString()).to.equal('0');
+            expect(minDelegationIncrease.toString()).to.equal('1');
         });
 
         it('Should return minDelegationDecrease', async () => {
             const minDelegationDecrease = (await legacySfcWrapper.minDelegationDecrease());
-            expect(minDelegationDecrease.toString()).to.equal('0');
+            expect(minDelegationDecrease.toString()).to.equal('1');
         });
 
         it('Should return stakeLockPeriodTime', async () => {
