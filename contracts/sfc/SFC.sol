@@ -244,10 +244,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         }
     }
 
-    function _isSelfStake(address delegator, uint256 toValidatorID) internal view returns (bool) {
-        return getValidatorID[delegator] == toValidatorID;
-    }
-
     function _getSelfStake(uint256 validatorID) internal view returns (uint256) {
         return getStake[getValidator[validatorID].auth][validatorID];
     }
