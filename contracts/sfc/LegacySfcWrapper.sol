@@ -63,7 +63,7 @@ contract LegacySfcWrapper is SFC {
         } else if (v.status == WITHDRAWN_BIT) {
             v.status = 0;
         }
-        uint256 selfStake = _getSelfStake(_stakerID);
+        uint256 selfStake = getSelfStake(_stakerID);
         return (v.status, v.createdEpoch, v.createdTime, v.deactivatedEpoch, v.deactivatedTime, selfStake, 1, v.receivedStake.sub(selfStake), v.auth, v.auth);
     }
 
@@ -193,7 +193,7 @@ contract LegacySfcWrapper is SFC {
 
     function lockUpStake(uint256 lockDuration) external {
         uint256 validatorID = getValidatorID[msg.sender];
-        lockStake(validatorID, lockDuration, _getSelfStake(validatorID));
+        lockStake(validatorID, lockDuration, getSelfStake(validatorID));
     }
 
     function lockUpDelegation(uint256 lockDuration, uint256 toStakerID) external {

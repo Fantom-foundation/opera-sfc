@@ -244,12 +244,12 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         }
     }
 
-    function _getSelfStake(uint256 validatorID) internal view returns (uint256) {
+    function getSelfStake(uint256 validatorID) public view returns (uint256) {
         return getStake[getValidator[validatorID].auth][validatorID];
     }
 
     function _checkDelegatedStakeLimit(uint256 validatorID) internal view returns (bool) {
-        return getValidator[validatorID].receivedStake <= _getSelfStake(validatorID).mul(maxDelegatedRatio()).div(Decimal.unit());
+        return getValidator[validatorID].receivedStake <= getSelfStake(validatorID).mul(maxDelegatedRatio()).div(Decimal.unit());
     }
 
     function delegate(uint256 toValidatorID) external payable {
@@ -314,7 +314,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             totalActiveStake = totalActiveStake.sub(amount);
         }
 
-        uint256 selfStakeAfterwards = _getSelfStake(toValidatorID);
+        uint256 selfStakeAfterwards = getSelfStake(toValidatorID);
         if (selfStakeAfterwards != 0) {
             require(selfStakeAfterwards >= minSelfStake(), "insufficient self-stake");
             require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
