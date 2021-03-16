@@ -4,24 +4,15 @@ The SFC (Special Fee Contract) maintains a group of validators and their delegat
 
 It distributes the rewards, based on internal transaction created by the Opera node.
 
-# Compile
-
-1. Install nodejs 10.5.0
-2. `npm install -g truffle@v5.1.4` # install truffle v5.1.4
-3. `npm update`
-4. `truffle build`
-
-Build output can be found in `build/`
-
 # Compile in docker
 
 1. `make`
 
 Build output can be found in `build/`
 
-# Test
+# Test in docker
 
-1. `npm test`
+1. `make test`
 
 If everything is all right, it should output something along this:
 ```
