@@ -5,6 +5,7 @@ import "./StakerConstants.sol";
 import "../ownership/Ownable.sol";
 import "../version/Version.sol";
 import "./NodeDriver.sol";
+import "./StakeTokenizer.sol";
 
 /**
  * @dev Stakers contract defines data structure and methods for validators / validators.
@@ -98,6 +99,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     uint256 offlinePenaltyThresholdTime;
 
     mapping(uint256 => uint256) public slashingRefundRatio; // validator ID -> (slashing refund ratio)
+
+    address public stakeTokenizerAddress;
 
     function isNode(address addr) internal view returns (bool) {
         return addr == address(node);
@@ -304,6 +307,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         require(amount > 0, "zero amount");
         require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough unlocked stake");
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
 
         require(getWithdrawalRequest[delegator][toValidatorID][wrID].amount == 0, "wrID already exists");
 
@@ -351,6 +355,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         address payable delegator = msg.sender;
         WithdrawalRequest memory request = getWithdrawalRequest[delegator][toValidatorID][wrID];
         require(request.epoch != 0, "request doesn't exist");
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
 
         uint256 requestTime = request.time;
         uint256 requestEpoch = request.epoch;
@@ -600,6 +605,10 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
     }
 
+    function updateStakeTokenizerAddress(address addr) onlyOwner external {
+        stakeTokenizerAddress = addr;
+    }
+
     function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTime, uint256[] memory offlineBlocks) internal {
         // mark offline nodes
         for (uint256 i = 0; i < validatorIDs.length; i++) {
@@ -723,6 +732,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return getLockupInfo[delegator][toValidatorID].fromEpoch <= epoch && epochEndTime(epoch) <= getLockupInfo[delegator][toValidatorID].endTime;
     }
 
+    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns(bool) {
+        if (stakeTokenizerAddress == address(0)) {
+            return true;
+        }
+        return StakeTokenizer(stakeTokenizerAddress).allowedToWithdrawStake(delegator, toValidatorID);
+    }
+
     function getUnlockedStake(address delegator, uint256 toValidatorID) public view returns (uint256) {
         if (!isLockedUp(delegator, toValidatorID)) {
             return getStake[delegator][toValidatorID];
@@ -777,6 +793,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         require(amount > 0, "zero amount");
         require(isLockedUp(delegator, toValidatorID), "not locked up");
         require(amount <= ld.lockedStake, "not enough locked stake");
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
 
         _stashRewards(delegator, toValidatorID);
 
