@@ -631,7 +631,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 epochFee;
     }
 
-    function _sealEpoch_rewards(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory uptimes, uint256[] memory originatedTxsFee) internal {
+    function _sealEpoch_rewards(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory uptimes, uint256[] memory accumulatedOriginatedTxsFee) internal {
         _SealEpochRewardsCtx memory ctx = _SealEpochRewardsCtx(new uint[](validatorIDs.length), 0, new uint[](validatorIDs.length), 0, 0, 0);
         EpochSnapshot storage prevSnapshot = getEpochSnapshot[currentEpoch().sub(1)];
 
@@ -641,12 +641,17 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
+            uint256 prevAccumulatedTxsFee = prevSnapshot.accumulatedOriginatedTxsFee[validatorIDs[i]];
+            uint256 originatedTxsFee = 0;
+            if (accumulatedOriginatedTxsFee[i] > prevAccumulatedTxsFee) {
+                originatedTxsFee = accumulatedOriginatedTxsFee[i] - prevAccumulatedTxsFee;
+            }
             // txRewardWeight = {originatedTxsFee} * {uptime}
             // originatedTxsFee is roughly proportional to {uptime} * {stake}, so the whole formula is roughly
             // {stake} * {uptime} ^ 2
-            ctx.txRewardWeights[i] = originatedTxsFee[i] * uptimes[i] / ctx.epochDuration;
+            ctx.txRewardWeights[i] = originatedTxsFee * uptimes[i] / ctx.epochDuration;
             ctx.totalTxRewardWeight = ctx.totalTxRewardWeight.add(ctx.txRewardWeights[i]);
-            ctx.epochFee = ctx.epochFee.add(originatedTxsFee[i]);
+            ctx.epochFee = ctx.epochFee.add(originatedTxsFee);
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
@@ -682,7 +687,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             }
             snapshot.accumulatedRewardPerToken[validatorID] = prevSnapshot.accumulatedRewardPerToken[validatorID] + rewardPerToken;
             //
-            snapshot.accumulatedOriginatedTxsFee[validatorID] = prevSnapshot.accumulatedOriginatedTxsFee[validatorID] + originatedTxsFee[i];
+            snapshot.accumulatedOriginatedTxsFee[validatorID] = accumulatedOriginatedTxsFee[i];
             snapshot.accumulatedUptime[validatorID] = prevSnapshot.accumulatedUptime[validatorID] + uptimes[i];
         }
 
