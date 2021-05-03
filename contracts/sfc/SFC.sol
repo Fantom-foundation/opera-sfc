@@ -530,7 +530,11 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         stashedRewardsUntilEpoch[delegator][toValidatorID] = _highestPayableEpoch(toValidatorID);
         _rewardsStash[delegator][toValidatorID] = sumRewards(_rewardsStash[delegator][toValidatorID], nonStashedReward);
         getStashedLockupRewards[delegator][toValidatorID] = sumRewards(getStashedLockupRewards[delegator][toValidatorID], nonStashedReward);
-        return true;
+        if (!isLockedUp(delegator, toValidatorID)) {
+            delete getLockupInfo[delegator][toValidatorID];
+            delete getStashedLockupRewards[delegator][toValidatorID];
+        }
+        return nonStashedReward.lockupBaseReward != 0 || nonStashedReward.lockupExtraReward != 0 || nonStashedReward.unlockedReward != 0;
     }
 
     function _mintNativeToken(uint256 amount) internal {
@@ -828,7 +832,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         totalActiveStake = _totalActiveStake;
     }
 
-    function correctReceivedStake(uint256 validatorID, uint256 diff) external onlyOwner {
+    function sanitizeReceivedStake(uint256 validatorID, uint256 diff) external onlyOwner {
         getValidator[validatorID].receivedStake = getValidator[validatorID].receivedStake.sub(diff);
+    }
+
+    function sanitizeLockupInfo(address delegator, uint256 toValidatorID) external {
+        require(!isLockedUp(delegator, toValidatorID) && getLockupInfo[delegator][toValidatorID].lockedStake > getStake[delegator][toValidatorID]);
+        delete getLockupInfo[delegator][toValidatorID];
+        delete getStashedLockupRewards[delegator][toValidatorID];
     }
 }
