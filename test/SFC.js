@@ -359,10 +359,6 @@ contract('SFC', async ([account1, account2]) => {
             await this.nodeI.copyCode(this.sfc.address, account1, { from: account1 });
         });
 
-        it('Should not copyCode if not SFC address', async () => {
-            await expectRevert(this.nodeI.copyCode('0x0000000000000000000000000000000000000000', account1, { from: account1 }), 'not SFC or self address');
-        });
-
         it('Should update network version', async () => {
             await this.nodeI.updateNetworkVersion(1, { from: account1 });
         });
