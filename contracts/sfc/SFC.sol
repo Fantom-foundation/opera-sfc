@@ -300,17 +300,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         }
     }
 
-    function undelegate(uint256 toValidatorID, uint256 wrID, uint256 amount) public {
-        address delegator = msg.sender;
-
-        _stashRewards(delegator, toValidatorID);
-
-        require(amount > 0, "zero amount");
-        require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough unlocked stake");
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
-
-        require(getWithdrawalRequest[delegator][toValidatorID][wrID].amount == 0, "wrID already exists");
-
+    function _rawUndelegate(address delegator, uint256 toValidatorID, uint256 amount) internal {
         getStake[delegator][toValidatorID] -= amount;
         getValidator[toValidatorID].receivedStake = getValidator[toValidatorID].receivedStake.sub(amount);
         totalStake = totalStake.sub(amount);
@@ -325,6 +315,20 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         } else {
             _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
         }
+    }
+
+    function undelegate(uint256 toValidatorID, uint256 wrID, uint256 amount) public {
+        address delegator = msg.sender;
+
+        _stashRewards(delegator, toValidatorID);
+
+        require(amount > 0, "zero amount");
+        require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough unlocked stake");
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
+
+        require(getWithdrawalRequest[delegator][toValidatorID][wrID].amount == 0, "wrID already exists");
+
+        _rawUndelegate(delegator, toValidatorID, amount);
 
         getWithdrawalRequest[delegator][toValidatorID][wrID].amount = amount;
         getWithdrawalRequest[delegator][toValidatorID][wrID].epoch = currentEpoch();
@@ -805,7 +809,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 penalty = _popDelegationUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
 
         ld.lockedStake -= amount;
-        getStake[delegator][toValidatorID] -= penalty;
+        _rawUndelegate(delegator, toValidatorID, penalty);
 
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
