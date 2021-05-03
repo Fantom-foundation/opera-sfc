@@ -814,4 +814,21 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
     }
+
+    function recalculateTotalStake() external {
+        uint256 _totalStake = 0;
+        uint256 _totalActiveStake = 0;
+        for (uint256 i = 1; i <= lastValidatorID; i++) {
+            _totalStake += getValidator[i].receivedStake;
+            if (getValidator[i].status == 0) {
+                _totalActiveStake += getValidator[i].receivedStake;
+            }
+        }
+        totalStake = _totalStake;
+        totalActiveStake = _totalActiveStake;
+    }
+
+    function correctReceivedStake(uint256 validatorID, uint256 diff) external onlyOwner {
+        getValidator[validatorID].receivedStake = getValidator[validatorID].receivedStake.sub(diff);
+    }
 }
