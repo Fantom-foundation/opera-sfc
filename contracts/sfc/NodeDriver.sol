@@ -38,8 +38,11 @@ contract NodeDriverAuth is Initializable, Ownable {
     }
 
     function copyCode(address acc, address from) external onlyOwner {
-        require(acc == address(sfc) || acc == address(this), "not SFC or self address");
         driver.copyCode(acc, from);
+    }
+
+    function incNonce(address acc, uint256 diff) external onlyOwner {
+        driver.incNonce(acc, diff);
     }
 
     function updateNetworkRules(bytes calldata diff) external onlyOwner {
@@ -129,6 +132,10 @@ contract NodeDriver is Initializable {
         evmWriter.setStorage(acc, key, value);
     }
 
+    function incNonce(address acc, uint256 diff) external onlyBackend {
+        evmWriter.incNonce(acc, diff);
+    }
+
     function updateNetworkRules(bytes calldata diff) external onlyBackend {
         emit UpdateNetworkRules(diff);
     }
@@ -185,4 +192,6 @@ interface EVMWriter {
     function swapCode(address acc, address with) external;
 
     function setStorage(address acc, bytes32 key, bytes32 value) external;
+
+    function incNonce(address acc, uint256 diff) external;
 }

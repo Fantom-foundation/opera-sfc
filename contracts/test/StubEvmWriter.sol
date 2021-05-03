@@ -10,4 +10,6 @@ contract StubEvmWriter is EVMWriter {
     function swapCode(address acc, address with) external {}
 
     function setStorage(address acc, bytes32 key, bytes32 value) external {}
+
+    function incNonce(address acc, uint256 diff) external {}
 }
