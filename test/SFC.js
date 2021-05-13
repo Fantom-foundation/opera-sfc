@@ -488,7 +488,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             });
 
             it('Returns the version of the current implementation', async () => {
-                expect((await this.sfc.version()).toString()).to.equals('0x333030');
+                expect((await this.sfc.version()).toString()).to.equals('0x333031');
             });
 
             it('Should create a Validator and return the ID', async () => {
