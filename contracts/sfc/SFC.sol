@@ -759,11 +759,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return getStake[delegator][toValidatorID].sub(getLockupInfo[delegator][toValidatorID].lockedStake);
     }
 
-    function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) public {
-        address delegator = msg.sender;
-
-        require(amount > 0, "zero amount");
-        require(!isLockedUp(delegator, toValidatorID), "already locked up");
+    function _lockStake(address delegator, uint256 toValidatorID, uint256 lockupDuration, uint256 amount) internal {
         require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough stake");
         require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
 
@@ -776,14 +772,28 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         _stashRewards(delegator, toValidatorID);
 
+        // check lockup duration after _stashRewards, which has erased previous lockup if it has unlocked already
         LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
-        ld.lockedStake = amount;
+        require(lockupDuration >= ld.duration, "lockup duration cannot decrease");
+
+        ld.lockedStake = ld.lockedStake.add(amount);
         ld.fromEpoch = currentEpoch();
         ld.endTime = endTime;
         ld.duration = lockupDuration;
-        delete getStashedLockupRewards[delegator][toValidatorID];
 
         emit LockedUpStake(delegator, toValidatorID, lockupDuration, amount);
+    }
+
+    function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) public {
+        address delegator = msg.sender;
+        require(amount > 0, "zero amount");
+        require(!isLockedUp(delegator, toValidatorID), "already locked up");
+        _lockStake(delegator, toValidatorID, lockupDuration, amount);
+    }
+
+    function relockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) public {
+        address delegator = msg.sender;
+        _lockStake(delegator, toValidatorID, lockupDuration, amount);
     }
 
     function _popDelegationUnlockPenalty(address delegator, uint256 toValidatorID, uint256 unlockAmount, uint256 totalAmount) internal returns (uint256) {
