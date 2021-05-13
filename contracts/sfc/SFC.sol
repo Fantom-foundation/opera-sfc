@@ -842,16 +842,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         totalActiveStake = _totalActiveStake;
     }
 
-    function sanitizeReceivedStake(uint256 validatorID, uint256 diff) external onlyOwner {
-        getValidator[validatorID].receivedStake = getValidator[validatorID].receivedStake.sub(diff);
-    }
-
-    function sanitizeLockupInfo(address delegator, uint256 toValidatorID) external {
-        require(!isLockedUp(delegator, toValidatorID) && getLockupInfo[delegator][toValidatorID].lockedStake > getStake[delegator][toValidatorID]);
-        delete getLockupInfo[delegator][toValidatorID];
-        delete getStashedLockupRewards[delegator][toValidatorID];
-    }
-
     function _copySnapshotTo(EpochSnapshot storage from, EpochSnapshot storage to) internal {
         for (uint256 i = 0; i < from.validatorIDs.length; i++) {
             uint256 validatorID = from.validatorIDs[i];
