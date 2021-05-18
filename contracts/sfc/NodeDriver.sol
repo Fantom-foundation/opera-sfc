@@ -37,6 +37,11 @@ contract NodeDriverAuth is Initializable, Ownable {
         driver.setBalance(acc, address(acc).balance.add(diff));
     }
 
+    function upgradeCode(address acc, address from) external onlyOwner {
+        require(isContract(acc) && isContract(from), "not a contract");
+        driver.copyCode(acc, from);
+    }
+
     function copyCode(address acc, address from) external onlyOwner {
         driver.copyCode(acc, from);
     }
@@ -83,6 +88,13 @@ contract NodeDriverAuth is Initializable, Ownable {
 
     function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
         sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
+    }
+
+    function isContract(address account) internal view returns (bool) {
+        uint256 size;
+        // solhint-disable-next-line no-inline-assembly
+        assembly { size := extcodesize(account) }
+        return size > 0;
     }
 }
 
