@@ -725,7 +725,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
     function isLockedUp(address delegator, uint256 toValidatorID) view public returns (bool) {
-        return getLockupInfo[delegator][toValidatorID].endTime != 0 && _now() <= getLockupInfo[delegator][toValidatorID].endTime;
+        return getLockupInfo[delegator][toValidatorID].endTime != 0 && getLockupInfo[delegator][toValidatorID].lockedStake != 0 && _now() <= getLockupInfo[delegator][toValidatorID].endTime;
     }
 
     function _isLockedUpAtEpoch(address delegator, uint256 toValidatorID, uint256 epoch) internal view returns (bool) {
