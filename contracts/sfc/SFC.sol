@@ -828,49 +828,4 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
     }
-
-    function recalculateTotalStake() external {
-        uint256 _totalStake = 0;
-        uint256 _totalActiveStake = 0;
-        for (uint256 i = 1; i <= lastValidatorID; i++) {
-            _totalStake += getValidator[i].receivedStake;
-            if (getValidator[i].status == 0) {
-                _totalActiveStake += getValidator[i].receivedStake;
-            }
-        }
-        totalStake = _totalStake;
-        totalActiveStake = _totalActiveStake;
-    }
-
-    function _copySnapshotTo(EpochSnapshot storage from, EpochSnapshot storage to) internal {
-        for (uint256 i = 0; i < from.validatorIDs.length; i++) {
-            uint256 validatorID = from.validatorIDs[i];
-            to.receivedStake[validatorID] = from.receivedStake[validatorID];
-            to.accumulatedRewardPerToken[validatorID] = from.accumulatedRewardPerToken[validatorID];
-            to.accumulatedUptime[validatorID] = from.accumulatedUptime[validatorID];
-            to.accumulatedOriginatedTxsFee[validatorID] = from.accumulatedOriginatedTxsFee[validatorID];
-            to.offlineTime[validatorID] = from.offlineTime[validatorID];
-            to.offlineBlocks[validatorID] = from.offlineBlocks[validatorID];
-        }
-
-        to.validatorIDs = from.validatorIDs;
-        to.endTime = from.endTime;
-        to.epochFee = 0;
-        to.totalTxRewardWeight = from.totalTxRewardWeight;
-        to.totalBaseRewardWeight = from.totalBaseRewardWeight;
-        to.baseRewardPerSecond = from.baseRewardPerSecond;
-        to.totalStake = from.totalStake;
-        to.totalSupply = from.totalSupply;
-    }
-
-    function addEmptyEpochs(uint256 num) external onlyOwner {
-        require(num > 0);
-        uint256 epoch = currentSealedEpoch;
-        _copySnapshotTo(getEpochSnapshot[epoch + 1], getEpochSnapshot[epoch + num + 1]);
-        for (uint256 i = num; i > 0; i--) {
-            _copySnapshotTo(getEpochSnapshot[epoch], getEpochSnapshot[epoch + i]);
-        }
-
-        currentSealedEpoch += num;
-    }
 }
