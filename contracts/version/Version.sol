@@ -8,7 +8,7 @@ contract Version {
      * @dev Returns the address of the current owner.
      */
     function version() public pure returns (bytes3) {
-        // version 3.0.1
-        return "301";
+        // version 3.0.2
+        return "302";
     }
 }
