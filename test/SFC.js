@@ -488,7 +488,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             });
 
             it('Returns the version of the current implementation', async () => {
-                expect((await this.sfc.version()).toString()).to.equals('0x333031');
+                expect((await this.sfc.version()).toString()).to.equals('0x333032');
             });
 
             it('Should create a Validator and return the ID', async () => {
@@ -1238,15 +1238,6 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
             await expect(this.sfc.advanceTime(new BN(24 * 60 * 60).toString())).to.be.fulfilled;
             await expect(this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees)).to.be.fulfilled;
             await expect(this.sfc.sealEpochValidators(allValidators)).to.be.fulfilled;
-        });
-
-        it('Should refund legacy delegation', async () => {
-            await expectRevert(this.sfc.refundSlashedLegacyDelegation(account2, 1, amount18('1.5'), { from: secondValidator }), 'Ownable: caller is not the owner');
-            await expectRevert(this.sfc.refundSlashedLegacyDelegation(account2, 1, amount18('1.5'), { from: firstValidator }), "validator isn't slashed");
-            await this.sfc.deactivateValidator(1, 1 << 7);
-            const delegatorBalance = new BN(await web3.eth.getBalance(account2));
-            await this.sfc.refundSlashedLegacyDelegation(account2, 1, amount18('1.5'), { from: firstValidator });
-            expect(delegatorBalance.add(amount18('1.5'))).to.be.bignumber.equal(await web3.eth.getBalance(account2));
         });
     });
 
