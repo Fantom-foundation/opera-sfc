@@ -124,6 +124,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     event UpdatedBaseRewardPerSec(uint256 value);
     event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
+    event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
 
     /*
     Getters
@@ -827,5 +828,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
+    }
+
+    function refundSlashedLegacyDelegation(address payable delegator, uint256 toValidatorID, uint256 amount) external onlyOwner {
+        require(isSlashed(toValidatorID), "validator isn't slashed");
+        require(amount <= 1457100266114788805830000, "amount is too high");
+        _mintNativeToken(amount);
+        delegator.transfer(amount);
+        emit RefundedSlashedLegacyDelegation(delegator, toValidatorID, amount);
     }
 }
