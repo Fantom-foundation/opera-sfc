@@ -1,6 +1,6 @@
 {
   "name": "opera-sfc",
-  "version": "1.0.0-RC",
+  "version": "3.0.2-rc1",
   "description": "Special Fee Contract",
   "scripts": {
     "lint:js": "eslint \"test/*.js\"",
