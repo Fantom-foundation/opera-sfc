@@ -746,7 +746,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return getLockupInfo[delegator][toValidatorID].fromEpoch <= epoch && epochEndTime(epoch) <= getLockupInfo[delegator][toValidatorID].endTime;
     }
 
-    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns(bool) {
+    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns (bool) {
         if (stakeTokenizerAddress == address(0)) {
             return true;
         }
@@ -775,7 +775,14 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         // check lockup duration after _stashRewards, which has erased previous lockup if it has unlocked already
         LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
-        require(lockupDuration >= ld.duration, "lockup duration cannot decrease");
+        require(endTime >= ld.endTime, "lockup cannot end earlier");
+
+        // calculate combined lock duration with the previous existing one
+        // make sure not to exceed the max duration limit
+        lockupDuration += ld.duration;
+        if (lockupDuration > maxLockupDuration()) {
+            lockupDuration = maxLockupDuration();
+        }
 
         ld.lockedStake = ld.lockedStake.add(amount);
         ld.fromEpoch = currentEpoch();
