@@ -541,6 +541,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     function _mintNativeToken(uint256 amount) internal {
         // balance will be increased after the transaction is processed
         node.incBalance(address(this), amount);
+        totalSupply = totalSupply.add(amount);
     }
 
     function _claimRewards(address delegator, uint256 toValidatorID) internal returns (Rewards memory rewards) {
