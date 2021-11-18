@@ -619,6 +619,16 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         stakeTokenizerAddress = addr;
     }
 
+    // updateTotalSupply allows to fix the different between actual total supply and totalSupply field due to the
+    // bug fixed in 3c828b56b7cd32ea058a954fad3cd726e193cc77
+    function updateTotalSupply(int256 diff) onlyOwner external {
+        if (diff >= 0) {
+            totalSupply += uint256(diff);
+        } else {
+            totalSupply -= uint256(-diff);
+        }
+    }
+
     function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTime, uint256[] memory offlineBlocks) internal {
         // mark offline nodes
         for (uint256 i = 0; i < validatorIDs.length; i++) {
