@@ -119,6 +119,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
+    event InflatedFTM(address indexed receiver, uint256 amount, string justification);
     event LockedUpStake(address indexed delegator, uint256 indexed validatorID, uint256 duration, uint256 amount);
     event UnlockedStake(address indexed delegator, uint256 indexed validatorID, uint256 amount, uint256 penalty);
     event UpdatedBaseRewardPerSec(uint256 value);
@@ -627,6 +628,14 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         } else {
             totalSupply -= uint256(-diff);
         }
+    }
+
+    // mintFTM allows SFC owner to mint an arbitrary amount of FTM tokens
+    // justification is a human readable description of why tokens were minted (e.g. because ERC20 FTM tokens were burnt)
+    function mintFTM(address payable receiver, uint256 amount, string calldata justification) onlyOwner external {
+        _mintNativeToken(amount);
+        receiver.transfer(amount);
+        emit InflatedFTM(receiver, amount, justification);
     }
 
     function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTime, uint256[] memory offlineBlocks) internal {
