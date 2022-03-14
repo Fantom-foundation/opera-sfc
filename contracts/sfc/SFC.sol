@@ -381,7 +381,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         totalSlashedStake += penalty;
         require(amount > penalty, "stake is fully slashed");
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        (bool sent, bytes memory data) = delegator.call.value(amount.sub(penalty))("");
+        (bool sent, ) = delegator.call.value(amount.sub(penalty))("");
         require(sent, "Failed to send FTM");
 
         emit Withdrawn(delegator, toValidatorID, wrID, amount);
@@ -561,7 +561,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         address payable delegator = msg.sender;
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        (bool sent, bytes memory data) = delegator.call.value(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward))("");
+        (bool sent, ) = delegator.call.value(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward))("");
         require(sent, "Failed to send FTM");
 
         emit ClaimedRewards(delegator, toValidatorID, rewards.lockupExtraReward, rewards.lockupBaseReward, rewards.unlockedReward);
