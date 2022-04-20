@@ -850,4 +850,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
     }
+
+    function setMaxDelegation(uint256 _maxDelegationRatio) onlyOwner external {
+        _updateMaxDelegation(_maxDelegationRatio);
+    }
 }

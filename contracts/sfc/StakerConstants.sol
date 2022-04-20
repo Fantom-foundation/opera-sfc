@@ -1,9 +1,10 @@
 pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "../ownership/Ownable.sol";
 import "../common/Decimal.sol";
 
-contract StakersConstants {
+contract StakersConstants is Ownable {
     using SafeMath for uint256;
 
     uint256 internal constant OK_STATUS = 0;
@@ -11,6 +12,10 @@ contract StakersConstants {
     uint256 internal constant OFFLINE_BIT = 1 << 3;
     uint256 internal constant DOUBLESIGN_BIT = 1 << 7;
     uint256 internal constant CHEATER_MASK = DOUBLESIGN_BIT;
+
+    uint256 private maxDelegation;
+
+    event UpdateMaxDelegationRatio(uint256 maxDelegationRatio);
 
     /**
      * @dev Minimum amount of stake for a validator, i.e., 500000 FTM
@@ -23,9 +28,9 @@ contract StakersConstants {
     /**
      * @dev Maximum ratio of delegations a validator can have, say, 15 times of self-stake
      */
-    function maxDelegatedRatio() public pure returns (uint256) {
+    function maxDelegatedRatio() public view returns (uint256) {
         // 1600%
-        return 16 * Decimal.unit();
+        return maxDelegation * Decimal.unit();
     }
 
     /**
@@ -76,5 +81,15 @@ contract StakersConstants {
     function withdrawalPeriodTime() public pure returns (uint256) {
         // 7 days
         return 60 * 60 * 24 * 7;
+    }
+
+    /**
+     @notice Method for updating maxDelegation ratio
+     @dev Only admin
+     @param _maxDelegation uint256 the maxDelegationRatio to set
+     */
+    function _updateMaxDelegation(uint256 _maxDelegation) internal onlyOwner {
+        maxDelegation = _maxDelegation;
+        emit UpdateMaxDelegationRatio(_maxDelegation);
     }
 }
