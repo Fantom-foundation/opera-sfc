@@ -98,6 +98,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     uint256 offlinePenaltyThresholdBlocksNum;
     uint256 offlinePenaltyThresholdTime;
 
+    uint256 private maxDelegation;
+
     mapping(uint256 => uint256) public slashingRefundRatio; // validator ID -> (slashing refund ratio)
 
     address public stakeTokenizerAddress;
@@ -126,6 +128,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
+    event UpdatedMaxDelegationRatio(uint256 maxDelegationRatio);
 
     /*
     Getters
@@ -173,6 +176,14 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             return 0;
         }
         return getLockupInfo[delegator][toValidatorID].lockedStake;
+    }
+
+    /**
+     * @dev Maximum ratio of delegations a validator can have, say, 15 times of self-stake
+     */
+    function maxDelegatedRatio() public view returns (uint256) {
+        // 1600%
+        return maxDelegation * Decimal.unit();
     }
 
     /*
@@ -853,5 +864,15 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     function setMaxDelegation(uint256 _maxDelegationRatio) onlyOwner external {
         _updateMaxDelegation(_maxDelegationRatio);
+    }
+
+    /**
+     @notice Method for updating maxDelegation ratio
+     @dev Only admin
+     @param _maxDelegation uint256 the maxDelegationRatio to set
+     */
+    function _updateMaxDelegation(uint256 _maxDelegation) internal onlyOwner {
+        maxDelegation = _maxDelegation;
+        emit UpdatedMaxDelegationRatio(_maxDelegation);
     }
 }

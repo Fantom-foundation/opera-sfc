@@ -234,8 +234,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
     describe('Basic functions', () => {
         describe('Update params', () => {
             it('Should allow updating the maxDelegationRatio param', async () => {
-                await this.sfc.setMaxDelegation(16);
-                expect((await this.sfc.maxDelegatedRatio()).toString()).to.equals('16000000000000000000');
+                await this.sfc.setMaxDelegation(17);
+                expect((await this.sfc.maxDelegatedRatio()).toString()).to.equals('17000000000000000000');
             });
 
             it('Should not allow non-owner to update the maxDelegationRatio param', async () => {
