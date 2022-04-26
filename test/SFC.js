@@ -241,130 +241,198 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             it('Should not allow non-owner to update the maxDelegationRatio param', async () => {
                 await expectRevert(this.sfc.setMaxDelegation(17, { from: secondValidator }), 'Ownable: caller is not the owner.');
             });
-        });
 
-        describe('Constants', () => {
-            it('Returns current Epoch', async () => {
-                expect((await this.sfc.currentEpoch()).toString()).to.equals('1');
-            });
-
-            it('Returns minimum amount to stake for a Validator', async () => {
+            // Uses UnitTestSFC.sol overriden function
+            it('Should allow updating the minSelfStake param', async () => {
+                await this.sfc.setMinSelfStake(3275);
                 expect((await this.sfc.minSelfStake()).toString()).to.equals('317500000000000000');
             });
 
-            // it('Returns the maximum ratio of delegations a validator can have', async () => {
-            //     console.log('Await: ', (await this.sfc.maxDelegatedRatio()).toString());
-            //     expect((await this.sfc.maxDelegatedRatio()).toString()).to.equals('16000000000000000000');
-            // });
+            it('Should not allow non-owner to update the minSelfStake param', async () => {
+                await expectRevert(this.sfc.setMinSelfStake(3175, { from: secondValidator }), 'Ownable: caller is not the owner.');
+            });
 
-            it('Returns commission fee in percentage a validator will get from a delegation', async () => {
+            it('Should allow updating the validatorCommission param', async () => {
+                await this.sfc.setValidatorCommission(15);
                 expect((await this.sfc.validatorCommission()).toString()).to.equals('150000000000000000');
             });
 
-            it('Returns commission fee in percentage a validator will get from a contract', async () => {
+            it('Should not allow non-owner to update the validatorCommission param', async () => {
+                await expectRevert(this.sfc.setValidatorCommission(15, { from: secondValidator }), 'Ownable: caller is not the owner.');
+            });
+
+            it('Should allow updating the contractCommission param', async () => {
+                await this.sfc.setContractCommission(30);
                 expect((await this.sfc.contractCommission()).toString()).to.equals('300000000000000000');
             });
 
-            it('Returns the ratio of the reward rate at base rate (without lockup)', async () => {
+            it('Should not allow non-owner to update the contractCommission param', async () => {
+                await expectRevert(this.sfc.setContractCommission(30, { from: secondValidator }), 'Ownable: caller is not the owner.');
+            });
+
+            it('Should allow updating the unlockedRewardRatio param', async () => {
+                await this.sfc.setUnlockedRewardRatio(30);
                 expect((await this.sfc.unlockedRewardRatio()).toString()).to.equals('300000000000000000');
             });
 
-            it('Returns the minimum duration of a stake/delegation lockup', async () => {
+            it('Should not allow non-owner to update the unlockedRewardRatio param', async () => {
+                await expectRevert(this.sfc.setUnlockedRewardRatio(30, { from: secondValidator }), 'Ownable: caller is not the owner.');
+            });
+
+            it('Should allow updating the minLockupDuration param', async () => {
+                await this.sfc.setMinLockupDuration(86400);
                 expect((await this.sfc.minLockupDuration()).toString()).to.equals('1209600');
             });
 
-            it('Returns the maximum duration of a stake/delegation lockup', async () => {
+            it('Should not allow non-owner to update the minLockupDuration param', async () => {
+                await expectRevert(this.sfc.setMinLockupDuration(86400, { from: secondValidator }), 'Ownable: caller is not the owner.');
+            });
+
+            it('Should allow updating the maxLockupDuration param', async () => {
+                await this.sfc.setMaxLockupDuration(86400);
                 expect((await this.sfc.maxLockupDuration()).toString()).to.equals('31536000');
             });
 
-            it('Returns the period of time that stake is locked', async () => {
-                expect((await this.sfc.withdrawalPeriodTime()).toString()).to.equals('604800');
+            it('Should not allow non-owner to update the maxLockupDuration param', async () => {
+                await expectRevert(this.sfc.setMaxLockupDuration(86400, { from: secondValidator }), 'Ownable: caller is not the owner.');
             });
 
-            it('Returns the number of epochs that stake is locked', async () => {
+            it('Should allow updating the withdrawalPeriodEpochs param', async () => {
+                await this.sfc.setWithdrawalPeriodEpoch(3);
                 expect((await this.sfc.withdrawalPeriodEpochs()).toString()).to.equals('3');
             });
 
-            it('Returns the version of the current implementation', async () => {
-                expect((await this.sfc.version()).toString()).to.equals('0x333032');
+            it('Should not allow non-owner to update the withdrawalPeriodEpochs param', async () => {
+                await expectRevert(this.sfc.setWithdrawalPeriodEpoch(86400, { from: secondValidator }), 'Ownable: caller is not the owner.');
             });
 
-            it('Should create a Validator and return the ID', async () => {
-                await this.sfc.createValidator(pubkey, {
-                    from: secondValidator,
-                    value: amount18('10'),
-                });
-                const lastValidatorID = await this.sfc.lastValidatorID();
-
-                expect(lastValidatorID.toString()).to.equals('1');
+            it('Should allow updating the withdrawalPeriodTime param', async () => {
+                await this.sfc.setWithdrawalPeriodTime(604800);
+                expect((await this.sfc.withdrawalPeriodTime()).toString()).to.equals('604800');
             });
 
-            it('Should fail to create a Validator insufficient self-stake', async () => {
-                await expectRevert(this.sfc.createValidator(pubkey, {
-                    from: secondValidator,
-                    value: 1,
-                }), 'insufficient self-stake');
-            });
-
-            it('Should fail if pubkey is empty', async () => {
-                await expectRevert(this.sfc.createValidator(web3.utils.stringToHex(''), {
-                    from: secondValidator,
-                    value: amount18('10'),
-                }), 'empty pubkey');
-            });
-
-            it('Should create two Validators and return the correct last validator ID', async () => {
-                let lastValidatorID;
-                await this.sfc.createValidator(pubkey, {
-                    from: secondValidator,
-                    value: amount18('10'),
-                });
-                lastValidatorID = await this.sfc.lastValidatorID();
-
-                expect(lastValidatorID.toString()).to.equals('1');
-
-                await this.sfc.createValidator(pubkey, {
-                    from: thirdValidator,
-                    value: amount18('12'),
-                });
-                lastValidatorID = await this.sfc.lastValidatorID();
-                expect(lastValidatorID.toString()).to.equals('2');
-            });
-
-            it('Should return Delegation', async () => {
-                await this.sfc.createValidator(pubkey, {
-                    from: secondValidator,
-                    value: amount18('10'),
-                });
-                (await this.sfc.delegate(1, { from: secondValidator, value: 1 }));
-            });
-
-            it('Should reject if amount is insufficient for self-stake', async () => {
-                expect((await this.sfc.minSelfStake()).toString()).to.equals('317500000000000000');
-                await expect(this.sfc.createValidator(pubkey, {
-                    from: secondValidator,
-                    value: amount18('0.3'),
-                })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert insufficient self-stake -- Reason given: insufficient self-stake.');
-            });
-
-            it('Returns current Epoch', async () => {
-                expect((await this.sfc.currentEpoch()).toString()).to.equals('1');
-            });
-
-            it('Should return current Sealed Epoch', async () => {
-                expect((await this.sfc.currentSealedEpoch()).toString()).to.equals('0');
-            });
-
-            it('Should return Now()', async () => {
-                const now = Math.trunc((Date.now()) / 1000);
-                expect((await this.sfc.getBlockTime()).toNumber()).to.be.within(now - 100, now + 100);
-            });
-
-            it('Should return getTime()', async () => {
-                const now = Math.trunc((Date.now()) / 1000);
-                expect((await this.sfc.getTime()).toNumber()).to.be.within(now - 100, now + 100);
+            it('Should not allow non-owner to update the withdrawalPeriodTime param', async () => {
+                await expectRevert(this.sfc.setWithdrawalPeriodTime(604800, { from: secondValidator }), 'Ownable: caller is not the owner.');
             });
         });
+
+        // describe('Constants', () => {
+        //     it('Returns current Epoch', async () => {
+        //         expect((await this.sfc.currentEpoch()).toString()).to.equals('1');
+        //     });
+
+        //     it('Returns minimum amount to stake for a Validator', async () => {
+        //         expect((await this.sfc.minSelfStake()).toString()).to.equals('317500000000000000');
+        //     });
+
+        //     it('Returns commission fee in percentage a validator will get from a delegation', async () => {
+        //         expect((await this.sfc.validatorCommission()).toString()).to.equals('150000000000000000');
+        //     });
+
+        //     it('Returns commission fee in percentage a validator will get from a contract', async () => {
+        //         expect((await this.sfc.contractCommission()).toString()).to.equals('300000000000000000');
+        //     });
+
+        //     it('Returns the ratio of the reward rate at base rate (without lockup)', async () => {
+        //         expect((await this.sfc.unlockedRewardRatio()).toString()).to.equals('300000000000000000');
+        //     });
+
+        //     it('Returns the minimum duration of a stake/delegation lockup', async () => {
+        //         expect((await this.sfc.minLockupDuration()).toString()).to.equals('1209600');
+        //     });
+
+        //     it('Returns the maximum duration of a stake/delegation lockup', async () => {
+        //         expect((await this.sfc.maxLockupDuration()).toString()).to.equals('31536000');
+        //     });
+
+        //     it('Returns the period of time that stake is locked', async () => {
+        //         expect((await this.sfc.withdrawalPeriodTime()).toString()).to.equals('604800');
+        //     });
+
+        //     it('Returns the number of epochs that stake is locked', async () => {
+        //         expect((await this.sfc.withdrawalPeriodEpochs()).toString()).to.equals('3');
+        //     });
+
+        //     it('Returns the version of the current implementation', async () => {
+        //         expect((await this.sfc.version()).toString()).to.equals('0x333032');
+        //     });
+
+        //     it('Should create a Validator and return the ID', async () => {
+        //         await this.sfc.createValidator(pubkey, {
+        //             from: secondValidator,
+        //             value: amount18('10'),
+        //         });
+        //         const lastValidatorID = await this.sfc.lastValidatorID();
+
+        //         expect(lastValidatorID.toString()).to.equals('1');
+        //     });
+
+        //     it('Should fail to create a Validator insufficient self-stake', async () => {
+        //         await expectRevert(this.sfc.createValidator(pubkey, {
+        //             from: secondValidator,
+        //             value: 1,
+        //         }), 'insufficient self-stake');
+        //     });
+
+        //     it('Should fail if pubkey is empty', async () => {
+        //         await expectRevert(this.sfc.createValidator(web3.utils.stringToHex(''), {
+        //             from: secondValidator,
+        //             value: amount18('10'),
+        //         }), 'empty pubkey');
+        //     });
+
+        //     it('Should create two Validators and return the correct last validator ID', async () => {
+        //         let lastValidatorID;
+        //         await this.sfc.createValidator(pubkey, {
+        //             from: secondValidator,
+        //             value: amount18('10'),
+        //         });
+        //         lastValidatorID = await this.sfc.lastValidatorID();
+
+        //         expect(lastValidatorID.toString()).to.equals('1');
+
+        //         await this.sfc.createValidator(pubkey, {
+        //             from: thirdValidator,
+        //             value: amount18('12'),
+        //         });
+        //         lastValidatorID = await this.sfc.lastValidatorID();
+        //         expect(lastValidatorID.toString()).to.equals('2');
+        //     });
+
+        //     it('Should return Delegation', async () => {
+        //         await this.sfc.createValidator(pubkey, {
+        //             from: secondValidator,
+        //             value: amount18('10'),
+        //         });
+        //         (await this.sfc.delegate(1, { from: secondValidator, value: 1 }));
+        //     });
+
+        //     it('Should reject if amount is insufficient for self-stake', async () => {
+        //         expect((await this.sfc.minSelfStake()).toString()).to.equals('317500000000000000');
+        //         await expect(this.sfc.createValidator(pubkey, {
+        //             from: secondValidator,
+        //             value: amount18('0.3'),
+        //         })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert insufficient self-stake -- Reason given: insufficient self-stake.');
+        //     });
+
+        //     it('Returns current Epoch', async () => {
+        //         expect((await this.sfc.currentEpoch()).toString()).to.equals('1');
+        //     });
+
+        //     it('Should return current Sealed Epoch', async () => {
+        //         expect((await this.sfc.currentSealedEpoch()).toString()).to.equals('0');
+        //     });
+
+        //     it('Should return Now()', async () => {
+        //         const now = Math.trunc((Date.now()) / 1000);
+        //         expect((await this.sfc.getBlockTime()).toNumber()).to.be.within(now - 100, now + 100);
+        //     });
+
+        //     it('Should return getTime()', async () => {
+        //         const now = Math.trunc((Date.now()) / 1000);
+        //         expect((await this.sfc.getTime()).toNumber()).to.be.within(now - 100, now + 100);
+        //     });
+        // });
 
         describe('Initialize', () => {
             it('Should have been initialized with firstValidator', async () => {

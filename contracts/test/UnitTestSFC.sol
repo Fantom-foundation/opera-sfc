@@ -3,7 +3,7 @@ pragma solidity ^0.5.0;
 import "../sfc/SFC.sol";
 
 contract UnitTestSFC is SFC {
-    function minSelfStake() public pure returns (uint256) {
+    function minSelfStake() public view returns (uint256) {
         // 0.3175000 FTM
         return 0.3175000 * 1e18;
     }

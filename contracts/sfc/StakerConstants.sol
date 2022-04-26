@@ -12,69 +12,69 @@ contract StakersConstants {
     uint256 internal constant DOUBLESIGN_BIT = 1 << 7;
     uint256 internal constant CHEATER_MASK = DOUBLESIGN_BIT;
 
-    /**
-     * @dev Minimum amount of stake for a validator, i.e., 500000 FTM
-     */
-    function minSelfStake() public pure returns (uint256) {
-        // 500000 FTM
-        return 500000 * 1e18;
-    }
+    // /**
+    //  * @dev Minimum amount of stake for a validator, i.e., 500000 FTM
+    //  */
+    // function minSelfStake() public pure returns (uint256) {
+    //     // 500000 FTM
+    //     return 500000 * 1e18;
+    // }
 
-    /**
-     * @dev Maximum ratio of delegations a validator can have, say, 15 times of self-stake
-     */
-    function maxDelegatedRatio() public view returns (uint256) {
-        // 1600%
-        return 16 * Decimal.unit();
-    }
+    // /**
+    //  * @dev Maximum ratio of delegations a validator can have, say, 15 times of self-stake
+    //  */
+    // function maxDelegatedRatio() public view returns (uint256) {
+    //     // 1600%
+    //     return 16 * Decimal.unit();
+    // }
 
-    /**
-     * @dev The commission fee in percentage a validator will get from a delegation, e.g., 15%
-     */
-    function validatorCommission() public pure returns (uint256) {
-        // 15%
-        return (15 * Decimal.unit()) / 100;
-    }
+    // /**
+    //  * @dev The commission fee in percentage a validator will get from a delegation, e.g., 15%
+    //  */
+    // function validatorCommission() public pure returns (uint256) {
+    //     // 15%
+    //     return (15 * Decimal.unit()) / 100;
+    // }
 
-    /**
-     * @dev The commission fee in percentage a validator will get from a contract, e.g., 30%
-     */
-    function contractCommission() public pure returns (uint256) {
-        // 30%
-        return (30 * Decimal.unit()) / 100;
-    }
+    // /**
+    //  * @dev The commission fee in percentage a validator will get from a contract, e.g., 30%
+    //  */
+    // function contractCommission() public pure returns (uint256) {
+    //     // 30%
+    //     return (30 * Decimal.unit()) / 100;
+    // }
 
-    /**
-     * @dev The ratio of the reward rate at base rate (no lock), e.g., 30%
-     */
-    function unlockedRewardRatio() public pure returns (uint256) {
-        // 30%
-        return (30 * Decimal.unit()) / 100;
-    }
+    // /**
+    //  * @dev The ratio of the reward rate at base rate (no lock), e.g., 30%
+    //  */
+    // function unlockedRewardRatio() public pure returns (uint256) {
+    //     // 30%
+    //     return (30 * Decimal.unit()) / 100;
+    // }
 
-    /**
-     * @dev The minimum duration of a stake/delegation lockup, e.g. 2 weeks
-     */
-    function minLockupDuration() public pure returns (uint256) {
-        return 86400 * 14;
-    }
+    // /**
+    //  * @dev The minimum duration of a stake/delegation lockup, e.g. 2 weeks
+    //  */
+    // function minLockupDuration() public pure returns (uint256) {
+    //     return 86400 * 14;
+    // }
 
-    /**
-     * @dev The maximum duration of a stake/delegation lockup, e.g. 1 year
-     */
-    function maxLockupDuration() public pure returns (uint256) {
-        return 86400 * 365;
-    }
+    // /**
+    //  * @dev The maximum duration of a stake/delegation lockup, e.g. 1 year
+    //  */
+    // function maxLockupDuration() public pure returns (uint256) {
+    //     return 86400 * 365;
+    // }
 
-    /**
-     * @dev the number of epochs that stake is locked
-     */
-    function withdrawalPeriodEpochs() public pure returns (uint256) {
-        return 3;
-    }
+    // /**
+    //  * @dev the number of epochs that stake is locked
+    //  */
+    // function withdrawalPeriodEpochs() public pure returns (uint256) {
+    //     return 3;
+    // }
 
-    function withdrawalPeriodTime() public pure returns (uint256) {
-        // 7 days
-        return 60 * 60 * 24 * 7;
-    }
+    // function withdrawalPeriodTime() public pure returns (uint256) {
+    //     // 7 days
+    //     return 60 * 60 * 24 * 7;
+    // }
 }

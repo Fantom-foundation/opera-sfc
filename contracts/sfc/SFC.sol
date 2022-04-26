@@ -98,7 +98,15 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     uint256 offlinePenaltyThresholdBlocksNum;
     uint256 offlinePenaltyThresholdTime;
 
+    uint256 private minStakeAmnt;
     uint256 private maxDelegation;
+    uint256 private validatorCommissionFee;
+    uint256 private contractCommissionFee;
+    uint256 private unlockedReward;
+    uint256 private minLockup;
+    uint256 private maxLockup;
+    uint256 private withdrawalPeriodEpochValue;
+    uint256 private withdrawalPeriodTimeValue;
 
     mapping(uint256 => uint256) public slashingRefundRatio; // validator ID -> (slashing refund ratio)
 
@@ -128,7 +136,16 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
+
+    event UpdatedMinSelfStake(uint256 minSelfStake);
     event UpdatedMaxDelegationRatio(uint256 maxDelegationRatio);
+    event UpdatedValidatorCommission(uint256 validatorCommission);
+    event UpdatedContractCommission(uint256 contractCommission);
+    event UpdatedUnlockedRewardRatio(uint256 unlockedRewardRatio);
+    event UpdatedMinLockupDuration(uint256 minLockupDuration);
+    event UpdatedMaxLockupDuration(uint256 maxLockupDuration);
+    event UpdatedWithdrawalPeriodEpoch(uint256 Value);
+    event UpdatedWithdrawalPeriodTime(uint256 withValuedrawalPeriodTime);
 
     /*
     Getters
@@ -179,11 +196,60 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
     /**
-     * @dev Maximum ratio of delegations a validator can have, say, 15 times of self-stake
+     * @dev Minimum amount of stake for a validator, i.e., 500000 FTM
      */
+    function minSelfStake() public view returns (uint256) {
+        return minStakeAmnt * 1e18;
+    }
+
     function maxDelegatedRatio() public view returns (uint256) {
-        // 1600%
         return maxDelegation * Decimal.unit();
+    }
+
+    /**
+     * @dev The commission fee in percentage a validator will get from a delegation, e.g., 15%
+     */
+    function validatorCommission() public view returns (uint256) {
+        return (validatorCommissionFee * Decimal.unit()) / 100;
+    }
+
+    /**
+     * @dev The commission fee in percentage a validator will get from a contract, e.g., 30%
+     */
+    function contractCommission() public view returns (uint256) {
+        return (contractCommissionFee * Decimal.unit()) / 100;
+    }
+
+    /**
+     * @dev The ratio of the reward rate at base rate (no lock), e.g., 30%
+     */
+    function unlockedRewardRatio() public view returns (uint256) {
+        return (unlockedReward * Decimal.unit()) / 100;
+    }
+
+    /**
+     * @dev The minimum duration of a stake/delegation lockup, e.g. 2 weeks
+     */
+    function minLockupDuration() public view returns (uint256) {
+        return minLockup * 14;
+    }
+
+    /**
+     * @dev The maximum duration of a stake/delegation lockup, e.g. 1 year
+     */
+    function maxLockupDuration() public view returns (uint256) {
+        return maxLockup * 365;
+    }
+
+    /**
+     * @dev the number of epochs that stake is locked
+     */
+    function withdrawalPeriodEpochs() public view returns (uint256) {
+        return withdrawalPeriodEpochValue;
+    }
+
+    function withdrawalPeriodTime() public view returns (uint256) {
+        return withdrawalPeriodTimeValue;
     }
 
     /*
@@ -415,7 +481,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return totalReward.mul(baseRewardWeight).div(totalBaseRewardWeight);
     }
 
-    function _calcRawValidatorEpochTxReward(uint256 epochFee, uint256 txRewardWeight, uint256 totalTxRewardWeight) internal pure returns (uint256) {
+    function _calcRawValidatorEpochTxReward(uint256 epochFee, uint256 txRewardWeight, uint256 totalTxRewardWeight) internal view returns (uint256) {
         if (txRewardWeight == 0) {
             return 0;
         }
@@ -465,7 +531,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return r - 1;
     }
 
-    function _scaleLockupReward(uint256 fullReward, uint256 lockupDuration) internal pure returns (Rewards memory reward) {
+    function _scaleLockupReward(uint256 fullReward, uint256 lockupDuration) internal view returns (Rewards memory reward) {
         reward = Rewards(0, 0, 0);
         if (lockupDuration != 0) {
             uint256 maxLockupExtraRatio = Decimal.unit() - unlockedRewardRatio();
@@ -866,13 +932,80 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         _updateMaxDelegation(_maxDelegationRatio);
     }
 
-    /**
-     @notice Method for updating maxDelegation ratio
-     @dev Only admin
-     @param _maxDelegation uint256 the maxDelegationRatio to set
-     */
     function _updateMaxDelegation(uint256 _maxDelegation) internal onlyOwner {
         maxDelegation = _maxDelegation;
         emit UpdatedMaxDelegationRatio(_maxDelegation);
+    }
+
+    function setMinSelfStake(uint256 _minSelfStake) onlyOwner external {
+        _updateMinSelfStake(_minSelfStake);
+    }
+
+    function _updateMinSelfStake(uint256 _minSelfStake) internal onlyOwner {
+        minStakeAmnt = _minSelfStake;
+        emit UpdatedMinSelfStake(_minSelfStake);
+    }
+
+    function setValidatorCommission(uint256 _validatorCommission) onlyOwner external {
+        _updateValidatorCommission(_validatorCommission);
+    }
+
+    function _updateValidatorCommission(uint256 _validatorCommission) internal onlyOwner {
+        validatorCommissionFee = _validatorCommission;
+        emit UpdatedValidatorCommission(_validatorCommission);
+    }
+
+    function setContractCommission(uint256 _contractCommission) onlyOwner external {
+        _updateContractCommission(_contractCommission);
+    }
+
+    function _updateContractCommission(uint256 _contractCommission) internal onlyOwner {
+        contractCommissionFee = _contractCommission;
+        emit UpdatedContractCommission(_contractCommission);
+    }
+
+    function setUnlockedRewardRatio(uint256 _unlockedReward) onlyOwner external {
+        _updateUnlockedRewardRatio(_unlockedReward);
+    }
+
+    function _updateUnlockedRewardRatio(uint256 _unlockedReward) internal onlyOwner {
+        unlockedReward = _unlockedReward;
+        emit UpdatedUnlockedRewardRatio(_unlockedReward);
+    }
+
+    function setMinLockupDuration(uint256 _minLockupDuration) onlyOwner external {
+        _updateMinLockupDuration(_minLockupDuration);
+    }
+
+    function _updateMinLockupDuration(uint256 _minLockupDuration) internal onlyOwner {
+        minLockup = _minLockupDuration;
+        emit UpdatedMinLockupDuration(_minLockupDuration);
+    }
+
+    function setMaxLockupDuration(uint256 _maxLockupDuration) onlyOwner external {
+        _updateMaxLockupDuration(_maxLockupDuration);
+    }
+
+    function _updateMaxLockupDuration(uint256 _maxLockupDuration) internal onlyOwner {
+        maxLockup = _maxLockupDuration;
+        emit UpdatedMaxLockupDuration(_maxLockupDuration);
+    }
+
+    function setWithdrawalPeriodEpoch(uint256 _withdrawalPeriodEpochs) onlyOwner external {
+        _updateWithdrawalPeriodEpoch(_withdrawalPeriodEpochs);
+    }
+
+    function _updateWithdrawalPeriodEpoch(uint256 _withdrawalPeriodEpochs) internal onlyOwner {
+        withdrawalPeriodEpochValue = _withdrawalPeriodEpochs;
+        emit UpdatedWithdrawalPeriodEpoch(_withdrawalPeriodEpochs);
+    }
+
+    function setWithdrawalPeriodTime(uint256 _withdrawalPeriodTime) onlyOwner external {
+        _updateWithdrawalPeriodTime(_withdrawalPeriodTime);
+    }
+
+    function _updateWithdrawalPeriodTime(uint256 _withdrawalPeriodTime) internal onlyOwner {
+        withdrawalPeriodTimeValue = _withdrawalPeriodTime;
+        emit UpdatedWithdrawalPeriodTime(_withdrawalPeriodTime);
     }
 }
