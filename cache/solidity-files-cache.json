@@ -1,0 +1,809 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\common\\Decimal.sol": {
+      "lastModificationDate": 1651068689490,
+      "contentHash": "244e5409b4e6c5dac85144deb059570a",
+      "sourceName": "contracts/common/Decimal.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "Decimal"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\sfc\\StakerConstants.sol": {
+      "lastModificationDate": 1651068721543,
+      "contentHash": "af374f71279ca67f75e43ecc8608dd88",
+      "sourceName": "contracts/sfc/StakerConstants.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/math/SafeMath.sol",
+        "../common/Decimal.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "StakersConstants"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\node_modules\\@openzeppelin\\contracts\\math\\SafeMath.sol": {
+      "lastModificationDate": 1651068862345,
+      "contentHash": "d208da96b6f6c1d204ee8248087cf2d7",
+      "sourceName": "@openzeppelin/contracts/math/SafeMath.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "SafeMath"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\sfc\\NodeDriver.sol": {
+      "lastModificationDate": 1651068689497,
+      "contentHash": "3688b3914888c11a78874408d434993a",
+      "sourceName": "contracts/sfc/NodeDriver.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/math/SafeMath.sol",
+        "../common/Initializable.sol",
+        "../ownership/Ownable.sol",
+        "./SFC.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "EVMWriter",
+        "NodeDriver",
+        "NodeDriverAuth"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\common\\Initializable.sol": {
+      "lastModificationDate": 1651068689490,
+      "contentHash": "2f1d6754a5208fb3797a875158d55219",
+      "sourceName": "contracts/common/Initializable.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.24 <0.7.0"
+      ],
+      "artifacts": [
+        "Initializable"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\ownership\\Ownable.sol": {
+      "lastModificationDate": 1651068689496,
+      "contentHash": "45b5d30e50f171e18d8c9c2199decee8",
+      "sourceName": "contracts/ownership/Ownable.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../common/Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "Ownable"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\sfc\\SFC.sol": {
+      "lastModificationDate": 1651069414621,
+      "contentHash": "03bb9732e1a64d16631d7f6d647bea09",
+      "sourceName": "contracts/sfc/SFC.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/math/SafeMath.sol",
+        "./StakerConstants.sol",
+        "../ownership/Ownable.sol",
+        "../version/Version.sol",
+        "./NodeDriver.sol",
+        "./StakeTokenizer.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "SFC"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\version\\Version.sol": {
+      "lastModificationDate": 1651068689501,
+      "contentHash": "25f2ce5b90b13654a9abf7310cacb34e",
+      "sourceName": "contracts/version/Version.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "Version"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\sfc\\StakeTokenizer.sol": {
+      "lastModificationDate": 1651068689498,
+      "contentHash": "ff8e4b475b0efd42c4c551c75385bb83",
+      "sourceName": "contracts/sfc/StakeTokenizer.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./SFC.sol",
+        "../erc20/base/ERC20Burnable.sol",
+        "../erc20/base/ERC20Mintable.sol",
+        "../common/Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "Spacer",
+        "StakeTokenizer"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\erc20\\base\\ERC20Burnable.sol": {
+      "lastModificationDate": 1651068689493,
+      "contentHash": "eb39f198f319b88e7fb55bf5171e0e3d",
+      "sourceName": "contracts/erc20/base/ERC20Burnable.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./ERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "ERC20Burnable"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\erc20\\base\\ERC20Mintable.sol": {
+      "lastModificationDate": 1651068689494,
+      "contentHash": "73172e37b395f5323cca7acf8104d9de",
+      "sourceName": "contracts/erc20/base/ERC20Mintable.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./ERC20.sol",
+        "./MinterRole.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "ERC20Mintable"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\erc20\\base\\ERC20.sol": {
+      "lastModificationDate": 1651068689492,
+      "contentHash": "aee432442ca25c5a217ca52383eb099e",
+      "sourceName": "contracts/erc20/base/ERC20.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/math/SafeMath.sol",
+        "./IERC20.sol",
+        "../../common/Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "ERC20"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\erc20\\base\\IERC20.sol": {
+      "lastModificationDate": 1651068689494,
+      "contentHash": "f280db954c24d67a426584ca73b26e58",
+      "sourceName": "contracts/erc20/base/IERC20.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "IERC20"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\erc20\\base\\MinterRole.sol": {
+      "lastModificationDate": 1651068689495,
+      "contentHash": "94393b632332ea4920ca677c5066759b",
+      "sourceName": "contracts/erc20/base/MinterRole.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Roles.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "MinterRole"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\erc20\\base\\Roles.sol": {
+      "lastModificationDate": 1651068689495,
+      "contentHash": "dac10bf619ee9e84eb94d8c9b828e22b",
+      "sourceName": "contracts/erc20/base/Roles.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "Roles"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\test\\StubEvmWriter.sol": {
+      "lastModificationDate": 1651068689499,
+      "contentHash": "0e0c63f0d2c4948accfd50b2b8ab8d37",
+      "sourceName": "contracts/test/StubEvmWriter.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../sfc/NodeDriver.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "StubEvmWriter"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\test\\UnitTestSFC.sol": {
+      "lastModificationDate": 1651068721544,
+      "contentHash": "2f2f86b913a2853bae550ce16e179cae",
+      "sourceName": "contracts/test/UnitTestSFC.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../sfc/SFC.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "UnitTestSFC"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\erc20\\base\\ERC20Detailed.sol": {
+      "lastModificationDate": 1651068689493,
+      "contentHash": "15f622da84707751a636b2661a035f38",
+      "sourceName": "contracts/erc20/base/ERC20Detailed.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20.sol",
+        "../../common/Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "ERC20Detailed"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\common\\ReentrancyGuard.sol": {
+      "lastModificationDate": 1651068689491,
+      "contentHash": "59d8113aa37352cba8082184497d0a83",
+      "sourceName": "contracts/common/ReentrancyGuard.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Initializable.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "ReentrancyGuard"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\sfc\\NetworkInitializer.sol": {
+      "lastModificationDate": 1651068689497,
+      "contentHash": "16a80bbe46f88705f9d7a85300c16dbe",
+      "sourceName": "contracts/sfc/NetworkInitializer.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./SFC.sol",
+        "./NodeDriver.sol"
+      ],
+      "versionPragmas": [
+        "^0.5.0"
+      ],
+      "artifacts": [
+        "NetworkInitializer"
+      ]
+    },
+    "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\sfc\\Migrations.sol": {
+      "lastModificationDate": 1651068689496,
+      "contentHash": "69a6754fa35f6cf8bdf632c289b1d20b",
+      "sourceName": "contracts/sfc/Migrations.sol",
+      "solcConfig": {
+        "version": "0.5.17",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.21 <0.6.0"
+      ],
+      "artifacts": [
+        "Migrations"
+      ]
+    }
+  }
+}
