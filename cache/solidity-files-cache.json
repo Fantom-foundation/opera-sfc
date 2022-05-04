@@ -230,8 +230,8 @@
       ]
     },
     "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\sfc\\SFC.sol": {
-      "lastModificationDate": 1651069414621,
-      "contentHash": "03bb9732e1a64d16631d7f6d647bea09",
+      "lastModificationDate": 1651664775574,
+      "contentHash": "f2717124cdec55f0ece6889efc8ecdbb",
       "sourceName": "contracts/sfc/SFC.sol",
       "solcConfig": {
         "version": "0.5.17",
@@ -616,8 +616,8 @@
       ]
     },
     "C:\\Users\\16266\\Desktop\\ibrahims-fork\\contracts\\test\\UnitTestSFC.sol": {
-      "lastModificationDate": 1651068721544,
-      "contentHash": "2f2f86b913a2853bae550ce16e179cae",
+      "lastModificationDate": 1651667250306,
+      "contentHash": "d5c14b4617ceea3c3739f545d603e951",
       "sourceName": "contracts/test/UnitTestSFC.sol",
       "solcConfig": {
         "version": "0.5.17",

@@ -98,7 +98,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     uint256 offlinePenaltyThresholdTime;
 
     uint256 private minStakeAmnt;
-    uint256 private maxDelegation = 16;
+    uint256 private maxDelegation;
     uint256 private validatorCommissionFee;
     uint256 private contractCommissionFee;
     uint256 private unlockedReward;

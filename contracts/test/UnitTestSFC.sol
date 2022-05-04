@@ -30,7 +30,11 @@ contract UnitTestSFC is SFC {
         return SFC._now();
     }
 
-    function highestLockupEpoch(address delegator, uint256 validatorID) external view returns (uint256) {
+    function highestLockupEpoch(address delegator, uint256 validatorID)
+        external
+        view
+        returns (uint256)
+    {
         return _highestLockupEpoch(delegator, validatorID);
     }
 
@@ -51,5 +55,3 @@ contract UnitTestSFC is SFC {
         return SFC.isNode(addr);
     }
 }
-
-
