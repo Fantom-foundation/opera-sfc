@@ -2,6 +2,7 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./StakerConstants.sol";
+import "./GasPriceConstants.sol";
 import "../ownership/Ownable.sol";
 import "../version/Version.sol";
 import "./NodeDriver.sol";
@@ -102,6 +103,12 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     address public stakeTokenizerAddress;
 
+    uint256 public targetGasPowerPerSecond;
+    uint256 internal counterweight;
+    uint256 public minGasPrice;
+
+    uint256 internal epochsToSkip;
+
     function isNode(address addr) internal view returns (bool) {
         return addr == address(node);
     }
@@ -185,9 +192,12 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         node = NodeDriverAuth(nodeDriver);
         totalSupply = _totalSupply;
         baseRewardPerSecond = 6.183414351851851852 * 1e18;
+        minGasPrice = GP.initialMinGasPrice();
+        targetGasPowerPerSecond = 3500000;
         offlinePenaltyThresholdBlocksNum = 1000;
         offlinePenaltyThresholdTime = 3 days;
         getEpochSnapshot[sealedEpoch].endTime = _now();
+        counterweight = 6 * 60 * 60;
     }
 
     function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyDriver {
@@ -381,7 +391,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         totalSlashedStake += penalty;
         require(amount > penalty, "stake is fully slashed");
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        (bool sent, ) = delegator.call.value(amount.sub(penalty))("");
+        (bool sent,) = delegator.call.value(amount.sub(penalty))("");
         require(sent, "Failed to send FTM");
 
         emit Withdrawn(delegator, toValidatorID, wrID, amount);
@@ -561,7 +571,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         address payable delegator = msg.sender;
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        (bool sent, ) = delegator.call.value(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward))("");
+        (bool sent,) = delegator.call.value(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward))("");
         require(sent, "Failed to send FTM");
 
         emit ClaimedRewards(delegator, toValidatorID, rewards.lockupExtraReward, rewards.lockupBaseReward, rewards.unlockedReward);
@@ -622,13 +632,26 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         stakeTokenizerAddress = addr;
     }
 
+    function updateTargetGasPowerPerSecond(uint256 v) onlyOwner external {
+        targetGasPowerPerSecond = v;
+    }
+
+    function updateGasPriceBalancingCounterweight(uint256 v) onlyOwner external {
+        counterweight = v;
+    }
+
+    function skipEpochs(uint256 v) onlyOwner external {
+        require(epochsToSkip == 0, "already set");
+        epochsToSkip = v;
+    }
+
     // updateTotalSupply allows to fix the different between actual total supply and totalSupply field due to the
     // bug fixed in 3c828b56b7cd32ea058a954fad3cd726e193cc77
     function updateTotalSupply(int256 diff) onlyOwner external {
         if (diff >= 0) {
             totalSupply += uint256(diff);
         } else {
-            totalSupply -= uint256(-diff);
+            totalSupply -= uint256(- diff);
         }
     }
 
@@ -658,18 +681,11 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 totalBaseRewardWeight;
         uint256[] txRewardWeights;
         uint256 totalTxRewardWeight;
-        uint256 epochDuration;
         uint256 epochFee;
     }
 
-    function _sealEpoch_rewards(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory uptimes, uint256[] memory accumulatedOriginatedTxsFee) internal {
-        _SealEpochRewardsCtx memory ctx = _SealEpochRewardsCtx(new uint[](validatorIDs.length), 0, new uint[](validatorIDs.length), 0, 0, 0);
-        EpochSnapshot storage prevSnapshot = getEpochSnapshot[currentEpoch().sub(1)];
-
-        ctx.epochDuration = 1;
-        if (_now() > prevSnapshot.endTime) {
-            ctx.epochDuration = _now() - prevSnapshot.endTime;
-        }
+    function _sealEpoch_rewards(uint256 epochDuration, EpochSnapshot storage snapshot, EpochSnapshot storage prevSnapshot, uint256[] memory validatorIDs, uint256[] memory uptimes, uint256[] memory accumulatedOriginatedTxsFee) internal {
+        _SealEpochRewardsCtx memory ctx = _SealEpochRewardsCtx(new uint[](validatorIDs.length), 0, new uint[](validatorIDs.length), 0, 0);
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             uint256 prevAccumulatedTxsFee = prevSnapshot.accumulatedOriginatedTxsFee[validatorIDs[i]];
@@ -680,19 +696,19 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             // txRewardWeight = {originatedTxsFee} * {uptime}
             // originatedTxsFee is roughly proportional to {uptime} * {stake}, so the whole formula is roughly
             // {stake} * {uptime} ^ 2
-            ctx.txRewardWeights[i] = originatedTxsFee * uptimes[i] / ctx.epochDuration;
+            ctx.txRewardWeights[i] = originatedTxsFee * uptimes[i] / epochDuration;
             ctx.totalTxRewardWeight = ctx.totalTxRewardWeight.add(ctx.txRewardWeights[i]);
             ctx.epochFee = ctx.epochFee.add(originatedTxsFee);
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             // baseRewardWeight = {stake} * {uptime ^ 2}
-            ctx.baseRewardWeights[i] = (((snapshot.receivedStake[validatorIDs[i]] * uptimes[i]) / ctx.epochDuration) * uptimes[i]) / ctx.epochDuration;
+            ctx.baseRewardWeights[i] = (((snapshot.receivedStake[validatorIDs[i]] * uptimes[i]) / epochDuration) * uptimes[i]) / epochDuration;
             ctx.totalBaseRewardWeight = ctx.totalBaseRewardWeight.add(ctx.baseRewardWeights[i]);
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
-            uint256 rawReward = _calcRawValidatorEpochBaseReward(ctx.epochDuration, baseRewardPerSecond, ctx.baseRewardWeights[i], ctx.totalBaseRewardWeight);
+            uint256 rawReward = _calcRawValidatorEpochBaseReward(epochDuration, baseRewardPerSecond, ctx.baseRewardWeights[i], ctx.totalBaseRewardWeight);
             rawReward = rawReward.add(_calcRawValidatorEpochTxReward(ctx.epochFee, ctx.txRewardWeights[i], ctx.totalTxRewardWeight));
 
             uint256 validatorID = validatorIDs[i];
@@ -717,7 +733,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
                 rewardPerToken = (delegatorsReward * Decimal.unit()) / receivedStake;
             }
             snapshot.accumulatedRewardPerToken[validatorID] = prevSnapshot.accumulatedRewardPerToken[validatorID] + rewardPerToken;
-            //
+
             snapshot.accumulatedOriginatedTxsFee[validatorID] = accumulatedOriginatedTxsFee[i];
             snapshot.accumulatedUptime[validatorID] = prevSnapshot.accumulatedUptime[validatorID] + uptimes[i];
         }
@@ -727,12 +743,52 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         snapshot.totalTxRewardWeight = ctx.totalTxRewardWeight;
     }
 
-    function sealEpoch(uint256[] calldata offlineTime, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
+
+    function _sealEpoch_minGasPrice(uint256 epochDuration, uint256 epochGas) internal {
+        if (targetGasPowerPerSecond == 0 || counterweight == 0) {
+            // upgrade is not enabled yet
+            return;
+        }
+        if (minGasPrice == 0) {
+            // migrate after prev version
+            minGasPrice = GP.initialMinGasPrice();
+        }
+
+        // change minGasPrice proportionally to the difference between target and received epochGas
+        uint256 targetEpochGas = epochDuration * targetGasPowerPerSecond + 1;
+        uint256 gasPriceDeltaRatio = epochGas * Decimal.unit() / targetEpochGas;
+        // scale down the change speed (estimate gasPriceDeltaRatio ^ (epochDuration / counterweight))
+        uint256 timedCounterweight = counterweight / epochDuration;
+        gasPriceDeltaRatio = (gasPriceDeltaRatio + timedCounterweight * Decimal.unit()) / (1 + timedCounterweight);
+        // limit the max/min possible delta in one epoch
+        gasPriceDeltaRatio = GP.trimGasPriceChangeRatio(gasPriceDeltaRatio);
+
+        // apply the ratio
+        uint256 newMinGasPrice = minGasPrice * gasPriceDeltaRatio / Decimal.unit();
+        // limit the max/min possible minGasPrice
+        newMinGasPrice = GP.trimMinGasPrice(newMinGasPrice);
+        // apply new minGasPrice
+        minGasPrice = newMinGasPrice;
+    }
+
+    function sealEpoch(uint256[] calldata offlineTime, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee, uint256 epochGas) external onlyDriver {
+        if (epochsToSkip > 0) {
+            return;
+        }
+
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         uint256[] memory validatorIDs = snapshot.validatorIDs;
 
         _sealEpoch_offline(snapshot, validatorIDs, offlineTime, offlineBlocks);
-        _sealEpoch_rewards(snapshot, validatorIDs, uptimes, originatedTxsFee);
+        {
+            EpochSnapshot storage prevSnapshot = getEpochSnapshot[currentSealedEpoch];
+            uint256 epochDuration = 1;
+            if (_now() > prevSnapshot.endTime) {
+                epochDuration = _now() - prevSnapshot.endTime;
+            }
+            _sealEpoch_rewards(epochDuration, snapshot, prevSnapshot, validatorIDs, uptimes, originatedTxsFee);
+            _sealEpoch_minGasPrice(epochDuration, epochGas);
+        }
 
         currentSealedEpoch = currentEpoch();
         snapshot.endTime = _now();
@@ -741,8 +797,17 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
-        // fill data for the next snapshot
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
+        if (epochsToSkip > 0) {
+            // erase data for the snapshot
+            for (uint256 i = 0; i < snapshot.validatorIDs.length; i++) {
+                uint256 validatorID = snapshot.validatorIDs[i];
+                snapshot.receivedStake[validatorID] = 0;
+            }
+            snapshot.totalStake = 0;
+            epochsToSkip -= 1;
+        }
+        // fill data for the next snapshot
         for (uint256 i = 0; i < nextValidatorIDs.length; i++) {
             uint256 validatorID = nextValidatorIDs[i];
             uint256 receivedStake = getValidator[validatorID].receivedStake;
@@ -750,6 +815,9 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             snapshot.totalStake = snapshot.totalStake.add(receivedStake);
         }
         snapshot.validatorIDs = nextValidatorIDs;
+        if (minGasPrice != 0) {
+            node.updateMinGasPrice(minGasPrice);
+        }
     }
 
     function _now() internal view returns (uint256) {
@@ -768,7 +836,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return getLockupInfo[delegator][toValidatorID].fromEpoch <= epoch && epochEndTime(epoch) <= getLockupInfo[delegator][toValidatorID].endTime;
     }
 
-    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns(bool) {
+    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns (bool) {
         if (stakeTokenizerAddress == address(0)) {
             return true;
         }

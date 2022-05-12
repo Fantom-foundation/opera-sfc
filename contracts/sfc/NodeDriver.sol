@@ -54,6 +54,10 @@ contract NodeDriverAuth is Initializable, Ownable {
         driver.updateNetworkRules(diff);
     }
 
+    function updateMinGasPrice(uint256 minGasPrice) external onlySFC {
+        driver.updateNetworkRules(bytes(strConcat("{\"Economy\":{\"MinGasPrice\":", uint256ToStr(minGasPrice), "}}")));
+    }
+
     function updateNetworkVersion(uint256 version) external onlyOwner {
         driver.updateNetworkVersion(version);
     }
@@ -86,8 +90,8 @@ contract NodeDriverAuth is Initializable, Ownable {
         sfc.sealEpochValidators(nextValidatorIDs);
     }
 
-    function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyDriver {
-        sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
+    function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee, uint256 usedGas) external onlyDriver {
+        sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee, usedGas);
     }
 
     function isContract(address account) internal view returns (bool) {
@@ -96,18 +100,62 @@ contract NodeDriverAuth is Initializable, Ownable {
         assembly { size := extcodesize(account) }
         return size > 0;
     }
+
+    function decimalsNum(uint256 num) internal pure returns (uint256) {
+        uint decimals;
+        while (num != 0) {
+            decimals++;
+            num /= 10;
+        }
+        return decimals;
+    }
+
+    function uint256ToStr(uint256 num) internal pure returns (string memory) {
+        if (num == 0) {
+            return "0";
+        }
+        uint decimals = decimalsNum(num);
+        bytes memory bstr = new bytes(decimals);
+        uint strIdx = decimals - 1;
+        while (num != 0) {
+            bstr[strIdx] = byte(uint8(48 + num % 10));
+            num /= 10;
+            strIdx--;
+        }
+        return string(bstr);
+    }
+
+    function strConcat(string memory _a, string memory _b, string memory _c) internal pure returns (string memory) {
+        bytes memory _ba = bytes(_a);
+        bytes memory _bb = bytes(_b);
+        bytes memory _bc = bytes(_c);
+        string memory abc = new string(_ba.length + _bb.length + _bc.length);
+        bytes memory babc = bytes(abc);
+        uint k = 0;
+        uint i = 0;
+        for (i = 0; i < _ba.length; i++) {
+            babc[k++] = _ba[i];
+        }
+        for (i = 0; i < _bb.length; i++) {
+            babc[k++] = _bb[i];
+        }
+        for (i = 0; i < _bc.length; i++) {
+            babc[k++] = _bc[i];
+        }
+        return string(babc);
+    }
 }
 
 contract NodeDriver is Initializable {
     SFC internal sfc;
-    NodeDriver internal backend;
+    NodeDriverAuth internal backend;
     EVMWriter internal evmWriter;
 
     event UpdatedBackend(address indexed backend);
 
     function setBackend(address _backend) external onlyBackend {
         emit UpdatedBackend(_backend);
-        backend = NodeDriver(_backend);
+        backend = NodeDriverAuth(_backend);
     }
 
     modifier onlyBackend() {
@@ -123,7 +171,7 @@ contract NodeDriver is Initializable {
     event AdvanceEpochs(uint256 num);
 
     function initialize(address _backend, address _evmWriterAddress) external initializer {
-        backend = NodeDriver(_backend);
+        backend = NodeDriverAuth(_backend);
         emit UpdatedBackend(_backend);
         evmWriter = EVMWriter(_evmWriterAddress);
     }
@@ -192,7 +240,11 @@ contract NodeDriver is Initializable {
     }
 
     function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyNode {
-        backend.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
+        backend.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee, 841669690);
+    }
+
+    function sealEpochV1(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee, uint256 usedGas) external onlyNode {
+        backend.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee, usedGas);
     }
 }
 
