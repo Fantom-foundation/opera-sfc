@@ -118,6 +118,7 @@ class BlockchainNode {
 }
 
 const pubkey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
+const invalidPubKey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5';
 
 contract('SFC', async ([account1, account2]) => {
     let nodeIRaw;
@@ -303,7 +304,14 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 await expectRevert(this.sfc.createValidator(web3.utils.stringToHex(''), {
                     from: secondValidator,
                     value: amount18('10'),
-                }), 'empty pubkey');
+                }), 'invalid pubkey');
+            });
+
+            it('Should fail if pubkey is invalid (shorter)', async () => {
+                await expectRevert(this.sfc.createValidator(invalidPubKey, {
+                    from: secondValidator,
+                    value: amount18('10'),
+                }), 'invalid pubkey');
             });
 
             it('Should not allow non-owner to update the withdrawalPeriodEpochs param', async () => {
