@@ -107,7 +107,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     uint256 internal counterweight;
     uint256 public minGasPrice;
 
-    uint256 internal epochsToSkip;
+    uint256 internal deleted0;
 
     function isNode(address addr) internal view returns (bool) {
         return addr == address(node);
@@ -640,11 +640,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         counterweight = v;
     }
 
-    function skipEpochs(uint256 v) onlyOwner external {
-        require(epochsToSkip == 0, "already set");
-        epochsToSkip = v;
-    }
-
     // updateTotalSupply allows to fix the different between actual total supply and totalSupply field due to the
     // bug fixed in 3c828b56b7cd32ea058a954fad3cd726e193cc77
     function updateTotalSupply(int256 diff) onlyOwner external {
@@ -772,10 +767,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     }
 
     function sealEpoch(uint256[] calldata offlineTime, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee, uint256 epochGas) external onlyDriver {
-        if (epochsToSkip > 0) {
-            return;
-        }
-
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         uint256[] memory validatorIDs = snapshot.validatorIDs;
 
@@ -798,15 +789,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
-        if (epochsToSkip > 0) {
-            // erase data for the snapshot
-            for (uint256 i = 0; i < snapshot.validatorIDs.length; i++) {
-                uint256 validatorID = snapshot.validatorIDs[i];
-                snapshot.receivedStake[validatorID] = 0;
-            }
-            snapshot.totalStake = 0;
-            epochsToSkip -= 1;
-        }
         // fill data for the next snapshot
         for (uint256 i = 0; i < nextValidatorIDs.length; i++) {
             uint256 validatorID = nextValidatorIDs[i];
