@@ -745,15 +745,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
 
     function _sealEpoch_minGasPrice(uint256 epochDuration, uint256 epochGas) internal {
-        if (targetGasPowerPerSecond == 0 || counterweight == 0) {
-            // upgrade is not enabled yet
-            return;
-        }
-        if (minGasPrice == 0) {
-            // migrate after prev version
-            minGasPrice = GP.initialMinGasPrice();
-        }
-
         // change minGasPrice proportionally to the difference between target and received epochGas
         uint256 targetEpochGas = epochDuration * targetGasPowerPerSecond + 1;
         uint256 gasPriceDeltaRatio = epochGas * Decimal.unit() / targetEpochGas;
@@ -802,9 +793,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             snapshot.totalStake = snapshot.totalStake.add(receivedStake);
         }
         snapshot.validatorIDs = nextValidatorIDs;
-        if (minGasPrice != 0) {
-            node.updateMinGasPrice(minGasPrice);
-        }
+        node.updateMinGasPrice(minGasPrice);
     }
 
     function _now() internal view returns (uint256) {
