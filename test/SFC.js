@@ -803,62 +803,62 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await this.sfc.sealEpoch([1], [1], [1], [1], 1000);
             await this.sfc.sealEpochValidators([1]);
 
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('99000000000'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95000000000'));
 
             await this.sfc.advanceTime(1);
             await this.sfc.sealEpoch([1], [1], [1], [1], 1000);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('98999998855'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94999998901'));
 
             await this.sfc.advanceTime(2);
             await this.sfc.sealEpoch([1], [1], [1], [1], 2000);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('98999997709'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94999997802'));
 
             await this.sfc.advanceTime(1000);
             await this.sfc.sealEpoch([1], [1], [1], [1], 1000000);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('98999996571'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94999996715'));
 
             await this.sfc.advanceTime(1000);
             await this.sfc.sealEpoch([1], [1], [1], [1], 666666);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('98620684722'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94637676437'));
 
             await this.sfc.advanceTime(1000);
             await this.sfc.sealEpoch([1], [1], [1], [1], 1500000);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('99187468566'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95179080284'));
 
             await this.sfc.advanceTime(1);
             await this.sfc.sealEpoch([1], [1], [1], [1], 666);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('99187084373'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95178711617'));
 
             await this.sfc.advanceTime(1);
             await this.sfc.sealEpoch([1], [1], [1], [1], 1500);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('99187656645'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95179260762'));
 
             await this.sfc.advanceTime(1000);
             await this.sfc.sealEpoch([1], [1], [1], [1], 10000000000);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('100179533211'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('99938223800'));
 
-            await this.sfc.advanceTime(1000);
+            await this.sfc.advanceTime(10000);
             await this.sfc.sealEpoch([1], [1], [1], [1], 0);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('99177737878'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94941312610'));
 
             await this.sfc.advanceTime(100);
             await this.sfc.sealEpoch([1], [1], [1], [1], 200000);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('99292391929'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95051069157'));
 
             await this.sfc.advanceTime(100);
             await this.sfc.sealEpoch([1], [1], [1], [1], 50000);
             await this.sfc.sealEpochValidators([1]);
-            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('99234996908'));
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94996125793'));
         });
     });
 });
