@@ -749,8 +749,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 targetEpochGas = epochDuration * targetGasPowerPerSecond + 1;
         uint256 gasPriceDeltaRatio = epochGas * Decimal.unit() / targetEpochGas;
         // scale down the change speed (estimate gasPriceDeltaRatio ^ (epochDuration / counterweight))
-        uint256 timedCounterweight = counterweight / epochDuration;
-        gasPriceDeltaRatio = (gasPriceDeltaRatio + timedCounterweight * Decimal.unit()) / (1 + timedCounterweight);
+        gasPriceDeltaRatio = (epochDuration * gasPriceDeltaRatio + counterweight * Decimal.unit()) / (epochDuration + counterweight);
         // limit the max/min possible delta in one epoch
         gasPriceDeltaRatio = GP.trimGasPriceChangeRatio(gasPriceDeltaRatio);
 
