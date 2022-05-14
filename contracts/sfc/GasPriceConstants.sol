@@ -14,8 +14,8 @@ library GP {
     }
 
     function trimMinGasPrice(uint256 x) internal pure returns (uint256) {
-        if (x > 100000 * 1e9) {
-            return 100000 * 1e9;
+        if (x > 1000000 * 1e9) {
+            return 1000000 * 1e9;
         }
         if (x < 1e9) {
             return 1e9;
