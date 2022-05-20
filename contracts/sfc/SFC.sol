@@ -800,8 +800,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     function _popDelegationUnlockPenalty(address delegator, uint256 toValidatorID, uint256 unlockAmount, uint256 totalAmount) internal returns (uint256) {
         uint256 lockupExtraRewardShare = getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward.mul(unlockAmount).div(totalAmount);
         uint256 lockupBaseRewardShare = getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward.mul(unlockAmount).div(totalAmount);
-        uint256 totalPenaltyAmount = lockupExtraRewardShare + lockupBaseRewardShare / 2;
-        uint256 penalty = totalPenaltyAmount.mul(unlockAmount).div(totalAmount);
+        uint256 penalty = lockupExtraRewardShare + lockupBaseRewardShare / 2;
         getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward = getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward.sub(lockupExtraRewardShare);
         getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward = getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward.sub(lockupBaseRewardShare);
         if (penalty >= unlockAmount) {
