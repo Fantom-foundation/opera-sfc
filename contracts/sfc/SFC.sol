@@ -311,8 +311,10 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         uint256 selfStakeAfterwards = getSelfStake(toValidatorID);
         if (selfStakeAfterwards != 0) {
-            require(selfStakeAfterwards >= minSelfStake(), "insufficient self-stake");
-            require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
+            if (getValidator[toValidatorID].status == OK_STATUS) {
+                require(selfStakeAfterwards >= minSelfStake(), "insufficient self-stake");
+                require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
+            }
         } else {
             _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
         }
@@ -746,7 +748,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return getLockupInfo[delegator][toValidatorID].fromEpoch <= epoch && epochEndTime(epoch) <= getLockupInfo[delegator][toValidatorID].endTime;
     }
 
-    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns(bool) {
+    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns (bool) {
         if (stakeTokenizerAddress == address(0)) {
             return true;
         }
