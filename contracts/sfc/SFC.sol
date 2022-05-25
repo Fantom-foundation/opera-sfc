@@ -642,16 +642,6 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         counterweight = v;
     }
 
-    // updateTotalSupply allows to fix the different between actual total supply and totalSupply field due to the
-    // bug fixed in 3c828b56b7cd32ea058a954fad3cd726e193cc77
-    function updateTotalSupply(int256 diff) onlyOwner external {
-        if (diff >= 0) {
-            totalSupply += uint256(diff);
-        } else {
-            totalSupply -= uint256(- diff);
-        }
-    }
-
     // mintFTM allows SFC owner to mint an arbitrary amount of FTM tokens
     // justification is a human readable description of why tokens were minted (e.g. because ERC20 FTM tokens were burnt)
     function mintFTM(address payable receiver, uint256 amount, string calldata justification) onlyOwner external {
