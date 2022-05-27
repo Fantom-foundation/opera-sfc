@@ -435,7 +435,18 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
     function createValidator(bytes calldata pubkey) external payable {
         require(msg.value >= minSelfStake(), "insufficient self-stake");
-        require(pubkey.length > 0 && pubkey.length == 65, "invalid pubkey");
+        require(pubkey.length > 0 && pubkey.length == 66, "invalid pubkey");
+
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < 4 ; i++) { 
+            if (pubkey[pubkey.length - 4 + i] != 0) {
+                count = count + 1;
+            }
+        }
+        
+        require(count > 0, "invalid pubkey");
+
         _createValidator(msg.sender, pubkey);
         _delegate(msg.sender, lastValidatorID, msg.value);
     }
