@@ -7,3 +7,5 @@ coverage.json
 /.coverage_contracts/
 /coverageEnv/
 /coverageEnv/
+artifacts/
+cache/
