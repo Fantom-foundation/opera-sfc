@@ -2,15 +2,26 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./StakerConstants.sol";
+import "../adapters/GovernanceToSFC.sol";
 import "../ownership/Ownable.sol";
 import "../version/Version.sol";
 import "./NodeDriver.sol";
 import "./StakeTokenizer.sol";
 
+interface IGovernanceToSFC {
+    function getGovernance() external view returns (address);
+
+    function activeProposals() external view returns (uint256);
+}
+
+interface IOwnable {
+    function owner() external view returns (address);
+}
+
 /**
  * @dev Stakers contract defines data structure and methods for validators / validators.
  */
-contract SFC is Initializable, Ownable, StakersConstants, Version {
+contract SFC is Initializable, Ownable, GovernanceToSFC, StakersConstants, Version {
     using SafeMath for uint256;
 
     /**
@@ -294,7 +305,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
      * @dev Minimum amount of stake for a validator, i.e., 500000 FTM
      */
     function minSelfStake() public view returns (uint256) {
-        return minStakeAmnt * 1e18;
+        return minStakeAmnt * Decimal.unit();
     }
 
     function maxDelegatedRatio() public view returns (uint256) {
@@ -355,9 +366,11 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         uint256 sealedEpoch,
         uint256 _totalSupply,
         address nodeDriver,
-        address owner
+        address owner,
+        address governance
     ) external initializer {
         Ownable.initialize(owner);
+        GovernanceToSFC.initialize(governance);
         currentSealedEpoch = sealedEpoch;
         node = NodeDriverAuth(nodeDriver);
         totalSupply = _totalSupply;
@@ -439,12 +452,12 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         uint256 count = 0;
 
-        for (uint256 i = 0; i < 4 ; i++) { 
-            if (pubkey[pubkey.length - 4 + i] != 0) {
+        for (uint256 i = 0; i < 4; i++) {
+            if (pubkey[pubkey.length -4 + i] != 0) {
                 count = count + 1;
             }
         }
-        
+
         require(count > 0, "invalid pubkey");
 
         _createValidator(msg.sender, pubkey);
@@ -1517,125 +1530,96 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         return penalty;
     }
 
-    function setMaxDelegation(uint256 _maxDelegationRatio) external onlyOwner {
+    function _onlyGovernance(address _sender) internal view {
+        require((_sender == getGovernance() || _sender == owner()), "SFC: this function is controlled by the owner and governance contract");
+    }
+
+    function setMaxDelegation(uint256 _maxDelegationRatio) external {
+        _onlyGovernance(msg.sender);
         _updateMaxDelegation(_maxDelegationRatio);
     }
 
-    function _updateMaxDelegation(uint256 _maxDelegation) internal onlyOwner {
+    function _updateMaxDelegation(uint256 _maxDelegation) internal {
         maxDelegation = _maxDelegation;
         emit UpdatedMaxDelegationRatio(_maxDelegation);
     }
 
-    function setMinSelfStake(uint256 _minSelfStake) external onlyOwner {
+    function setMinSelfStake(uint256 _minSelfStake) external {
+        _onlyGovernance(msg.sender);
         _updateMinSelfStake(_minSelfStake);
     }
 
-    function _updateMinSelfStake(uint256 _minSelfStake) internal onlyOwner {
+    function _updateMinSelfStake(uint256 _minSelfStake) internal {
         minStakeAmnt = _minSelfStake;
         emit UpdatedMinSelfStake(_minSelfStake);
     }
 
-    function setValidatorCommission(uint256 _validatorCommission)
-        external
-        onlyOwner
-    {
+    function setValidatorCommission(uint256 _validatorCommission) external {
+        _onlyGovernance(msg.sender);
         _updateValidatorCommission(_validatorCommission);
     }
 
-    function _updateValidatorCommission(uint256 _validatorCommission)
-        internal
-        onlyOwner
-    {
+    function _updateValidatorCommission(uint256 _validatorCommission) internal {
         validatorCommissionFee = _validatorCommission;
         emit UpdatedValidatorCommission(_validatorCommission);
     }
 
-    function setContractCommission(uint256 _contractCommission)
-        external
-        onlyOwner
-    {
+    function setContractCommission(uint256 _contractCommission) external {
+        _onlyGovernance(msg.sender);
         _updateContractCommission(_contractCommission);
     }
 
-    function _updateContractCommission(uint256 _contractCommission)
-        internal
-        onlyOwner
-    {
+    function _updateContractCommission(uint256 _contractCommission) internal {
         contractCommissionFee = _contractCommission;
         emit UpdatedContractCommission(_contractCommission);
     }
 
-    function setUnlockedRewardRatio(uint256 _unlockedReward)
-        external
-        onlyOwner
-    {
+    function setUnlockedRewardRatio(uint256 _unlockedReward) external {
+        _onlyGovernance(msg.sender);
         _updateUnlockedRewardRatio(_unlockedReward);
     }
 
-    function _updateUnlockedRewardRatio(uint256 _unlockedReward)
-        internal
-        onlyOwner
-    {
+    function _updateUnlockedRewardRatio(uint256 _unlockedReward) internal {
         unlockedReward = _unlockedReward;
         emit UpdatedUnlockedRewardRatio(_unlockedReward);
     }
 
-    function setMinLockupDuration(uint256 _minLockupDuration)
-        external
-        onlyOwner
-    {
-        _updateMinLockupDuration(_minLockupDuration);
+    function setMinLockupDuration(uint256 _minLockupDuration) external {
+        _onlyGovernance(msg.sender);
+         _updateMinLockupDuration(_minLockupDuration);
     }
 
-    function _updateMinLockupDuration(uint256 _minLockupDuration)
-        internal
-        onlyOwner
-    {
+    function _updateMinLockupDuration(uint256 _minLockupDuration) internal {
         minLockup = _minLockupDuration;
         emit UpdatedMinLockupDuration(_minLockupDuration);
     }
 
-    function setMaxLockupDuration(uint256 _maxLockupDuration)
-        external
-        onlyOwner
-    {
+    function setMaxLockupDuration(uint256 _maxLockupDuration) external {
+        _onlyGovernance(msg.sender);
         _updateMaxLockupDuration(_maxLockupDuration);
     }
 
-    function _updateMaxLockupDuration(uint256 _maxLockupDuration)
-        internal
-        onlyOwner
-    {
+    function _updateMaxLockupDuration(uint256 _maxLockupDuration) internal {
         maxLockup = _maxLockupDuration;
         emit UpdatedMaxLockupDuration(_maxLockupDuration);
     }
 
-    function setWithdrawalPeriodEpoch(uint256 _withdrawalPeriodEpochs)
-        external
-        onlyOwner
-    {
+    function setWithdrawalPeriodEpoch(uint256 _withdrawalPeriodEpochs) external {
+        _onlyGovernance(msg.sender);
         _updateWithdrawalPeriodEpoch(_withdrawalPeriodEpochs);
     }
 
-    function _updateWithdrawalPeriodEpoch(uint256 _withdrawalPeriodEpochs)
-        internal
-        onlyOwner
-    {
+    function _updateWithdrawalPeriodEpoch(uint256 _withdrawalPeriodEpochs) internal {
         withdrawalPeriodEpochValue = _withdrawalPeriodEpochs;
         emit UpdatedWithdrawalPeriodEpoch(_withdrawalPeriodEpochs);
     }
 
-    function setWithdrawalPeriodTime(uint256 _withdrawalPeriodTime)
-        external
-        onlyOwner
-    {
+    function setWithdrawalPeriodTime(uint256 _withdrawalPeriodTime) external {
+        _onlyGovernance(msg.sender);
         _updateWithdrawalPeriodTime(_withdrawalPeriodTime);
     }
 
-    function _updateWithdrawalPeriodTime(uint256 _withdrawalPeriodTime)
-        internal
-        onlyOwner
-    {
+    function _updateWithdrawalPeriodTime(uint256 _withdrawalPeriodTime) internal {
         withdrawalPeriodTimeValue = _withdrawalPeriodTime;
         emit UpdatedWithdrawalPeriodTime(_withdrawalPeriodTime);
     }
