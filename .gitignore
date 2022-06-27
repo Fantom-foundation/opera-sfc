@@ -10,3 +10,4 @@ coverage.json
 artifacts/
 cache/
 .env
+contracts/test/.DS_Store
