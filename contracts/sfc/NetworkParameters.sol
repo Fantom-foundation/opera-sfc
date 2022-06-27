@@ -3,10 +3,8 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../common/Decimal.sol";
 import "../adapters/GovernanceToSFC.sol";
-import "../ownership/Ownable.sol";
-import "../common/Initializable.sol";
 
-contract NetworkParameters is Ownable, GovernanceToSFC {
+contract NetworkParameters is GovernanceToSFC {
     using SafeMath for uint256;
 
     uint256 private minStakeAmnt;
