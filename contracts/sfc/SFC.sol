@@ -932,7 +932,7 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         return rewards;
     }
 
-    function claimRewards(uint256 toValidatorID) public {
+    function claimRewards(uint256 toValidatorID) public noActiveProposals {
         address payable delegator = msg.sender;
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
