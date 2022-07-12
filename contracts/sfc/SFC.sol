@@ -2,6 +2,7 @@ pragma solidity ^0.5.0;
 
 import "./StakerConstants.sol";
 import "./GasPriceConstants.sol";
+import "../ownership/Ownable.sol";
 import "../version/Version.sol";
 import "./NodeDriver.sol";
 import "./StakeTokenizer.sol";
@@ -301,26 +302,8 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         counterweight = 6 * 60 * 60;
     }
 
-    function setGenesisValidator(
-        address auth,
-        uint256 validatorID,
-        bytes calldata pubkey,
-        uint256 status,
-        uint256 createdEpoch,
-        uint256 createdTime,
-        uint256 deactivatedEpoch,
-        uint256 deactivatedTime
-    ) external onlyDriver {
-        _rawCreateValidator(
-            auth,
-            validatorID,
-            pubkey,
-            status,
-            createdEpoch,
-            createdTime,
-            deactivatedEpoch,
-            deactivatedTime
-        );
+    function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyDriver {
+        _rawCreateValidator(auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
         if (validatorID > lastValidatorID) {
             lastValidatorID = validatorID;
         }
@@ -946,11 +929,7 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         address payable delegator = msg.sender;
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        (bool sent, ) = delegator.call.value(
-            rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(
-                rewards.unlockedReward
-            )
-        )("");
+        (bool sent,) = delegator.call.value(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward))("");
         require(sent, "Failed to send FTM");
 
         emit ClaimedRewards(
@@ -1108,7 +1087,6 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         uint256 totalBaseRewardWeight;
         uint256[] txRewardWeights;
         uint256 totalTxRewardWeight;
-        uint256 epochDuration;
         uint256 epochFee;
     }
 
@@ -1199,7 +1177,6 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         uint256[] memory validatorIDs = snapshot.validatorIDs;
 
         _sealEpoch_offline(snapshot, validatorIDs, offlineTime, offlineBlocks);
-        _sealEpoch_rewards(snapshot, validatorIDs, uptimes, originatedTxsFee);
         {
             EpochSnapshot storage prevSnapshot = getEpochSnapshot[currentSealedEpoch];
             uint256 epochDuration = 1;
@@ -1237,33 +1214,15 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         return getEpochSnapshot[epoch].endTime;
     }
 
-    function isLockedUp(address delegator, uint256 toValidatorID)
-        public
-        view
-        returns (bool)
-    {
-        return
-            getLockupInfo[delegator][toValidatorID].endTime != 0 &&
-            getLockupInfo[delegator][toValidatorID].lockedStake != 0 &&
-            _now() <= getLockupInfo[delegator][toValidatorID].endTime;
+    function isLockedUp(address delegator, uint256 toValidatorID) view public returns (bool) {
+        return getLockupInfo[delegator][toValidatorID].endTime != 0 && getLockupInfo[delegator][toValidatorID].lockedStake != 0 && _now() <= getLockupInfo[delegator][toValidatorID].endTime;
     }
 
-    function _isLockedUpAtEpoch(
-        address delegator,
-        uint256 toValidatorID,
-        uint256 epoch
-    ) internal view returns (bool) {
-        return
-            getLockupInfo[delegator][toValidatorID].fromEpoch <= epoch &&
-            epochEndTime(epoch) <=
-            getLockupInfo[delegator][toValidatorID].endTime;
+    function _isLockedUpAtEpoch(address delegator, uint256 toValidatorID, uint256 epoch) internal view returns (bool) {
+        return getLockupInfo[delegator][toValidatorID].fromEpoch <= epoch && epochEndTime(epoch) <= getLockupInfo[delegator][toValidatorID].endTime;
     }
 
-    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID)
-        internal
-        view
-        returns (bool)
-    {
+    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns (bool) {
         if (stakeTokenizerAddress == address(0)) {
             return true;
         }

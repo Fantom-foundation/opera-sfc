@@ -51,7 +51,7 @@ async function sealEpoch(sfc, duration, _validatorsMetrics = undefined) {
     }
 
     await sfc.advanceTime(duration);
-    await sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees);
+    await sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0);
     await sfc.sealEpochValidators(allValidators);
 }
 
@@ -106,7 +106,7 @@ class BlockchainNode {
         }
 
         await this.sfc.advanceTime(duration);
-        await this.handle(await this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees));
+        await this.handle(await this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0));
         await this.handle(await this.sfc.sealEpochValidators(nextValidatorIDs));
         this.validators = this.nextValidators;
         // clone this.nextValidators
@@ -196,6 +196,7 @@ contract('SFC', async ([account1, account2]) => {
 
         it('Should not be possible to seal Epoch through NodeDriver if not called by node', async () => {
             await expectRevert(nodeIRaw.sealEpoch([0, 1], [0, 1], [0, 1], [0, 1]), 'not callable');
+            await expectRevert(nodeIRaw.sealEpochV1([0, 1], [0, 1], [0, 1], [0, 1], 0), 'not callable');
         });
     });
 
@@ -211,7 +212,7 @@ contract('SFC', async ([account1, account2]) => {
         });
 
         it('should reject sealEpoch if not called by Node', async () => {
-            await expect(this.sfc.sealEpoch([1], [1], [1], [1], {
+            await expect(this.sfc.sealEpoch([1], [1], [1], [1], 0, {
                 from: account1,
             })).to.be.rejectedWith('caller is not the NodeDriverAuth contract');
         });
@@ -284,8 +285,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 expect((await this.sfc.withdrawalPeriodEpochs()).toString()).to.equals('3');
             });
 
-            it('Should not allow non-owner to update the minLockupDuration param', async () => {
-                await expectRevert(this.sfc.setMinLockupDuration(86400, { from: secondValidator }), 'SFC: this function is controlled by the owner and governance contract');
+            it('Returns the version of the current implementation', async () => {
+                expect((await this.sfc.version()).toString()).to.equals('0x333033');
             });
 
             it('Should create a Validator and return the ID', async () => {
@@ -664,7 +665,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         it('Returns stashedRewardsUntilEpoch', async () => {
             expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('12'));
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('13'));
-            await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102]);
+            await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102], 0);
             expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('13'));
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('14'));
             await this.sfc.sealEpoch(
@@ -672,24 +673,28 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
+                0,
             );
             await this.sfc.sealEpoch(
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
+                0,
             );
             await this.sfc.sealEpoch(
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
+                0,
             );
             await this.sfc.sealEpoch(
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
                 [100, 101, 102],
+                0,
             );
             expect(await this.sfc.currentSealedEpoch.call()).to.be.bignumber.equal(new BN('17'));
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('18'));
@@ -811,6 +816,77 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             expect(this.node.nextValidators[firstValidatorID.toString()]).to.be.bignumber.equal(amount18('0.4175'));
             expect(this.node.nextValidators[secondValidatorID.toString()]).to.be.bignumber.equal(amount18('0.6825'));
             expect(this.node.nextValidators[thirdValidatorID.toString()]).to.be.bignumber.equal(amount18('0.4'));
+        });
+
+        it('balances gas price', async () => {
+            await this.sfc.updateGasPriceBalancingCounterweight(24 * 60 * 60);
+            await this.sfc.rebaseTime();
+            await this.sfc.createValidator(pubkey, {
+                from: firstValidator,
+                value: amount18('1.0'),
+            });
+
+            await this.sfc.updateTargetGasPowerPerSecond(1000);
+
+            await this.sfc.sealEpoch([1], [1], [1], [1], 1000);
+            await this.sfc.sealEpochValidators([1]);
+
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95000000000'));
+
+            await this.sfc.advanceTime(1);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 1000);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94999998901'));
+
+            await this.sfc.advanceTime(2);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 2000);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94999997802'));
+
+            await this.sfc.advanceTime(1000);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 1000000);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94999996715'));
+
+            await this.sfc.advanceTime(1000);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 666666);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94637676437'));
+
+            await this.sfc.advanceTime(1000);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 1500000);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95179080284'));
+
+            await this.sfc.advanceTime(1);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 666);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95178711617'));
+
+            await this.sfc.advanceTime(1);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 1500);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95179260762'));
+
+            await this.sfc.advanceTime(1000);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 10000000000);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('99938223800'));
+
+            await this.sfc.advanceTime(10000);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 0);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94941312610'));
+
+            await this.sfc.advanceTime(100);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 200000);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('95051069157'));
+
+            await this.sfc.advanceTime(100);
+            await this.sfc.sealEpoch([1], [1], [1], [1], 50000);
+            await this.sfc.sealEpochValidators([1]);
+            expect(await this.sfc.minGasPrice()).to.be.bignumber.equal(new BN('94996125793'));
         });
     });
 });
@@ -1023,7 +1099,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
             }
 
             await expect(this.sfc.advanceTime(new BN(24 * 60 * 60).toString())).to.be.fulfilled;
-            await expect(this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees)).to.be.fulfilled;
+            await expect(this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0)).to.be.fulfilled;
             await expect(this.sfc.sealEpochValidators(allValidators)).to.be.fulfilled;
         });
 
@@ -1056,7 +1132,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
             }
 
             await expect(this.sfc.advanceTime(new BN(24 * 60 * 60).toString())).to.be.fulfilled;
-            await expect(this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees)).to.be.fulfilled;
+            await expect(this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0)).to.be.fulfilled;
             await expect(this.sfc.sealEpochValidators(allValidators)).to.be.fulfilled;
         });
     });
@@ -1270,7 +1346,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
             }
 
             await expect(this.sfc.advanceTime(new BN(24 * 60 * 60).toString())).to.be.fulfilled;
-            await expectRevert(this.nodeI.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, {
+            await expectRevert(this.nodeI.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0, {
                 from: account2,
             }), 'caller is not the NodeDriver contract');
         });

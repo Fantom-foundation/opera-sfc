@@ -101,7 +101,7 @@ contract NodeDriverAuth is Initializable, Ownable {
         return size > 0;
     }
 
-        function decimalsNum(uint256 num) internal pure returns (uint256) {
+    function decimalsNum(uint256 num) internal pure returns (uint256) {
         uint decimals;
         while (num != 0) {
             decimals++;
@@ -171,7 +171,7 @@ contract NodeDriver is Initializable {
     event AdvanceEpochs(uint256 num);
 
     function initialize(address _backend, address _evmWriterAddress) external initializer {
-        backend = NodeDriver(_backend);
+        backend = NodeDriverAuth(_backend);
         emit UpdatedBackend(_backend);
         evmWriter = EVMWriter(_evmWriterAddress);
     }
