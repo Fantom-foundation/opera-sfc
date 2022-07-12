@@ -9,3 +9,5 @@ coverage.json
 /coverageEnv/
 artifacts/
 cache/
+.env
+contracts/test/.DS_Store

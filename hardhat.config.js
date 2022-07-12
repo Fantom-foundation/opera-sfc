@@ -1,9 +1,13 @@
+require('hardhat-contract-sizer');
+require('dotenv').config();
 require('@nomiclabs/hardhat-truffle5');
 require('@nomiclabs/hardhat-waffle');
 require('@openzeppelin/hardhat-upgrades');
 require('@openzeppelin/test-helpers');
 require('@nomiclabs/hardhat-ethers');
 require('@nomiclabs/hardhat-web3');
+
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 module.exports = {
   networks: {
@@ -15,11 +19,12 @@ module.exports = {
     },
     mainnet: {
       url: 'https://rpcapi.fantom.network',
-      chainId: 250,
+      chainId: 250
     },
     testnet: {
       url: 'https://rpc.testnet.fantom.network',
-      chainID: 4002,
+      chainId: 4002,
+      accounts: [`0x${PRIVATE_KEY}`]
     }
   },
   mocha: {},
