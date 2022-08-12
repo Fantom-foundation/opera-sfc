@@ -30,11 +30,11 @@ contract NetworkParameters is GovernanceToSFC {
 */
     /**
      * @dev Initializes the contract setting the default governance contract.
-     */
+     
     function initialize(address _governance) internal initializer {
         governance = Governance(_governance);
         //emit GovernanceUpdated(address(0), _governance);
-    }
+    }*/
 
     function _onlyGovernance(address _sender) internal view {
         require(

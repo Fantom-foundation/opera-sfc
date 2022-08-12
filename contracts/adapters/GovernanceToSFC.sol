@@ -1,7 +1,6 @@
 pragma solidity ^0.5.0;
 
 import "../ownership/Ownable.sol";
-import "../common/Initializable.sol";
 
 /**
 * @dev `GovernanceToSFC.sol` is a contract module which provides a bridge from the governance 

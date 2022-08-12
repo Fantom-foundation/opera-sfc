@@ -285,11 +285,11 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         uint256 sealedEpoch,
         uint256 _totalSupply,
         address nodeDriver,
-        address owner,
-        address governance
+        address owner
+        //address governance
     ) external initializer {
         Ownable.initialize(owner);
-        NetworkParameters.initialize(governance);
+        //NetworkParameters.initialize(governance);
         currentSealedEpoch = sealedEpoch;
         node = NodeDriverAuth(nodeDriver);
         totalSupply = _totalSupply;
