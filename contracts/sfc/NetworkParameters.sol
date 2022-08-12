@@ -17,6 +17,7 @@ contract NetworkParameters is GovernanceToSFC {
     uint256 private withdrawalPeriodEpochValue;
     uint256 private withdrawalPeriodTimeValue;
 
+/** 
     event UpdatedMinSelfStake(uint256 minSelfStake);
     event UpdatedMaxDelegationRatio(uint256 maxDelegationRatio);
     event UpdatedValidatorCommission(uint256 validatorCommission);
@@ -26,18 +27,18 @@ contract NetworkParameters is GovernanceToSFC {
     event UpdatedMaxLockupDuration(uint256 maxLockupDuration);
     event UpdatedWithdrawalPeriodEpoch(uint256 Value);
     event UpdatedWithdrawalPeriodTime(uint256 withValuedrawalPeriodTime);
-
+*/
     /**
      * @dev Initializes the contract setting the default governance contract.
      */
     function initialize(address _governance) internal initializer {
         governance = Governance(_governance);
-        emit GovernanceUpdated(address(0), _governance);
+        //emit GovernanceUpdated(address(0), _governance);
     }
 
     function _onlyGovernance(address _sender) internal view {
         require(
-            (_sender == getGovernance() || _sender == owner()),
+            (_sender == address(governance) || _sender == owner()),
             "SFC: this function is controlled by the owner and governance contract"
         );
     }
@@ -45,43 +46,43 @@ contract NetworkParameters is GovernanceToSFC {
     function setMaxDelegation(uint256 _maxDelegationRatio) external {
         _onlyGovernance(msg.sender);
         maxDelegation = _maxDelegationRatio;
-        emit UpdatedMaxDelegationRatio(_maxDelegationRatio);
+        //emit UpdatedMaxDelegationRatio(_maxDelegationRatio);
     }
 
     function setMinSelfStake(uint256 _minSelfStake) external {
         _onlyGovernance(msg.sender);
         minStakeAmnt = _minSelfStake;
-        emit UpdatedMinSelfStake(_minSelfStake);
+        //emit UpdatedMinSelfStake(_minSelfStake);
     }
 
     function setValidatorCommission(uint256 _validatorCommission) external {
         _onlyGovernance(msg.sender);
         validatorCommissionFee = _validatorCommission;
-        emit UpdatedValidatorCommission(_validatorCommission);
+        //emit UpdatedValidatorCommission(_validatorCommission);
     }
 
     function setContractCommission(uint256 _contractCommission) external {
         _onlyGovernance(msg.sender);
         contractCommissionFee = _contractCommission;
-        emit UpdatedContractCommission(_contractCommission);
+        //emit UpdatedContractCommission(_contractCommission);
     }
 
     function setUnlockedRewardRatio(uint256 _unlockedReward) external {
         _onlyGovernance(msg.sender);
         unlockedReward = _unlockedReward;
-        emit UpdatedUnlockedRewardRatio(_unlockedReward);
+        //emit UpdatedUnlockedRewardRatio(_unlockedReward);
     }
 
     function setMinLockupDuration(uint256 _minLockupDuration) external {
         _onlyGovernance(msg.sender);
         minLockup = _minLockupDuration;
-        emit UpdatedMinLockupDuration(_minLockupDuration);
+        //emit UpdatedMinLockupDuration(_minLockupDuration);
     }
 
     function setMaxLockupDuration(uint256 _maxLockupDuration) external {
         _onlyGovernance(msg.sender);
         maxLockup = _maxLockupDuration;
-        emit UpdatedMaxLockupDuration(_maxLockupDuration);
+        //emit UpdatedMaxLockupDuration(_maxLockupDuration);
     }
 
     function setWithdrawalPeriodEpoch(uint256 _withdrawalPeriodEpochs)
@@ -89,13 +90,13 @@ contract NetworkParameters is GovernanceToSFC {
     {
         _onlyGovernance(msg.sender);
         withdrawalPeriodEpochValue = _withdrawalPeriodEpochs;
-        emit UpdatedWithdrawalPeriodEpoch(_withdrawalPeriodEpochs);
+        //emit UpdatedWithdrawalPeriodEpoch(_withdrawalPeriodEpochs);
     }
 
     function setWithdrawalPeriodTime(uint256 _withdrawalPeriodTime) external {
         _onlyGovernance(msg.sender);
         withdrawalPeriodTimeValue = _withdrawalPeriodTime;
-        emit UpdatedWithdrawalPeriodTime(_withdrawalPeriodTime);
+        //emit UpdatedWithdrawalPeriodTime(_withdrawalPeriodTime);
     }
 
     /**

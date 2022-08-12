@@ -925,7 +925,8 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         return rewards;
     }
 
-    function claimRewards(uint256 toValidatorID) public noActiveProposals {
+    function claimRewards(uint256 toValidatorID) public {
+        require(governance.getActiveProposals() == 0, "SFC: There are active Governance proposals");
         address payable delegator = msg.sender;
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)

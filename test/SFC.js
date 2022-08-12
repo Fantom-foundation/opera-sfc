@@ -8,6 +8,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 chai.use(chaiAsPromised);
 const UnitTestSFC = artifacts.require('UnitTestSFC');
+const UnitTestGovernance = artifacts.require('UnitTestGovernance');
 const SFC = artifacts.require('SFC');
 const StakersConstants = artifacts.require('StakersConstants');
 const NodeDriverAuth = artifacts.require('NodeDriverAuth');
@@ -228,11 +229,12 @@ contract('SFC', async ([account1, account2]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address);
         await this.sfc.setMaxDelegation(new BN('16'));
         await this.sfc.setValidatorCommission(new BN('15'));
         await this.sfc.setContractCommission(new BN('30'));
@@ -411,11 +413,12 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr);
+        await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address);
         await this.sfc.setMaxDelegation(new BN('16'));
         await this.sfc.setValidatorCommission(new BN('15'));
         await this.sfc.setContractCommission(new BN('30'));
@@ -424,6 +427,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         await this.sfc.setWithdrawalPeriodEpoch('3');
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
+        
     });
 
     describe('Prevent Genesis Call if not node', () => {
@@ -586,11 +590,12 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
+            const governance = await UnitTestGovernance.new();
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
             const initializer = await NetworkInitializer.new();
-            await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr);
+            await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address);
             await this.sfc.setMaxDelegation(new BN('16'));
             await this.sfc.setValidatorCommission(new BN('15'));
             await this.sfc.setContractCommission(new BN('30'));
@@ -641,11 +646,12 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
+            const governance = await UnitTestGovernance.new();
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
             const initializer = await NetworkInitializer.new();
-            await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr);
+            await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address);
             await this.sfc.setMaxDelegation(new BN('16'));
             await this.sfc.setValidatorCommission(new BN('15'));
             await this.sfc.setContractCommission(new BN('30'));
@@ -703,11 +709,12 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
     describe('Methods tests', async () => {
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
+            const governance = await UnitTestGovernance.new();
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
             const initializer = await NetworkInitializer.new();
-            await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr);
+            await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address);
             await this.sfc.setMaxDelegation(new BN('16'));
             await this.sfc.setValidatorCommission(new BN('15'));
             await this.sfc.setContractCommission(new BN('30'));
@@ -898,11 +905,12 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr)
+        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address)
         await this.sfc.setMaxDelegation(new BN('16'));
         await this.sfc.setValidatorCommission(new BN('15'));
         await this.sfc.setContractCommission(new BN('30'));
@@ -1433,11 +1441,12 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address);
         await this.sfc.setMaxDelegation(new BN('16'));
         await this.sfc.setValidatorCommission(new BN('15'));
         await this.sfc.setContractCommission(new BN('30'));
@@ -1469,11 +1478,12 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address);
         await this.sfc.setMaxDelegation(new BN('16'));
         await this.sfc.setValidatorCommission(new BN('15'));
         await this.sfc.setContractCommission(new BN('30'));
@@ -1580,11 +1590,12 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address);
         await this.sfc.setMaxDelegation(new BN('16'));
         await this.sfc.setValidatorCommission(new BN('15'));
         await this.sfc.setContractCommission(new BN('30'));
@@ -1785,11 +1796,12 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, emptyAddr);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator, governance.address);
         await this.sfc.setMaxDelegation(new BN('16'));
         await this.sfc.setValidatorCommission(new BN('15'));
         await this.sfc.setContractCommission(new BN('30'));
