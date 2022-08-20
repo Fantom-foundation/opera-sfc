@@ -107,7 +107,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     uint256 internal counterweight;
     uint256 public minGasPrice;
 
-    uint256 internal deleted0;
+    address public treasuryAddress;
 
     function isNode(address addr) internal view returns (bool) {
         return addr == address(node);
@@ -421,8 +421,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             return 0;
         }
         uint256 txReward = epochFee.mul(txRewardWeight).div(totalTxRewardWeight);
-        // fee reward except contractCommission
-        return txReward.mul(Decimal.unit() - contractCommission()).div(Decimal.unit());
+        // fee reward except burntFeeShare and treasuryFeeShare
+        return txReward.mul(Decimal.unit() - burntFeeShare() - treasuryFeeShare()).div(Decimal.unit());
     }
 
     function _calcValidatorCommission(uint256 rawReward, uint256 commission) internal pure returns (uint256)  {
@@ -642,6 +642,10 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         counterweight = v;
     }
 
+    function updateTreasuryAddress(address v) onlyOwner external {
+        treasuryAddress = v;
+    }
+
     // mintFTM allows SFC owner to mint an arbitrary amount of FTM tokens
     // justification is a human readable description of why tokens were minted (e.g. because ERC20 FTM tokens were burnt)
     function mintFTM(address payable receiver, uint256 amount, string calldata justification) onlyOwner external {
@@ -732,6 +736,13 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
             totalSupply -= snapshot.epochFee;
         } else {
             totalSupply = 0;
+        }
+
+        // transfer 10% of fees to treasury
+        if (treasuryAddress != address(0)) {
+            uint256 feeShare = ctx.epochFee * treasuryFeeShare() / Decimal.unit();
+            _mintNativeToken(feeShare);
+            treasuryAddress.call.value(feeShare)("");
         }
     }
 
