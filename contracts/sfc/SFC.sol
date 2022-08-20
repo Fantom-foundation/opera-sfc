@@ -127,6 +127,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
     event InflatedFTM(address indexed receiver, uint256 amount, string justification);
+    event BurntFTM(uint256 amount);
     event LockedUpStake(address indexed delegator, uint256 indexed validatorID, uint256 duration, uint256 amount);
     event UnlockedStake(address indexed delegator, uint256 indexed validatorID, uint256 amount, uint256 penalty);
     event UpdatedBaseRewardPerSec(uint256 value);
@@ -395,6 +396,7 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         (bool sent,) = delegator.call.value(amount.sub(penalty))("");
         require(sent, "Failed to send FTM");
+        _burnFTM(penalty);
 
         emit Withdrawn(delegator, toValidatorID, wrID, amount);
     }
@@ -654,6 +656,18 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
         emit InflatedFTM(receiver, amount, justification);
     }
 
+    // burnFTM allows SFC to burn an arbitrary amount of FTM tokens
+    function burnFTM(uint256 amount) onlyOwner external {
+        _burnFTM(amount);
+    }
+
+    function _burnFTM(uint256 amount) internal {
+        if (amount != 0) {
+            address(0).transfer(amount);
+            emit BurntFTM(amount);
+        }
+    }
+
     function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTime, uint256[] memory offlineBlocks) internal {
         // mark offline nodes
         for (uint256 i = 0; i < validatorIDs.length; i++) {
@@ -892,6 +906,8 @@ contract SFC is Initializable, Ownable, StakersConstants, Version {
 
         ld.lockedStake -= amount;
         _rawUndelegate(delegator, toValidatorID, penalty);
+
+        _burnFTM(penalty);
 
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
