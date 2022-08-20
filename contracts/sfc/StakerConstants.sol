@@ -37,11 +37,19 @@ contract StakersConstants {
     }
 
     /**
-     * @dev The commission fee in percentage a validator will get from a contract, e.g., 30%
+     * @dev The percentage of fees to burn, e.g., 20%
      */
-    function contractCommission() public pure returns (uint256) {
-        // 30%
-        return (30 * Decimal.unit()) / 100;
+    function burntFeeShare() public pure returns (uint256) {
+        // 20%
+        return (20 * Decimal.unit()) / 100;
+    }
+
+    /**
+     * @dev The percentage of fees to transfer to treasury address, e.g., 10%
+     */
+    function treasuryFeeShare() public pure returns (uint256) {
+        // 10%
+        return (10 * Decimal.unit()) / 100;
     }
 
     /**
