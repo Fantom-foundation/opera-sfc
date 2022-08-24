@@ -52,6 +52,14 @@ contract StakersConstants {
         return (10 * Decimal.unit()) / 100;
     }
 
+    /**
+     * @dev The percentage of fees to transfer to treasury address, e.g., 10%
+     */
+    function treasuryFeeShare() public pure returns (uint256) {
+        // 10%
+        return (10 * Decimal.unit()) / 100;
+    }
+
     // /**
     //  * @dev The ratio of the reward rate at base rate (no lock), e.g., 30%
     //  */
