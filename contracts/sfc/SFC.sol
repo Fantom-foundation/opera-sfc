@@ -106,7 +106,7 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
     uint256 internal counterweight;
     uint256 public minGasPrice;
 
-    uint256 internal deleted0;
+    address public treasuryAddress;
 
     function isNode(address addr) internal view returns (bool) {
         return addr == address(node);
@@ -132,54 +132,15 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         uint256 deactivatedTime
     );
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
-    event Delegated(
-        address indexed delegator,
-        uint256 indexed toValidatorID,
-        uint256 amount
-    );
-    event Undelegated(
-        address indexed delegator,
-        uint256 indexed toValidatorID,
-        uint256 indexed wrID,
-        uint256 amount
-    );
-    event Withdrawn(
-        address indexed delegator,
-        uint256 indexed toValidatorID,
-        uint256 indexed wrID,
-        uint256 amount
-    );
-    event ClaimedRewards(
-        address indexed delegator,
-        uint256 indexed toValidatorID,
-        uint256 lockupExtraReward,
-        uint256 lockupBaseReward,
-        uint256 unlockedReward
-    );
-    event RestakedRewards(
-        address indexed delegator,
-        uint256 indexed toValidatorID,
-        uint256 lockupExtraReward,
-        uint256 lockupBaseReward,
-        uint256 unlockedReward
-    );
-    event InflatedFTM(
-        address indexed receiver,
-        uint256 amount,
-        string justification
-    );
-    event LockedUpStake(
-        address indexed delegator,
-        uint256 indexed validatorID,
-        uint256 duration,
-        uint256 amount
-    );
-    event UnlockedStake(
-        address indexed delegator,
-        uint256 indexed validatorID,
-        uint256 amount,
-        uint256 penalty
-    );
+    event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
+    event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
+    event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
+    event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
+    event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
+    event InflatedFTM(address indexed receiver, uint256 amount, string justification);
+    event BurntFTM(uint256 amount);
+    event LockedUpStake(address indexed delegator, uint256 indexed validatorID, uint256 duration, uint256 amount);
+    event UnlockedStake(address indexed delegator, uint256 indexed validatorID, uint256 amount, uint256 penalty);
     event UpdatedBaseRewardPerSec(uint256 value);
     event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
     event UpdatedSlashingRefundRatio(
@@ -517,14 +478,10 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
 
         uint256 selfStakeAfterwards = getSelfStake(toValidatorID);
         if (selfStakeAfterwards != 0) {
-            require(
-                selfStakeAfterwards >= minSelfStake(),
-                "insufficient self-stake"
-            );
-            require(
-                _checkDelegatedStakeLimit(toValidatorID),
-                "validator's delegations limit is exceeded"
-            );
+            if (getValidator[toValidatorID].status == OK_STATUS) {
+                require(selfStakeAfterwards >= minSelfStake(), "insufficient self-stake");
+                require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
+            }
         } else {
             _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
         }
@@ -634,6 +591,7 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         (bool sent,) = delegator.call.value(amount.sub(penalty))("");
         require(sent, "Failed to send FTM");
+        _burnFTM(penalty);
 
         emit Withdrawn(delegator, toValidatorID, wrID, amount);
     }
@@ -669,14 +627,9 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         if (txRewardWeight == 0) {
             return 0;
         }
-        uint256 txReward = epochFee.mul(txRewardWeight).div(
-            totalTxRewardWeight
-        );
-        // fee reward except contractCommission
-        return
-            txReward.mul(Decimal.unit() - contractCommission()).div(
-                Decimal.unit()
-            );
+        uint256 txReward = epochFee.mul(txRewardWeight).div(totalTxRewardWeight);
+        // fee reward except burntFeeShare and treasuryFeeShare
+        return txReward.mul(Decimal.unit() - burntFeeShare() - treasuryFeeShare()).div(Decimal.unit());
     }
 
     function _calcValidatorCommission(uint256 rawReward, uint256 commission)
@@ -1040,14 +993,8 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         counterweight = v;
     }
 
-    // updateTotalSupply allows to fix the different between actual total supply and totalSupply field due to the
-    // bug fixed in 3c828b56b7cd32ea058a954fad3cd726e193cc77
-    function updateTotalSupply(int256 diff) external onlyOwner {
-        if (diff >= 0) {
-            totalSupply += uint256(diff);
-        } else {
-            totalSupply -= uint256(- diff);
-        }
+    function updateTreasuryAddress(address v) onlyOwner external {
+        treasuryAddress = v;
     }
 
     // mintFTM allows SFC owner to mint an arbitrary amount of FTM tokens
@@ -1062,12 +1009,19 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
         emit InflatedFTM(receiver, amount, justification);
     }
 
-    function _sealEpoch_offline(
-        EpochSnapshot storage snapshot,
-        uint256[] memory validatorIDs,
-        uint256[] memory offlineTime,
-        uint256[] memory offlineBlocks
-    ) internal {
+    // burnFTM allows SFC to burn an arbitrary amount of FTM tokens
+    function burnFTM(uint256 amount) onlyOwner external {
+        _burnFTM(amount);
+    }
+
+    function _burnFTM(uint256 amount) internal {
+        if (amount != 0) {
+            address(0).transfer(amount);
+            emit BurntFTM(amount);
+        }
+    }
+
+    function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTime, uint256[] memory offlineBlocks) internal {
         // mark offline nodes
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             if (
@@ -1152,6 +1106,13 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
             totalSupply -= snapshot.epochFee;
         } else {
             totalSupply = 0;
+        }
+
+        // transfer 10% of fees to treasury
+        if (treasuryAddress != address(0)) {
+            uint256 feeShare = ctx.epochFee * treasuryFeeShare() / Decimal.unit();
+            _mintNativeToken(feeShare);
+            treasuryAddress.call.value(feeShare)("");
         }
     }
 
@@ -1367,6 +1328,8 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
 
         ld.lockedStake -= amount;
         _rawUndelegate(delegator, toValidatorID, penalty);
+
+        _burnFTM(penalty);
 
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
