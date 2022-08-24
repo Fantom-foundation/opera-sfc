@@ -1,19 +1,22 @@
 const {
     BN,
     expectRevert,
-} = require('openzeppelin-test-helpers');
+} = require('@openzeppelin/test-helpers');
 const chai = require('chai');
 const { expect } = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 
 chai.use(chaiAsPromised);
 const UnitTestSFC = artifacts.require('UnitTestSFC');
+const UnitTestGovernance = artifacts.require('UnitTestGovernance');
 const SFC = artifacts.require('SFC');
 const StakersConstants = artifacts.require('StakersConstants');
 const NodeDriverAuth = artifacts.require('NodeDriverAuth');
 const NodeDriver = artifacts.require('NodeDriver');
 const NetworkInitializer = artifacts.require('NetworkInitializer');
 const StubEvmWriter = artifacts.require('StubEvmWriter');
+
+const { evm, exceptions } = require('./test-utils');
 
 function amount18(n) {
     return new BN(web3.utils.toWei(n, 'ether'));
@@ -115,7 +118,10 @@ class BlockchainNode {
     }
 }
 
-const pubkey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
+const pubkey = '0xc004ad15bf79efee161507f23df3d571021d08a1ac3cc14beb4a9a204f0c60487298d1d736b9fc6f53779c9579968a9421f411d60728d9dac85ad1286c1ca0e82d8a';
+const invalidPubKey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5';
+const zeroPubKey = '0xc004ad15bf79ef5d7cbdb0f629a6fd7a27b4597fcbf9b7bd9b764efef4ba72b3d4890c89e677a69ffd6f8160c7f0da8b000000000000000000000000000000000000';
+const emptyAddr = '0x0000000000000000000000000000000000000000';
 
 contract('SFC', async ([account1, account2]) => {
     let nodeIRaw;
@@ -223,11 +229,19 @@ contract('SFC', async ([account1, account2]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
         await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await this.sfc.updateGovernanceContract(governance.address);
+        await this.sfc.setMaxDelegation(new BN('16'));
+        await this.sfc.setValidatorCommission(new BN('15'));
+        await this.sfc.setContractCommission(new BN('30'));
+        await this.sfc.setUnlockedRewardRatio(new BN('30'));
+        await this.sfc.setMaxLockupDuration(86400);
+        await this.sfc.setWithdrawalPeriodEpoch('3');
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
@@ -262,16 +276,16 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 expect((await this.sfc.unlockedRewardRatio()).toString()).to.equals('300000000000000000');
             });
 
-            it('Returns the minimum duration of a stake/delegation lockup', async () => {
-                expect((await this.sfc.minLockupDuration()).toString()).to.equals('1209600');
+            it('Should not allow non-owner to update the contractCommission param', async () => {
+                await expectRevert(this.sfc.setContractCommission(30, { from: secondValidator }), 'SFC: this function is controlled by the owner and governance contract');
             });
 
             it('Returns the maximum duration of a stake/delegation lockup', async () => {
                 expect((await this.sfc.maxLockupDuration()).toString()).to.equals('31536000');
             });
 
-            it('Returns the period of time that stake is locked', async () => {
-                expect((await this.sfc.withdrawalPeriodTime()).toString()).to.equals('604800');
+            it('Should not allow non-owner to update the unlockedRewardRatio param', async () => {
+                await expectRevert(this.sfc.setUnlockedRewardRatio(30, { from: secondValidator }), 'SFC: this function is controlled by the owner and governance contract');
             });
 
             it('Returns the number of epochs that stake is locked', async () => {
@@ -292,36 +306,33 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 expect(lastValidatorID.toString()).to.equals('1');
             });
 
-            it('Should fail to create a Validator insufficient self-stake', async () => {
-                await expectRevert(this.sfc.createValidator(pubkey, {
-                    from: secondValidator,
-                    value: 1,
-                }), 'insufficient self-stake');
+            it('Should not allow non-owner to update the maxLockupDuration param', async () => {
+                await expectRevert(this.sfc.setMaxLockupDuration(86400, { from: secondValidator }), 'SFC: this function is controlled by the owner and governance contract');
             });
 
             it('Should fail if pubkey is empty', async () => {
                 await expectRevert(this.sfc.createValidator(web3.utils.stringToHex(''), {
                     from: secondValidator,
                     value: amount18('10'),
-                }), 'empty pubkey');
+                }), 'invalid pubkey');
             });
 
-            it('Should create two Validators and return the correct last validator ID', async () => {
-                let lastValidatorID;
-                await this.sfc.createValidator(pubkey, {
+            it('Should fail if pubkey is invalid (shorter)', async () => {
+                await expectRevert(this.sfc.createValidator(invalidPubKey, {
                     from: secondValidator,
                     value: amount18('10'),
-                });
-                lastValidatorID = await this.sfc.lastValidatorID();
+                }), 'invalid pubkey');
+            });
 
-                expect(lastValidatorID.toString()).to.equals('1');
+            it('Should fail if last bytes of pubkey contains 0', async () => {
+                await expectRevert(this.sfc.createValidator(zeroPubKey, {
+                    from: secondValidator,
+                    value: amount18('10'),
+                }), 'invalid pubkey');
+            });
 
-                await this.sfc.createValidator(pubkey, {
-                    from: thirdValidator,
-                    value: amount18('12'),
-                });
-                lastValidatorID = await this.sfc.lastValidatorID();
-                expect(lastValidatorID.toString()).to.equals('2');
+            it('Should not allow non-owner to update the withdrawalPeriodEpochs param', async () => {
+                await expectRevert(this.sfc.setWithdrawalPeriodEpoch(86400, { from: secondValidator }), 'SFC: this function is controlled by the owner and governance contract');
             });
 
             it('Should return Delegation', async () => {
@@ -332,12 +343,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 (await this.sfc.delegate(1, { from: secondValidator, value: 1 }));
             });
 
-            it('Should reject if amount is insufficient for self-stake', async () => {
-                expect((await this.sfc.minSelfStake()).toString()).to.equals('317500000000000000');
-                await expect(this.sfc.createValidator(pubkey, {
-                    from: secondValidator,
-                    value: amount18('0.3'),
-                })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert insufficient self-stake -- Reason given: insufficient self-stake.');
+            it('Should not allow non-owner to update the withdrawalPeriodTime param', async () => {
+                await expectRevert(this.sfc.setWithdrawalPeriodTime(604800, { from: secondValidator }), 'SFC: this function is controlled by the owner and governance contract');
             });
 
             it('Returns current Epoch', async () => {
@@ -349,13 +356,13 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             });
 
             it('Should return Now()', async () => {
-                const now = Math.trunc((Date.now()) / 1000);
-                expect((await this.sfc.getBlockTime()).toNumber()).to.be.within(now - 100, now + 100);
+                var ts = (await web3.eth.getBlock('latest')).timestamp;
+                expect((await this.sfc.getBlockTime()).toNumber()).to.be.within(ts - 100, ts + 100);
             });
 
             it('Should return getTime()', async () => {
-                const now = Math.trunc((Date.now()) / 1000);
-                expect((await this.sfc.getTime()).toNumber()).to.be.within(now - 100, now + 100);
+                var ts = (await web3.eth.getBlock('latest')).timestamp;
+                expect((await this.sfc.getTime()).toNumber()).to.be.within(ts - 100, ts + 100);
             });
         });
 
@@ -411,13 +418,22 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
         await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await this.sfc.updateGovernanceContract(governance.address);
+        await this.sfc.setMaxDelegation(new BN('16'));
+        await this.sfc.setValidatorCommission(new BN('15'));
+        await this.sfc.setContractCommission(new BN('30'));
+        await this.sfc.setUnlockedRewardRatio(new BN('30'));
+        await this.sfc.setMaxLockupDuration(86400);
+        await this.sfc.setWithdrawalPeriodEpoch('3');
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
+        
     });
 
     describe('Prevent Genesis Call if not node', () => {
@@ -470,7 +486,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await expect(this.sfc.delegate(1, {
                 from: firstDelegator,
                 value: amount18('10'),
-            })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert validator doesn\'t exist -- Reason given: validator doesn\'t exist');
+            })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'validator doesn't exist'");
             await expect(this.sfc.createValidator(pubkey, {
                 from: firstValidator,
                 value: amount18('10'),
@@ -479,7 +495,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await expect(this.sfc.delegate(2, {
                 from: secondDelegator,
                 value: amount18('10'),
-            })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert validator doesn\'t exist -- Reason given: validator doesn\'t exist');
+            })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'validator doesn't exist'");
             await expect(this.sfc.createValidator(pubkey, {
                 from: secondValidator,
                 value: amount18('15'),
@@ -488,7 +504,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await expect(this.sfc.delegate(3, {
                 from: thirdDelegator,
                 value: amount18('10'),
-            })).to.be.rejectedWith('Returned error: VM Exception while processing transaction: revert validator doesn\'t exist -- Reason given: validator doesn\'t exist');
+            })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'validator doesn't exist'");
             await expect(this.sfc.createValidator(pubkey, {
                 from: thirdValidator,
                 value: amount18('20'),
@@ -580,11 +596,19 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
+            const governance = await UnitTestGovernance.new();
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
             const initializer = await NetworkInitializer.new();
             await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+            await this.sfc.updateGovernanceContract(governance.address);
+            await this.sfc.setMaxDelegation(new BN('16'));
+            await this.sfc.setValidatorCommission(new BN('15'));
+            await this.sfc.setContractCommission(new BN('30'));
+            await this.sfc.setUnlockedRewardRatio(new BN('30'));
+            await this.sfc.setMaxLockupDuration(86400);
+            await this.sfc.setWithdrawalPeriodEpoch('3');
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -616,8 +640,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('Should returns Validator\'s Created Time', async () => {
-            const now = Math.trunc((Date.now()) / 1000);
-            expect(validator.createdTime.toNumber()).to.be.within(now - 5, now + 5);
+            var ts = (await web3.eth.getBlock('latest')).timestamp;
+            expect(validator.createdTime.toNumber()).to.be.within(ts - 5, ts + 5);
         });
 
         it('Should returns Validator\'s Auth (address)', async () => {
@@ -629,11 +653,19 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         let validator;
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
+            const governance = await UnitTestGovernance.new();
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
             const initializer = await NetworkInitializer.new();
             await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+            await this.sfc.updateGovernanceContract(governance.address);
+            await this.sfc.setMaxDelegation(new BN('16'));
+            await this.sfc.setValidatorCommission(new BN('15'));
+            await this.sfc.setContractCommission(new BN('30'));
+            await this.sfc.setUnlockedRewardRatio(new BN('30'));
+            await this.sfc.setMaxLockupDuration(86400);
+            await this.sfc.setWithdrawalPeriodEpoch('3');
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -685,11 +717,19 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
     describe('Methods tests', async () => {
         beforeEach(async () => {
             this.sfc = await UnitTestSFC.new();
+            const governance = await UnitTestGovernance.new();
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
             const initializer = await NetworkInitializer.new();
             await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+            await this.sfc.updateGovernanceContract(governance.address);
+            await this.sfc.setMaxDelegation(new BN('16'));
+            await this.sfc.setValidatorCommission(new BN('15'));
+            await this.sfc.setContractCommission(new BN('30'));
+            await this.sfc.setUnlockedRewardRatio(new BN('30'));
+            await this.sfc.setMaxLockupDuration(86400);
+            await this.sfc.setWithdrawalPeriodEpoch('3');
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -874,11 +914,19 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
         await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await this.sfc.updateGovernanceContract(governance.address);
+        await this.sfc.setMaxDelegation(new BN('16'));
+        await this.sfc.setValidatorCommission(new BN('15'));
+        await this.sfc.setContractCommission(new BN('30'));
+        await this.sfc.setUnlockedRewardRatio(new BN('30'));
+        await this.sfc.setMaxLockupDuration(86400);
+        await this.sfc.setWithdrawalPeriodEpoch('3');
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
 
@@ -1403,11 +1451,19 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
         await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await this.sfc.updateGovernanceContract(governance.address);
+        await this.sfc.setMaxDelegation(new BN('16'));
+        await this.sfc.setValidatorCommission(new BN('15'));
+        await this.sfc.setContractCommission(new BN('30'));
+        await this.sfc.setUnlockedRewardRatio(new BN('30'));
+        await this.sfc.setMaxLockupDuration(86400);
+        await this.sfc.setWithdrawalPeriodEpoch('3');
         await this.sfc.enableNonNodeCalls();
         await this.sfc.setGenesisValidator(firstValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0);
         firstValidatorID = await this.sfc.getValidatorID(firstValidator);
@@ -1433,11 +1489,19 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
         await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await this.sfc.updateGovernanceContract(governance.address);
+        await this.sfc.setMaxDelegation(new BN('16'));
+        await this.sfc.setValidatorCommission(new BN('15'));
+        await this.sfc.setContractCommission(new BN('30'));
+        await this.sfc.setUnlockedRewardRatio(new BN('30'));
+        await this.sfc.setMaxLockupDuration(86400);
+        await this.sfc.setWithdrawalPeriodEpoch('3');
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
 
@@ -1538,11 +1602,19 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
         await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await this.sfc.updateGovernanceContract(governance.address);
+        await this.sfc.setMaxDelegation(new BN('16'));
+        await this.sfc.setValidatorCommission(new BN('15'));
+        await this.sfc.setContractCommission(new BN('30'));
+        await this.sfc.setUnlockedRewardRatio(new BN('30'));
+        await this.sfc.setMaxLockupDuration(86400);
+        await this.sfc.setWithdrawalPeriodEpoch('3');
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
 
@@ -1737,11 +1809,19 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
     beforeEach(async () => {
         this.sfc = await UnitTestSFC.new();
+        const governance = await UnitTestGovernance.new();
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
         await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await this.sfc.updateGovernanceContract(governance.address);
+        await this.sfc.setMaxDelegation(new BN('16'));
+        await this.sfc.setValidatorCommission(new BN('15'));
+        await this.sfc.setContractCommission(new BN('30'));
+        await this.sfc.setUnlockedRewardRatio(new BN('30'));
+        await this.sfc.setMaxLockupDuration(86400);
+        await this.sfc.setWithdrawalPeriodEpoch('3');
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
 
