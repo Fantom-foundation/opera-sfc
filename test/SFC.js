@@ -264,8 +264,12 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 expect((await this.sfc.validatorCommission()).toString()).to.equals('150000000000000000');
             });
 
-            it('Returns commission fee in percentage a validator will get from a contract', async () => {
-                expect((await this.sfc.contractCommission()).toString()).to.equals('300000000000000000');
+            it('Returns burntFeeShare', async () => {
+                expect((await this.sfc.burntFeeShare()).toString()).to.equals('200000000000000000');
+            });
+
+            it('Returns treasuryFeeShare', async () => {
+                expect((await this.sfc.treasuryFeeShare()).toString()).to.equals('100000000000000000');
             });
 
             it('Returns the ratio of the reward rate at base rate (without lockup)', async () => {
