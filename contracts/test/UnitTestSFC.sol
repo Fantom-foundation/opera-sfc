@@ -52,7 +52,6 @@ contract UnitTestSFC is SFC {
         if (allowedNonNodeCalls) {
             return true;
         }
-        //return SFC.isNode(addr);
-        return (addr == address(node));
+        return SFC.isNode(addr);
     }
 }
