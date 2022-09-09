@@ -188,3 +188,48 @@ false
 
   125 passing (2m)
 ```
+
+Error Messages Dictionary
+
+err 1  :  caller is not the NodeDriverAuth contract
+err 2  :  locked stake is greater than the whole stake
+err 3  :  insufficient self-stake
+err 4  :  invalid pubkey
+err 5  :  invalid pubkey
+err 6  :  validator already exists
+err 7  :  validator doesn't exist
+err 8  :  validator's delegations limit is exceeded
+err 9  :  zero amount
+err 10 :  insufficient self-stake
+err 11 :  validator's delegations limit is exceeded
+err 12 :  zero amount
+err 13 :  not enough unlocked stake
+err 14 :  outstanding sFTM balance
+err 15 :  wrID already exists
+err 16 :  request doesn't exist
+err 17 :  outstanding sFTM balance
+err 18 :  not enough time passed
+err 19 :  not enough epochs passed
+err 20 :  stake is fully slashed
+err 21 :  Failed to send FTM
+err 22 :  stake is fully slashed
+err 23 :  wrong status
+err 24 :  nothing to stash
+err 25 :  zero rewards
+err 26 :  SFC: There are active Governance proposals
+err 27 :  Failed to send FTM
+err 28 :  validator doesn't exist
+err 29 :  too large reward per second
+err 30 :  validator isn't slashed
+err 31 :  must be less than or equal to 1.0
+err 32 :  not enough stake
+err 33 :  validator isn't active
+err 34 :  incorrect duration
+err 35 :  validator lockup period will end earlier
+err 36 :  lockup duration cannot decrease
+err 37 :  zero amount
+err 38 :  already locked up
+err 39 :  zero amount
+err 40 :  not locked up
+err 41 :  not enough locked stake
+err 43 :  outstanding sFTM balance
