@@ -598,7 +598,7 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
             toValidatorID
         ][wrID];
         require(request.epoch != 0, "err 17");
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "err 19");
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "err 18");
 
         uint256 requestTime = request.time;
         uint256 requestEpoch = request.epoch;
@@ -610,10 +610,10 @@ contract SFC is Initializable, NetworkParameters, StakersConstants, Version {
             requestEpoch = getValidator[toValidatorID].deactivatedEpoch;
         }
 
-        require(_now() >= requestTime + withdrawalPeriodTime(), "err 20");
+        require(_now() >= requestTime + withdrawalPeriodTime(), "err 19");
         require(
             currentSealedEpoch + 1 >= requestEpoch + withdrawalPeriodEpochs(),
-            "err 21"
+            "err 20"
         );
 
         uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID]

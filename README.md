@@ -198,21 +198,21 @@ err 4  :  invalid pubkey
 err 5  :  invalid pubkey
 err 6  :  validator already exists
 err 7  :  validator doesn't exist
-err 8  :  validator's delegations limit is exceeded
-err 9  :  zero amount
-err 10 :  insufficient self-stake
-err 11 :  validator's delegations limit is exceeded
-err 12 :  zero amount
-err 13 :  not enough unlocked stake
-err 14 :  outstanding sFTM balance
-err 15 :  wrID already exists
-err 16 :  request doesn't exist
-err 17 :  outstanding sFTM balance
-err 18 :  not enough time passed
-err 19 :  not enough epochs passed
-err 20 :  stake is fully slashed
-err 21 :  Failed to send FTM
-err 22 :  stake is fully slashed
+err 8  :  validator isn't active
+err 9  :  validator's delegation limit is exceeded
+err 10 :  zero amount
+err 11 :  insufficient self-stake
+err 12 :  validator's delegations limit is exeeded
+err 13 :  zero amount
+err 14 :  not enough unlocked stake
+err 15 :  outstanding sFTM balance
+err 16 :  wrID already exists
+err 17 :  request doesn't exist
+err 18 :  outstanding sFTM balance
+err 19 :  not enough time passed
+err 20 :  not enough epochs passed
+err 21 :  stake is fully slashed
+err 22 :  Failed to send FTM
 err 23 :  wrong status
 err 24 :  nothing to stash
 err 25 :  zero rewards
@@ -232,4 +232,4 @@ err 38 :  already locked up
 err 39 :  zero amount
 err 40 :  not locked up
 err 41 :  not enough locked stake
-err 43 :  outstanding sFTM balance
+err 42 :  outstanding sFTM balance
