@@ -1,89 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "../sfc/SFC.sol";
-import "../sfc/SFCI.sol";
-import "../sfc/SFCLib.sol";
-
-contract UnitTestSFCBase {
-    uint256 internal time;
-    bool public allowedNonNodeCalls;
-
-    function rebaseTime() external {
-        time = block.timestamp;
-    }
-
-    function advanceTime(uint256 diff) external {
-        time += diff;
-    }
-
-    function getTime() external view returns (uint256) {
-        return time;
-    }
-
-    function getBlockTime() external view returns (uint256) {
-        return block.timestamp;
-    }
-
-    function enableNonNodeCalls() external {
-        allowedNonNodeCalls = true;
-    }
-
-    function disableNonNodeCalls() external {
-        allowedNonNodeCalls = false;
-    }
-}
-
-contract UnitTestSFC is SFC, UnitTestSFCBase {
-    function minSelfStake() public pure returns (uint256) {
-        // 0.3175000 FTM
-        return 0.3175000 * 1e18;
-    }
-
-    function _now() internal view returns (uint256) {
-        return time;
-    }
-
-    function isNode(address addr) internal view returns (bool) {
-        if (allowedNonNodeCalls) {
-            return true;
-        }
-        return SFCBase.isNode(addr);
-    }
-}
-
-contract UnitTestSFCLib is SFCLib, UnitTestSFCBase {
-    function minSelfStake() public pure returns (uint256) {
-        // 0.3175000 FTM
-        return 0.3175000 * 1e18;
-    }
-
-    function highestLockupEpoch(address delegator, uint256 validatorID) external view returns (uint256) {
-        return _highestLockupEpoch(delegator, validatorID);
-    }
-
-    function _now() internal view returns (uint256) {
-        return time;
-    }
-
-    function isNode(address addr) internal view returns (bool) {
-        if (allowedNonNodeCalls) {
-            return true;
-        }
-        return SFCBase.isNode(addr);
-    }
-}
-
-contract UnitTestNetworkInitializer {
-    function initializeAll(uint256 sealedEpoch, uint256 totalSupply, address payable _sfc, address _auth, address _driver, address _evmWriter, address _owner) external {
-        NodeDriver(_driver).initialize(_auth, _evmWriter);
-        NodeDriverAuth(_auth).initialize(_sfc, _driver, _owner);
-        SFCUnitTestI(_sfc).initialize(sealedEpoch, totalSupply, _auth, address(new UnitTestSFCLib()), _owner);
-        selfdestruct(address(0));
-    }
-}
-
-interface SFCUnitTestI {
-
+interface SFCI {
     function baseRewardPerSecond() external view returns (uint256);
 
     function burntFeeShare() external pure returns (uint256);
@@ -237,24 +154,4 @@ interface SFCUnitTestI {
     function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external;
 
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external;
-
-    function _syncValidator(uint256 validatorID, bool syncPubkey) external;
-
-    function getTime() external view returns (uint256);
-
-    function getBlockTime() external view returns (uint256);
-
-    function rebaseTime() external;
-
-    function advanceTime(uint256) external;
-
-    function highestLockupEpoch(address, uint256) external view returns (uint256);
-
-    function enableNonNodeCalls() external;
-
-    function disableNonNodeCalls() external;
-
-    function allowedNonNodeCalls() external view returns (bool);
 }
-
-

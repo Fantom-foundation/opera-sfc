@@ -8,11 +8,10 @@ const chaiAsPromised = require('chai-as-promised');
 
 chai.use(chaiAsPromised);
 const UnitTestSFC = artifacts.require('UnitTestSFC');
-const SFC = artifacts.require('SFC');
-const StakersConstants = artifacts.require('StakersConstants');
+const SFCI = artifacts.require('SFCUnitTestI');
 const NodeDriverAuth = artifacts.require('NodeDriverAuth');
 const NodeDriver = artifacts.require('NodeDriver');
-const NetworkInitializer = artifacts.require('NetworkInitializer');
+const NetworkInitializer = artifacts.require('UnitTestNetworkInitializer');
 const StubEvmWriter = artifacts.require('StubEvmWriter');
 
 function amount18(n) {
@@ -120,7 +119,7 @@ const pubkey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18
 contract('SFC', async ([account1, account2]) => {
     let nodeIRaw;
     beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);;
         nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
@@ -222,7 +221,7 @@ contract('SFC', async ([account1, account2]) => {
 
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
     beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
@@ -410,7 +409,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
 
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
     beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
@@ -579,7 +578,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
     describe('Returns Validator', () => {
         let validator;
         beforeEach(async () => {
-            this.sfc = await UnitTestSFC.new();
+            this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
@@ -628,7 +627,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
     describe('EpochSnapshot', () => {
         let validator;
         beforeEach(async () => {
-            this.sfc = await UnitTestSFC.new();
+            this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
@@ -684,7 +683,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
     });
     describe('Methods tests', async () => {
         beforeEach(async () => {
-            this.sfc = await UnitTestSFC.new();
+            this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
@@ -873,7 +872,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
     let thirdValidatorID;
 
     beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
@@ -1402,7 +1401,7 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
     let firstValidatorID;
 
     beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
@@ -1432,7 +1431,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
     let testValidator3ID;
 
     beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
@@ -1537,7 +1536,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
     let testValidator3ID;
 
     beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
@@ -1736,7 +1735,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
     let testValidator3ID;
 
     beforeEach(async () => {
-        this.sfc = await UnitTestSFC.new();
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
