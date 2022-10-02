@@ -16,7 +16,7 @@ contract StakeTokenizer is Spacer, Initializable {
 
     address public sFTMTokenAddress;
 
-    function initialize(address _sfc, address _sFTMTokenAddress) public initializer {
+    function initialize(address payable _sfc, address _sFTMTokenAddress) public initializer {
         sfc = SFC(_sfc);
         sFTMTokenAddress = _sFTMTokenAddress;
     }
