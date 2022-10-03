@@ -3,19 +3,20 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../common/Initializable.sol";
 import "../ownership/Ownable.sol";
-import "./SFC.sol";
+import "./SFCI.sol";
+
 
 contract NodeDriverAuth is Initializable, Ownable {
     using SafeMath for uint256;
 
-    SFC internal sfc;
+    SFCI internal sfc;
     NodeDriver internal driver;
 
     // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
-    function initialize(address _sfc, address _driver, address _owner) external initializer {
+    function initialize(address payable _sfc, address _driver, address _owner) external initializer {
         Ownable.initialize(_owner);
         driver = NodeDriver(_driver);
-        sfc = SFC(_sfc);
+        sfc = SFCI(_sfc);
     }
 
     modifier onlySFC() {
@@ -147,7 +148,7 @@ contract NodeDriverAuth is Initializable, Ownable {
 }
 
 contract NodeDriver is Initializable {
-    SFC internal sfc;
+    uint256 private erased0;
     NodeDriverAuth internal backend;
     EVMWriter internal evmWriter;
 
