@@ -8,11 +8,13 @@ const chaiAsPromised = require('chai-as-promised');
 
 chai.use(chaiAsPromised);
 const UnitTestSFC = artifacts.require('UnitTestSFC');
+const UnitTestSFCLib = artifacts.require('UnitTestSFCLib');
 const SFCI = artifacts.require('SFCUnitTestI');
 const NodeDriverAuth = artifacts.require('NodeDriverAuth');
 const NodeDriver = artifacts.require('NodeDriver');
 const NetworkInitializer = artifacts.require('UnitTestNetworkInitializer');
 const StubEvmWriter = artifacts.require('StubEvmWriter');
+const ConstantsManager = artifacts.require('ConstantsManager');
 
 function amount18(n) {
     return new BN(web3.utils.toWei(n, 'ether'));
@@ -119,12 +121,14 @@ const pubkey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18
 contract('SFC', async ([account1, account2]) => {
     let nodeIRaw;
     beforeEach(async () => {
-        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);;
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
         nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, account1);
+        await initializer.initializeAll(12, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, account1);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
     });
 
     describe('Nde', () => {
@@ -226,7 +230,9 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.sfcLib = await UnitTestSFCLib.new();
+        await initializer.initializeAll(0, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
@@ -238,43 +244,43 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             });
 
             it('Returns minimum amount to stake for a Validator', async () => {
-                expect((await this.sfc.minSelfStake()).toString()).to.equals('317500000000000000');
+                expect((await this.consts.minSelfStake()).toString()).to.equals('317500000000000000');
             });
 
             it('Returns the maximum ratio of delegations a validator can have', async () => {
-                expect((await this.sfc.maxDelegatedRatio()).toString()).to.equals('16000000000000000000');
+                expect((await this.consts.maxDelegatedRatio()).toString()).to.equals('16000000000000000000');
             });
 
             it('Returns commission fee in percentage a validator will get from a delegation', async () => {
-                expect((await this.sfc.validatorCommission()).toString()).to.equals('150000000000000000');
+                expect((await this.consts.validatorCommission()).toString()).to.equals('150000000000000000');
             });
 
             it('Returns burntFeeShare', async () => {
-                expect((await this.sfc.burntFeeShare()).toString()).to.equals('200000000000000000');
+                expect((await this.consts.burntFeeShare()).toString()).to.equals('200000000000000000');
             });
 
             it('Returns treasuryFeeShare', async () => {
-                expect((await this.sfc.treasuryFeeShare()).toString()).to.equals('100000000000000000');
+                expect((await this.consts.treasuryFeeShare()).toString()).to.equals('100000000000000000');
             });
 
             it('Returns the ratio of the reward rate at base rate (without lockup)', async () => {
-                expect((await this.sfc.unlockedRewardRatio()).toString()).to.equals('300000000000000000');
+                expect((await this.consts.unlockedRewardRatio()).toString()).to.equals('300000000000000000');
             });
 
             it('Returns the minimum duration of a stake/delegation lockup', async () => {
-                expect((await this.sfc.minLockupDuration()).toString()).to.equals('1209600');
+                expect((await this.consts.minLockupDuration()).toString()).to.equals('1209600');
             });
 
             it('Returns the maximum duration of a stake/delegation lockup', async () => {
-                expect((await this.sfc.maxLockupDuration()).toString()).to.equals('31536000');
+                expect((await this.consts.maxLockupDuration()).toString()).to.equals('31536000');
             });
 
             it('Returns the period of time that stake is locked', async () => {
-                expect((await this.sfc.withdrawalPeriodTime()).toString()).to.equals('604800');
+                expect((await this.consts.withdrawalPeriodTime()).toString()).to.equals('604800');
             });
 
             it('Returns the number of epochs that stake is locked', async () => {
-                expect((await this.sfc.withdrawalPeriodEpochs()).toString()).to.equals('3');
+                expect((await this.consts.withdrawalPeriodEpochs()).toString()).to.equals('3');
             });
 
             it('Returns the version of the current implementation', async () => {
@@ -332,7 +338,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             });
 
             it('Should reject if amount is insufficient for self-stake', async () => {
-                expect((await this.sfc.minSelfStake()).toString()).to.equals('317500000000000000');
+                expect((await this.consts.minSelfStake()).toString()).to.equals('317500000000000000');
                 await expect(this.sfc.createValidator(pubkey, {
                     from: secondValidator,
                     value: amount18('0.3'),
@@ -401,7 +407,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             });
 
             it('Should call updateOfflinePenaltyThreshold', async () => {
-                await this.sfc.updateOfflinePenaltyThreshold(1, 10);
+                await this.consts.updateOfflinePenaltyThresholdTime(3600);
+                await this.consts.updateOfflinePenaltyThresholdBlocksNum(10);
             });
         });
     });
@@ -413,8 +420,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await initializer.initializeAll(10, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
         await this.sfc.rebaseTime();
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
@@ -582,8 +591,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
+            this.sfcLib = await UnitTestSFCLib.new();
             const initializer = await NetworkInitializer.new();
-            await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+            await initializer.initializeAll(12, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+            this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -631,8 +642,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
+            this.sfcLib = await UnitTestSFCLib.new();
             const initializer = await NetworkInitializer.new();
-            await initializer.initializeAll(12, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+            await initializer.initializeAll(12, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+            this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -687,8 +700,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             const nodeIRaw = await NodeDriver.new();
             const evmWriter = await StubEvmWriter.new();
             this.nodeI = await NodeDriverAuth.new();
+            this.sfcLib = await UnitTestSFCLib.new();
             const initializer = await NetworkInitializer.new();
-            await initializer.initializeAll(10, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+            await initializer.initializeAll(10, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+            this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
             await this.sfc.rebaseTime();
             await this.sfc.enableNonNodeCalls();
             this.node = new BlockchainNode(this.sfc, firstValidator);
@@ -794,14 +809,14 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
 
         it('balances gas price', async () => {
-            await this.sfc.updateGasPriceBalancingCounterweight(24 * 60 * 60);
+            await this.consts.updateGasPriceBalancingCounterweight(24 * 60 * 60);
             await this.sfc.rebaseTime();
             await this.sfc.createValidator(pubkey, {
                 from: firstValidator,
                 value: amount18('1.0'),
             });
 
-            await this.sfc.updateTargetGasPowerPerSecond(1000);
+            await this.consts.updateTargetGasPowerPerSecond(1000);
 
             await this.sfc.sealEpoch([1], [1], [1], [1], 1000);
             await this.sfc.sealEpochValidators([1]);
@@ -876,8 +891,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
 
@@ -917,7 +934,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
 
     describe('Staking / Sealed Epoch functions', () => {
         it('Should return claimed Rewards until Epoch', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             expect(await this.sfc.stashedRewardsUntilEpoch(firstDelegator, 1)).to.bignumber.equal(new BN(0));
@@ -926,7 +943,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
 
         it('Check pending Rewards of delegators', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('0');
             expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('0');
@@ -938,7 +955,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
 
         it('Check if pending Rewards have been increased after sealing Epoch', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('6966');
@@ -950,7 +967,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
 
         it('Should increase balances after claiming Rewards', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('100000000000000'));
+            await this.consts.updateBaseRewardPerSecond(new BN('100000000000000'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -967,7 +984,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
 
         it('Should increase stake after restaking Rewards', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -993,7 +1010,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
                 from: firstDelegator,
             });
 
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -1013,7 +1030,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
 
         it('Should return stashed Rewards', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -1025,13 +1042,11 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
 
         it('Should update the validator on node', async () => {
-            await this.sfc.updateOfflinePenaltyThreshold(1000, 500);
-            const tx = (await this.sfc.offlinePenaltyThreshold());
+            await this.consts.updateOfflinePenaltyThresholdTime(10000);
+            await this.consts.updateOfflinePenaltyThresholdBlocksNum(500);
 
-            const offlinePenaltyThresholdBlocksNum = (tx[0]);
-            const offlinePenaltyThresholdTime = (tx[1]);
-            expect(offlinePenaltyThresholdTime).to.bignumber.equals(new BN(500));
-            expect(offlinePenaltyThresholdBlocksNum).to.bignumber.equals(new BN(1000));
+            expect(await this.consts.offlinePenaltyThresholdTime()).to.bignumber.equals(new BN(10000));
+            expect(await this.consts.offlinePenaltyThresholdBlocksNum()).to.bignumber.equals(new BN(500));
         });
 
         it('Should not be able to deactivate validator if not Node', async () => {
@@ -1122,7 +1137,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
 
         // note: copied from the non-lockup tests
         it('Check pending Rewards of delegators', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('0');
             expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString()).to.equals('0');
@@ -1135,7 +1150,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
 
         // note: copied from the non-lockup tests
         it('Check if pending Rewards have been increased after sealing Epoch', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             expect((await this.sfc.pendingRewards(firstValidator, firstValidatorID)).toString()).to.equals('14279');
@@ -1148,7 +1163,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
 
         // note: copied from the non-lockup tests
         it('Should increase balances after claiming Rewards', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -1163,7 +1178,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
 
         // note: copied from the non-lockup tests
         it('Should return stashed Rewards', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -1175,7 +1190,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
 
         it('Should return pending rewards after unlocking and re-locking', async () => {
-            await this.sfc.updateBaseRewardPerSecond(new BN('1'));
+            await this.consts.updateBaseRewardPerSecond(new BN('1'));
 
             for (let i = 0; i < 2; i++) {
                 const epoch = await this.sfc.currentSealedEpoch();
@@ -1405,8 +1420,10 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
         await this.sfc.enableNonNodeCalls();
         await this.sfc.setGenesisValidator(firstValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0);
         firstValidatorID = await this.sfc.getValidatorID(firstValidator);
@@ -1435,12 +1452,14 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
 
-        await this.sfc.updateBaseRewardPerSecond(amount18('1'));
+        await this.consts.updateBaseRewardPerSecond(amount18('1'));
 
         await this.sfc.createValidator(pubkey, {
             from: account1,
@@ -1540,12 +1559,14 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
 
-        await this.sfc.updateBaseRewardPerSecond(amount18('1'));
+        await this.consts.updateBaseRewardPerSecond(amount18('1'));
 
         await this.sfc.createValidator(pubkey, {
             from: account1,
@@ -1739,12 +1760,14 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         const nodeIRaw = await NodeDriver.new();
         const evmWriter = await StubEvmWriter.new();
         this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
         const initializer = await NetworkInitializer.new();
-        await initializer.initializeAll(0, 0, this.sfc.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        await initializer.initializeAll(0, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
         await this.sfc.rebaseTime();
         await this.sfc.enableNonNodeCalls();
 
-        await this.sfc.updateBaseRewardPerSecond(amount18('1'));
+        await this.consts.updateBaseRewardPerSecond(amount18('1'));
 
         await this.sfc.createValidator(pubkey, {
             from: account1,
