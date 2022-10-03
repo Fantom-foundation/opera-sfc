@@ -1,10 +1,15 @@
 pragma solidity ^0.5.0;
 
 import "./SFCState.sol";
-import "./StakerConstants.sol";
 
-contract SFCBase is SFCState, StakersConstants {
+contract SFCBase is SFCState {
     using SafeMath for uint256;
+
+    uint256 internal constant OK_STATUS = 0;
+    uint256 internal constant WITHDRAWN_BIT = 1;
+    uint256 internal constant OFFLINE_BIT = 1 << 3;
+    uint256 internal constant DOUBLESIGN_BIT = 1 << 7;
+    uint256 internal constant CHEATER_MASK = DOUBLESIGN_BIT;
 
     event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
@@ -22,13 +27,13 @@ contract SFCBase is SFCState, StakersConstants {
         return currentSealedEpoch + 1;
     }
 
-    function _calcRawValidatorEpochTxReward(uint256 epochFee, uint256 txRewardWeight, uint256 totalTxRewardWeight) internal pure returns (uint256) {
+    function _calcRawValidatorEpochTxReward(uint256 epochFee, uint256 txRewardWeight, uint256 totalTxRewardWeight) internal view returns (uint256) {
         if (txRewardWeight == 0) {
             return 0;
         }
         uint256 txReward = epochFee.mul(txRewardWeight).div(totalTxRewardWeight);
         // fee reward except burntFeeShare and treasuryFeeShare
-        return txReward.mul(Decimal.unit() - burntFeeShare() - treasuryFeeShare()).div(Decimal.unit());
+        return txReward.mul(Decimal.unit() - c.burntFeeShare() - c.treasuryFeeShare()).div(Decimal.unit());
     }
 
     function _calcRawValidatorEpochBaseReward(uint256 epochDuration, uint256 _baseRewardPerSecond, uint256 baseRewardWeight, uint256 totalBaseRewardWeight) internal pure returns (uint256) {
@@ -53,16 +58,17 @@ contract SFCBase is SFCState, StakersConstants {
         return sumRewards(sumRewards(a, b), c);
     }
 
-    function _scaleLockupReward(uint256 fullReward, uint256 lockupDuration) internal pure returns (Rewards memory reward) {
+    function _scaleLockupReward(uint256 fullReward, uint256 lockupDuration) internal view returns (Rewards memory reward) {
         reward = Rewards(0, 0, 0);
+        uint256 unlockedRewardRatio = c.unlockedRewardRatio();
         if (lockupDuration != 0) {
-            uint256 maxLockupExtraRatio = Decimal.unit() - unlockedRewardRatio();
-            uint256 lockupExtraRatio = maxLockupExtraRatio.mul(lockupDuration).div(maxLockupDuration());
-            uint256 totalScaledReward = fullReward.mul(unlockedRewardRatio() + lockupExtraRatio).div(Decimal.unit());
-            reward.lockupBaseReward = fullReward.mul(unlockedRewardRatio()).div(Decimal.unit());
+            uint256 maxLockupExtraRatio = Decimal.unit() - unlockedRewardRatio;
+            uint256 lockupExtraRatio = maxLockupExtraRatio.mul(lockupDuration).div(c.maxLockupDuration());
+            uint256 totalScaledReward = fullReward.mul(unlockedRewardRatio + lockupExtraRatio).div(Decimal.unit());
+            reward.lockupBaseReward = fullReward.mul(unlockedRewardRatio).div(Decimal.unit());
             reward.lockupExtraReward = totalScaledReward - reward.lockupBaseReward;
         } else {
-            reward.unlockedReward = fullReward.mul(unlockedRewardRatio()).div(Decimal.unit());
+            reward.unlockedReward = fullReward.mul(unlockedRewardRatio).div(Decimal.unit());
         }
         return reward;
     }

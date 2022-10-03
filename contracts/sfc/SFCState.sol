@@ -2,6 +2,7 @@ pragma solidity ^0.5.0;
 
 import "./NodeDriver.sol";
 import "../ownership/Ownable.sol";
+import "./ConstantsManager.sol";
 
 contract SFCState is Initializable, Ownable {
     using SafeMath for uint256;
@@ -83,22 +84,24 @@ contract SFCState is Initializable, Ownable {
         uint256 totalSupply;
     }
 
-    uint256 public baseRewardPerSecond;
+    uint256 private erased0;
     uint256 public totalSupply;
     mapping(uint256 => EpochSnapshot) public getEpochSnapshot;
 
-    uint256 offlinePenaltyThresholdBlocksNum;
-    uint256 offlinePenaltyThresholdTime;
+    uint256 private erased1;
+    uint256 private erased2;
 
     mapping(uint256 => uint256) public slashingRefundRatio; // validator ID -> (slashing refund ratio)
 
     address public stakeTokenizerAddress;
 
-    uint256 public targetGasPowerPerSecond;
-    uint256 internal counterweight;
+    uint256 private erased3;
+    uint256 private erased4;
     uint256 public minGasPrice;
 
     address public treasuryAddress;
 
     address internal libAddress;
+
+    ConstantsManager internal c;
 }
