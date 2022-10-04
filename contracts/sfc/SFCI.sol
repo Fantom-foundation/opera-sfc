@@ -1,10 +1,6 @@
 pragma solidity ^0.5.0;
 
 interface SFCI {
-    function baseRewardPerSecond() external view returns (uint256);
-
-    function burntFeeShare() external pure returns (uint256);
-
     function currentSealedEpoch() external view returns (uint256);
 
     function getEpochSnapshot(uint256) external view returns (uint256 endTime, uint256 epochFee, uint256 totalBaseRewardWeight, uint256 totalTxRewardWeight, uint256 _baseRewardPerSecond, uint256 totalStake, uint256 totalSupply);
@@ -27,15 +23,7 @@ interface SFCI {
 
     function lastValidatorID() external view returns (uint256);
 
-    function maxDelegatedRatio() external pure returns (uint256);
-
-    function maxLockupDuration() external pure returns (uint256);
-
     function minGasPrice() external view returns (uint256);
-
-    function minLockupDuration() external pure returns (uint256);
-
-    function minSelfStake() external pure returns (uint256);
 
     function owner() external view returns (address);
 
@@ -46,8 +34,6 @@ interface SFCI {
     function stakeTokenizerAddress() external view returns (address);
 
     function stashedRewardsUntilEpoch(address, uint256) external view returns (uint256);
-
-    function targetGasPowerPerSecond() external view returns (uint256);
 
     function totalActiveStake() external view returns (uint256);
 
@@ -61,19 +47,11 @@ interface SFCI {
 
     function treasuryAddress() external view returns (address);
 
-    function treasuryFeeShare() external pure returns (uint256);
-
-    function unlockedRewardRatio() external pure returns (uint256);
-
-    function validatorCommission() external pure returns (uint256);
-
     function version() external pure returns (bytes3);
 
-    function withdrawalPeriodEpochs() external pure returns (uint256);
-
-    function withdrawalPeriodTime() external pure returns (uint256);
-
     function currentEpoch() external view returns (uint256);
+
+    function constsAddress() external view returns (address);
 
     function getEpochValidatorIDs(uint256 epoch) external view returns (uint256[] memory);
 
@@ -115,8 +93,6 @@ interface SFCI {
 
     function restakeRewards(uint256 toValidatorID) external;
 
-    function offlinePenaltyThreshold() external view returns (uint256 blocksNum, uint256 time);
-
     function updateBaseRewardPerSecond(uint256 value) external;
 
     function updateOfflinePenaltyThreshold(uint256 blocksNum, uint256 time) external;
@@ -149,7 +125,7 @@ interface SFCI {
 
     function unlockStake(uint256 toValidatorID, uint256 amount) external returns (uint256);
 
-    function initialize(uint256 sealedEpoch, uint256 _totalSupply, address nodeDriver, address lib, address _owner) external;
+    function initialize(uint256 sealedEpoch, uint256 _totalSupply, address nodeDriver, address lib, address consts, address _owner) external;
 
     function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external;
 

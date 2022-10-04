@@ -89,7 +89,7 @@ contract SFCLib is SFCBase {
     */
 
     function createValidator(bytes calldata pubkey) external payable {
-        require(msg.value >= minSelfStake(), "insufficient self-stake");
+        require(msg.value >= c.minSelfStake(), "insufficient self-stake");
         require(pubkey.length > 0, "empty pubkey");
         _createValidator(msg.sender, pubkey);
         _delegate(msg.sender, lastValidatorID, msg.value);
@@ -125,7 +125,7 @@ contract SFCLib is SFCBase {
     }
 
     function _checkDelegatedStakeLimit(uint256 validatorID) internal view returns (bool) {
-        return getValidator[validatorID].receivedStake <= getSelfStake(validatorID).mul(maxDelegatedRatio()).div(Decimal.unit());
+        return getValidator[validatorID].receivedStake <= getSelfStake(validatorID).mul(c.maxDelegatedRatio()).div(Decimal.unit());
     }
 
     function delegate(uint256 toValidatorID) external payable {
@@ -168,7 +168,7 @@ contract SFCLib is SFCBase {
         uint256 selfStakeAfterwards = getSelfStake(toValidatorID);
         if (selfStakeAfterwards != 0) {
             if (getValidator[toValidatorID].status == OK_STATUS) {
-                require(selfStakeAfterwards >= minSelfStake(), "insufficient self-stake");
+                require(selfStakeAfterwards >= c.minSelfStake(), "insufficient self-stake");
                 require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
             }
         } else {
@@ -227,8 +227,8 @@ contract SFCLib is SFCBase {
             requestEpoch = getValidator[toValidatorID].deactivatedEpoch;
         }
 
-        require(_now() >= requestTime + withdrawalPeriodTime(), "not enough time passed");
-        require(currentEpoch() >= requestEpoch + withdrawalPeriodEpochs(), "not enough epochs passed");
+        require(_now() >= requestTime + c.withdrawalPeriodTime(), "not enough time passed");
+        require(currentEpoch() >= requestEpoch + c.withdrawalPeriodEpochs(), "not enough epochs passed");
 
         uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID].amount;
         bool isCheater = isSlashed(toValidatorID);
@@ -431,7 +431,7 @@ contract SFCLib is SFCBase {
         require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough stake");
         require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
 
-        require(lockupDuration >= minLockupDuration() && lockupDuration <= maxLockupDuration(), "incorrect duration");
+        require(lockupDuration >= c.minLockupDuration() && lockupDuration <= c.maxLockupDuration(), "incorrect duration");
         uint256 endTime = _now().add(lockupDuration);
         address validatorAddr = getValidator[toValidatorID].auth;
         if (delegator != validatorAddr) {

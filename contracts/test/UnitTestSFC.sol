@@ -34,11 +34,6 @@ contract UnitTestSFCBase {
 }
 
 contract UnitTestSFC is SFC, UnitTestSFCBase {
-    function minSelfStake() public pure returns (uint256) {
-        // 0.3175000 FTM
-        return 0.3175000 * 1e18;
-    }
-
     function _now() internal view returns (uint256) {
         return time;
     }
@@ -52,11 +47,6 @@ contract UnitTestSFC is SFC, UnitTestSFCBase {
 }
 
 contract UnitTestSFCLib is SFCLib, UnitTestSFCBase {
-    function minSelfStake() public pure returns (uint256) {
-        // 0.3175000 FTM
-        return 0.3175000 * 1e18;
-    }
-
     function highestLockupEpoch(address delegator, uint256 validatorID) external view returns (uint256) {
         return _highestLockupEpoch(delegator, validatorID);
     }
@@ -74,19 +64,35 @@ contract UnitTestSFCLib is SFCLib, UnitTestSFCBase {
 }
 
 contract UnitTestNetworkInitializer {
-    function initializeAll(uint256 sealedEpoch, uint256 totalSupply, address payable _sfc, address _auth, address _driver, address _evmWriter, address _owner) external {
+    function initializeAll(uint256 sealedEpoch, uint256 totalSupply, address payable _sfc, address _lib, address _auth, address _driver, address _evmWriter, address _owner) external {
         NodeDriver(_driver).initialize(_auth, _evmWriter);
         NodeDriverAuth(_auth).initialize(_sfc, _driver, _owner);
-        SFCUnitTestI(_sfc).initialize(sealedEpoch, totalSupply, _auth, address(new UnitTestSFCLib()), _owner);
+
+        ConstantsManager consts = new ConstantsManager();
+        consts.initialize();
+        consts.updateMinSelfStake(0.3175000 * 1e18);
+        consts.updateMaxDelegatedRatio(16 * Decimal.unit());
+        consts.updateValidatorCommission((15 * Decimal.unit()) / 100);
+        consts.updateBurntFeeShare((20 * Decimal.unit()) / 100);
+        consts.updateTreasuryFeeShare((10 * Decimal.unit()) / 100);
+        consts.updateUnlockedRewardRatio((30 * Decimal.unit()) / 100);
+        consts.updateMinLockupDuration(86400 * 14);
+        consts.updateMaxLockupDuration(86400 * 365);
+        consts.updateWithdrawalPeriodEpochs(3);
+        consts.updateWithdrawalPeriodTime(60 * 60 * 24 * 7);
+        consts.updateBaseRewardPerSecond(6183414351851851852);
+        consts.updateOfflinePenaltyThresholdTime(3 days);
+        consts.updateOfflinePenaltyThresholdBlocksNum(1000);
+        consts.updateTargetGasPowerPerSecond(3500000);
+        consts.updateGasPriceBalancingCounterweight(6 * 60 * 60);
+        consts.transferOwnership(_owner);
+
+        SFCUnitTestI(_sfc).initialize(sealedEpoch, totalSupply, _auth, _lib, address(consts), _owner);
         selfdestruct(address(0));
     }
 }
 
 interface SFCUnitTestI {
-
-    function baseRewardPerSecond() external view returns (uint256);
-
-    function burntFeeShare() external pure returns (uint256);
 
     function currentSealedEpoch() external view returns (uint256);
 
@@ -110,15 +116,7 @@ interface SFCUnitTestI {
 
     function lastValidatorID() external view returns (uint256);
 
-    function maxDelegatedRatio() external pure returns (uint256);
-
-    function maxLockupDuration() external pure returns (uint256);
-
     function minGasPrice() external view returns (uint256);
-
-    function minLockupDuration() external pure returns (uint256);
-
-    function minSelfStake() external pure returns (uint256);
 
     function owner() external view returns (address);
 
@@ -144,19 +142,11 @@ interface SFCUnitTestI {
 
     function treasuryAddress() external view returns (address);
 
-    function treasuryFeeShare() external pure returns (uint256);
-
-    function unlockedRewardRatio() external pure returns (uint256);
-
-    function validatorCommission() external pure returns (uint256);
-
     function version() external pure returns (bytes3);
 
-    function withdrawalPeriodEpochs() external pure returns (uint256);
-
-    function withdrawalPeriodTime() external pure returns (uint256);
-
     function currentEpoch() external view returns (uint256);
+
+    function constsAddress() external view returns (address);
 
     function getEpochValidatorIDs(uint256 epoch) external view returns (uint256[] memory);
 
@@ -232,7 +222,7 @@ interface SFCUnitTestI {
 
     function unlockStake(uint256 toValidatorID, uint256 amount) external returns (uint256);
 
-    function initialize(uint256 sealedEpoch, uint256 _totalSupply, address nodeDriver, address lib, address _owner) external;
+    function initialize(uint256 sealedEpoch, uint256 _totalSupply, address nodeDriver, address lib, address consts, address _owner) external;
 
     function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external;
 

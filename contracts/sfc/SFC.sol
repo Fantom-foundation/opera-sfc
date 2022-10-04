@@ -40,55 +40,35 @@ contract SFC is SFCBase, Version {
     Constructor
     */
 
-    function initialize(uint256 sealedEpoch, uint256 _totalSupply, address nodeDriver, address lib, address owner) external initializer {
+    function initialize(uint256 sealedEpoch, uint256 _totalSupply, address nodeDriver, address lib, address _c, address owner) external initializer {
         Ownable.initialize(owner);
         currentSealedEpoch = sealedEpoch;
         node = NodeDriverAuth(nodeDriver);
         libAddress = lib;
+        c = ConstantsManager(_c);
         totalSupply = _totalSupply;
-        baseRewardPerSecond = 6.183414351851851852 * 1e18;
         minGasPrice = GP.initialMinGasPrice();
-        targetGasPowerPerSecond = 3500000;
-        offlinePenaltyThresholdBlocksNum = 1000;
-        offlinePenaltyThresholdTime = 3 days;
         getEpochSnapshot[sealedEpoch].endTime = _now();
-        counterweight = 6 * 60 * 60;
-    }
-
-    function offlinePenaltyThreshold() public view returns (uint256 blocksNum, uint256 time) {
-        return (offlinePenaltyThresholdBlocksNum, offlinePenaltyThresholdTime);
-    }
-
-    function updateBaseRewardPerSecond(uint256 value) onlyOwner external {
-        require(value <= 32.967977168935185184 * 1e18, "too large reward per second");
-        baseRewardPerSecond = value;
-        emit UpdatedBaseRewardPerSec(value);
-    }
-
-    function updateOfflinePenaltyThreshold(uint256 blocksNum, uint256 time) onlyOwner external {
-        offlinePenaltyThresholdTime = time;
-        offlinePenaltyThresholdBlocksNum = blocksNum;
-        emit UpdatedOfflinePenaltyThreshold(blocksNum, time);
     }
 
     function updateStakeTokenizerAddress(address addr) onlyOwner external {
         stakeTokenizerAddress = addr;
     }
 
-    function updateTargetGasPowerPerSecond(uint256 v) onlyOwner external {
-        targetGasPowerPerSecond = v;
-    }
-
     function updateLibAddress(address v) onlyOwner external {
         libAddress = v;
     }
 
-    function updateGasPriceBalancingCounterweight(uint256 v) onlyOwner external {
-        counterweight = v;
-    }
-
     function updateTreasuryAddress(address v) onlyOwner external {
         treasuryAddress = v;
+    }
+
+    function updateConstsAddress(address v) onlyOwner external {
+        c = ConstantsManager(v);
+    }
+
+    function constsAddress() external view returns (address) {
+        return address(c);
     }
 
     /*
@@ -98,7 +78,7 @@ contract SFC is SFCBase, Version {
     function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTime, uint256[] memory offlineBlocks) internal {
         // mark offline nodes
         for (uint256 i = 0; i < validatorIDs.length; i++) {
-            if (offlineBlocks[i] > offlinePenaltyThresholdBlocksNum && offlineTime[i] >= offlinePenaltyThresholdTime) {
+            if (offlineBlocks[i] > c.offlinePenaltyThresholdBlocksNum() && offlineTime[i] >= c.offlinePenaltyThresholdTime()) {
                 _setValidatorDeactivated(validatorIDs[i], OFFLINE_BIT);
                 _syncValidator(validatorIDs[i], false);
             }
@@ -140,13 +120,13 @@ contract SFC is SFCBase, Version {
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
-            uint256 rawReward = _calcRawValidatorEpochBaseReward(epochDuration, baseRewardPerSecond, ctx.baseRewardWeights[i], ctx.totalBaseRewardWeight);
+            uint256 rawReward = _calcRawValidatorEpochBaseReward(epochDuration, c.baseRewardPerSecond(), ctx.baseRewardWeights[i], ctx.totalBaseRewardWeight);
             rawReward = rawReward.add(_calcRawValidatorEpochTxReward(ctx.epochFee, ctx.txRewardWeights[i], ctx.totalTxRewardWeight));
 
             uint256 validatorID = validatorIDs[i];
             address validatorAddr = getValidator[validatorID].auth;
             // accounting validator's commission
-            uint256 commissionRewardFull = _calcValidatorCommission(rawReward, validatorCommission());
+            uint256 commissionRewardFull = _calcValidatorCommission(rawReward, c.validatorCommission());
             uint256 selfStake = getStake[validatorAddr][validatorID];
             if (selfStake != 0) {
                 uint256 lCommissionRewardFull = (commissionRewardFull * getLockedStake(validatorAddr, validatorID)) / selfStake;
@@ -181,7 +161,7 @@ contract SFC is SFCBase, Version {
 
         // transfer 10% of fees to treasury
         if (treasuryAddress != address(0)) {
-            uint256 feeShare = ctx.epochFee * treasuryFeeShare() / Decimal.unit();
+            uint256 feeShare = ctx.epochFee * c.treasuryFeeShare() / Decimal.unit();
             _mintNativeToken(feeShare);
             treasuryAddress.call.value(feeShare)("");
         }
@@ -190,8 +170,9 @@ contract SFC is SFCBase, Version {
 
     function _sealEpoch_minGasPrice(uint256 epochDuration, uint256 epochGas) internal {
         // change minGasPrice proportionally to the difference between target and received epochGas
-        uint256 targetEpochGas = epochDuration * targetGasPowerPerSecond + 1;
+        uint256 targetEpochGas = epochDuration * c.targetGasPowerPerSecond() + 1;
         uint256 gasPriceDeltaRatio = epochGas * Decimal.unit() / targetEpochGas;
+        uint256 counterweight = c.gasPriceBalancingCounterweight();
         // scale down the change speed (estimate gasPriceDeltaRatio ^ (epochDuration / counterweight))
         gasPriceDeltaRatio = (epochDuration * gasPriceDeltaRatio + counterweight * Decimal.unit()) / (epochDuration + counterweight);
         // limit the max/min possible delta in one epoch
@@ -222,7 +203,7 @@ contract SFC is SFCBase, Version {
 
         currentSealedEpoch = currentEpoch();
         snapshot.endTime = _now();
-        snapshot.baseRewardPerSecond = baseRewardPerSecond;
+        snapshot.baseRewardPerSecond = c.baseRewardPerSecond();
         snapshot.totalSupply = totalSupply;
     }
 
