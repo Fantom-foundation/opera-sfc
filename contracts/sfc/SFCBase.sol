@@ -73,6 +73,15 @@ contract SFCBase is SFCState {
         return reward;
     }
 
+    function _recountVotes(address delegator, address validatorAuth, bool strict) internal {
+        if (voteBookAddress != address(0)) {
+            // Don't allow recountVotes to use up all the gas
+            (bool success,) = voteBookAddress.call.gas(8000000)(abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth));
+            // Don't revert if recountVotes failed unless strict mode enabled
+            require(success || !strict, "gov votes recounting failed");
+        }
+    }
+
     function _setValidatorDeactivated(uint256 validatorID, uint256 status) internal {
         if (getValidator[validatorID].status == OK_STATUS && status != OK_STATUS) {
             totalActiveStake = totalActiveStake.sub(getValidator[validatorID].receivedStake);
