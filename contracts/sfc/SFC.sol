@@ -71,6 +71,10 @@ contract SFC is SFCBase, Version {
         return address(c);
     }
 
+    function updateVoteBookAddress(address v) onlyOwner external {
+        voteBookAddress = v;
+    }
+
     /*
     Epoch callbacks
     */

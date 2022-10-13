@@ -51,6 +51,8 @@ interface SFCI {
 
     function currentEpoch() external view returns (uint256);
 
+    function updateConstsAddress(address v) external;
+
     function constsAddress() external view returns (address);
 
     function getEpochValidatorIDs(uint256 epoch) external view returns (uint256[] memory);
@@ -101,10 +103,6 @@ interface SFCI {
 
     function updateStakeTokenizerAddress(address addr) external;
 
-    function updateTargetGasPowerPerSecond(uint256 v) external;
-
-    function updateGasPriceBalancingCounterweight(uint256 v) external;
-
     function updateTreasuryAddress(address v) external;
 
     function mintFTM(address receiver, uint256 amount, string calldata justification) external;
@@ -130,4 +128,8 @@ interface SFCI {
     function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external;
 
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external;
+
+    function updateVoteBookAddress(address v) external;
+
+    function voteBookAddress(address v) external view returns (address);
 }

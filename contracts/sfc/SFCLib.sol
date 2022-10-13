@@ -69,7 +69,7 @@ contract SFCLib is SFCBase {
     }
 
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyDriver {
-        _rawDelegate(delegator, toValidatorID, stake);
+        _rawDelegate(delegator, toValidatorID, stake, false);
         _rewardsStash[delegator][toValidatorID].unlockedReward = rewards;
         _mintNativeToken(stake);
         if (lockedStake != 0) {
@@ -135,11 +135,11 @@ contract SFCLib is SFCBase {
     function _delegate(address delegator, uint256 toValidatorID, uint256 amount) internal {
         require(_validatorExists(toValidatorID), "validator doesn't exist");
         require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
-        _rawDelegate(delegator, toValidatorID, amount);
+        _rawDelegate(delegator, toValidatorID, amount, true);
         require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
     }
 
-    function _rawDelegate(address delegator, uint256 toValidatorID, uint256 amount) internal {
+    function _rawDelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict) internal {
         require(amount > 0, "zero amount");
 
         _stashRewards(delegator, toValidatorID);
@@ -155,9 +155,16 @@ contract SFCLib is SFCBase {
         _syncValidator(toValidatorID, origStake == 0);
 
         emit Delegated(delegator, toValidatorID, amount);
+
+        _recountVotes(delegator, getValidator[toValidatorID].auth, strict);
     }
 
-    function _rawUndelegate(address delegator, uint256 toValidatorID, uint256 amount) internal {
+    function recountVotes(address delegator, address validatorAuth, bool strict, uint256 gas) external {
+        (bool success,) = voteBookAddress.call.gas(gas)(abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth));
+        require(success || !strict, "gov votes recounting failed");
+    }
+
+    function _rawUndelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict) internal {
         getStake[delegator][toValidatorID] -= amount;
         getValidator[toValidatorID].receivedStake = getValidator[toValidatorID].receivedStake.sub(amount);
         totalStake = totalStake.sub(amount);
@@ -174,6 +181,8 @@ contract SFCLib is SFCBase {
         } else {
             _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
         }
+
+        _recountVotes(delegator, getValidator[toValidatorID].auth, strict);
     }
 
     function undelegate(uint256 toValidatorID, uint256 wrID, uint256 amount) public {
@@ -187,7 +196,7 @@ contract SFCLib is SFCBase {
 
         require(getWithdrawalRequest[delegator][toValidatorID][wrID].amount == 0, "wrID already exists");
 
-        _rawUndelegate(delegator, toValidatorID, amount);
+        _rawUndelegate(delegator, toValidatorID, amount, true);
 
         getWithdrawalRequest[delegator][toValidatorID][wrID].amount = amount;
         getWithdrawalRequest[delegator][toValidatorID][wrID].epoch = currentEpoch();
@@ -245,12 +254,13 @@ contract SFCLib is SFCBase {
         emit Withdrawn(delegator, toValidatorID, wrID, amount);
     }
 
-
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
         require(status != OK_STATUS, "wrong status");
 
         _setValidatorDeactivated(validatorID, status);
         _syncValidator(validatorID, false);
+        address validatorAddr = getValidator[validatorID].auth;
+        _recountVotes(validatorAddr, validatorAddr, false);
     }
 
     function _highestPayableEpoch(uint256 validatorID) internal view returns (uint256) {
@@ -490,7 +500,7 @@ contract SFCLib is SFCBase {
         uint256 penalty = _popDelegationUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
 
         ld.lockedStake -= amount;
-        _rawUndelegate(delegator, toValidatorID, penalty);
+        _rawUndelegate(delegator, toValidatorID, penalty, true);
 
         _burnFTM(penalty);
 
