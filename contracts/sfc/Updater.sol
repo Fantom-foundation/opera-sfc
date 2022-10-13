@@ -40,7 +40,7 @@ contract Updater is Ownable {
         consts.updateMaxLockupDuration(86400 * 365);
         consts.updateWithdrawalPeriodEpochs(3);
         consts.updateWithdrawalPeriodTime(60 * 60 * 24 * 7);
-        consts.updateBaseRewardPerSecond(6183414351851851852);
+        consts.updateBaseRewardPerSecond(2668658453701531600);
         consts.updateOfflinePenaltyThresholdTime(3 days);
         consts.updateOfflinePenaltyThresholdBlocksNum(1000);
         consts.updateTargetGasPowerPerSecond(3500000);
