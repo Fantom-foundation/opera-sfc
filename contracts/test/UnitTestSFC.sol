@@ -146,6 +146,8 @@ interface SFCUnitTestI {
 
     function currentEpoch() external view returns (uint256);
 
+    function updateConstsAddress(address v) external;
+
     function constsAddress() external view returns (address);
 
     function getEpochValidatorIDs(uint256 epoch) external view returns (uint256[] memory);
@@ -198,10 +200,6 @@ interface SFCUnitTestI {
 
     function updateStakeTokenizerAddress(address addr) external;
 
-    function updateTargetGasPowerPerSecond(uint256 v) external;
-
-    function updateGasPriceBalancingCounterweight(uint256 v) external;
-
     function updateTreasuryAddress(address v) external;
 
     function mintFTM(address receiver, uint256 amount, string calldata justification) external;
@@ -245,6 +243,10 @@ interface SFCUnitTestI {
     function disableNonNodeCalls() external;
 
     function allowedNonNodeCalls() external view returns (bool);
+
+    function updateVoteBookAddress(address v) external;
+
+    function voteBookAddress(address v) external view returns (address);
 }
 
 

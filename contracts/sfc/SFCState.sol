@@ -104,4 +104,6 @@ contract SFCState is Initializable, Ownable {
     address internal libAddress;
 
     ConstantsManager internal c;
+
+    address public voteBookAddress;
 }
