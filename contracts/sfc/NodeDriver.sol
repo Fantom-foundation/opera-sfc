@@ -6,6 +6,10 @@ import "../ownership/Ownable.sol";
 import "./SFCI.sol";
 
 
+interface NodeDriverExecutable {
+    function execute() external;
+}
+
 contract NodeDriverAuth is Initializable, Ownable {
     using SafeMath for uint256;
 
@@ -31,6 +35,23 @@ contract NodeDriverAuth is Initializable, Ownable {
 
     function migrateTo(address newDriverAuth) external onlyOwner {
         driver.setBackend(newDriverAuth);
+    }
+
+    function _execute(address executable, address newOwner, bytes32 selfCodeHash, bytes32 driverCodeHash) internal {
+        _transferOwnership(executable);
+        NodeDriverExecutable(executable).execute();
+        _transferOwnership(newOwner);
+        //require(driver.backend() == address(this), "ownership of driver is lost");
+        require(_getCodeHash(address(this)) == selfCodeHash, "self code hash doesn't match");
+        require(_getCodeHash(address(driver)) == driverCodeHash, "driver code hash doesn't match");
+    }
+
+    function execute(address executable) external onlyOwner {
+        _execute(executable, owner(), _getCodeHash(address(this)), _getCodeHash(address(driver)));
+    }
+
+    function mutExecute(address executable, address newOwner, bytes32 selfCodeHash, bytes32 driverCodeHash) external onlyOwner {
+        _execute(executable, newOwner, selfCodeHash, driverCodeHash);
     }
 
     function incBalance(address acc, uint256 diff) external onlySFC {
@@ -98,7 +119,7 @@ contract NodeDriverAuth is Initializable, Ownable {
     function isContract(address account) internal view returns (bool) {
         uint256 size;
         // solhint-disable-next-line no-inline-assembly
-        assembly { size := extcodesize(account) }
+        assembly {size := extcodesize(account)}
         return size > 0;
     }
 
@@ -144,6 +165,12 @@ contract NodeDriverAuth is Initializable, Ownable {
             babc[k++] = _bc[i];
         }
         return string(babc);
+    }
+
+    function _getCodeHash(address addr) internal view returns (bytes32) {
+        bytes32 codeHash;
+        assembly {codeHash := extcodehash(addr)}
+        return codeHash;
     }
 }
 
