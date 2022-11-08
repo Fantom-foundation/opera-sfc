@@ -1,9 +1,12 @@
 pragma solidity ^0.5.0;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../ownership/Ownable.sol";
 import "../common/Decimal.sol";
 
 contract ConstantsManager is Ownable {
+    using SafeMath for uint256;
+
     // Minimum amount of stake for a validator, i.e., 500000 FTM
     uint256 public minSelfStake;
     // Maximum ratio of delegations a validator can have, say, 15 times of self-stake
@@ -53,11 +56,13 @@ contract ConstantsManager is Ownable {
 
     function updateBurntFeeShare(uint256 v) onlyOwner external {
         require(v <= Decimal.unit(), "too large value");
+        require(v.add(treasuryFeeShare) <= Decimal.unit(), "treasuryFeeShare and burntFeeShare exceed 100%");
         burntFeeShare = v;
     }
 
     function updateTreasuryFeeShare(uint256 v) onlyOwner external {
         require(v <= Decimal.unit(), "too large value");
+        require(v.add(burntFeeShare) <= Decimal.unit(), "treasuryFeeShare and burntFeeShare exceed 100%");
         treasuryFeeShare = v;
     }
 
