@@ -43,7 +43,7 @@ contract Updater is Ownable {
         consts.updateBaseRewardPerSecond(2668658453701531600);
         consts.updateOfflinePenaltyThresholdTime(5 days);
         consts.updateOfflinePenaltyThresholdBlocksNum(1000);
-        consts.updateTargetGasPowerPerSecond(3500000);
+        consts.updateTargetGasPowerPerSecond(2000000);
         consts.updateGasPriceBalancingCounterweight(3600);
         consts.transferOwnership(msg.sender);
 

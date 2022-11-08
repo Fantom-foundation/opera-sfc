@@ -83,7 +83,7 @@ contract UnitTestNetworkInitializer {
         consts.updateBaseRewardPerSecond(6183414351851851852);
         consts.updateOfflinePenaltyThresholdTime(3 days);
         consts.updateOfflinePenaltyThresholdBlocksNum(1000);
-        consts.updateTargetGasPowerPerSecond(3500000);
+        consts.updateTargetGasPowerPerSecond(2000000);
         consts.updateGasPriceBalancingCounterweight(6 * 60 * 60);
         consts.transferOwnership(_owner);
 
