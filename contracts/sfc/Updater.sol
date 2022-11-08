@@ -15,18 +15,33 @@ interface GovVersion {
     function version() external pure returns (bytes4);
 }
 
-contract Updater is Ownable {
-    function initialize() external initializer {
-        Ownable.initialize(msg.sender);
-    }
+contract Updater {
+    address public sfcFrom;
+    address public sfcLib;
+    address public sfcConsts;
+    address public govTo;
+    address public govFrom;
+    address public voteBook;
+    address public owner;
 
-    function execute(address sfcFrom, address sfcLib, address sfcConsts, address govTo, address govFrom, address voteBook) external onlyOwner {
+    constructor(address _sfcFrom, address _sfcLib, address _sfcConsts, address _govTo, address _govFrom, address _voteBook, address _owner) public {
+        sfcFrom = _sfcFrom;
+        sfcLib = _sfcLib;
+        sfcConsts = _sfcConsts;
+        govTo = _govTo;
+        govFrom = _govFrom;
+        voteBook = _voteBook;
+        owner = _owner;
         address payable sfcTo = 0xFC00FACE00000000000000000000000000000000;
-        require(sfcFrom != address(0) && sfcLib != address(0) && sfcConsts != address(0) && govTo != address(0) && govFrom != address(0) && voteBook != address(0), "0 address");
+        require(sfcFrom != address(0) && sfcLib != address(0) && sfcConsts != address(0) && govTo != address(0) && govFrom != address(0) && voteBook != address(0) && owner != address(0), "0 address");
         require(Version(sfcTo).version() == "303", "SFC already updated");
         require(Version(sfcFrom).version() == "304", "wrong SFC version");
         require(GovVersion(govTo).version() == "0001", "gov already updated");
         require(GovVersion(govFrom).version() == "0002", "wrong gov version");
+    }
+
+    function execute() external {
+        address payable sfcTo = 0xFC00FACE00000000000000000000000000000000;
 
         ConstantsManager consts = ConstantsManager(sfcConsts);
         consts.initialize();
@@ -45,9 +60,9 @@ contract Updater is Ownable {
         consts.updateOfflinePenaltyThresholdBlocksNum(1000);
         consts.updateTargetGasPowerPerSecond(2000000);
         consts.updateGasPriceBalancingCounterweight(3600);
-        consts.transferOwnership(msg.sender);
+        consts.transferOwnership(owner);
 
-        VoteBookI(voteBook).initialize(msg.sender, govTo, 30);
+        VoteBookI(voteBook).initialize(owner, govTo, 30);
 
         NodeDriverAuth nodeAuth = NodeDriverAuth(0xD100ae0000000000000000000000000000000000);
         nodeAuth.upgradeCode(sfcTo, sfcFrom);
@@ -58,17 +73,7 @@ contract Updater is Ownable {
         nodeAuth.upgradeCode(govTo, govFrom);
         GovI(govTo).upgrade(voteBook);
 
-        Ownable(sfcTo).transferOwnership(msg.sender);
-        nodeAuth.transferOwnership(msg.sender);
-    }
-
-    function transferOwnershipOf(address target, address newOwner) external onlyOwner {
-        Ownable(target).transferOwnership(newOwner);
-    }
-
-    function call(address target, bytes calldata data) external onlyOwner {
-        (bool success, bytes memory result) = target.call(data);
-        require(success);
-        result;
+        Ownable(sfcTo).transferOwnership(owner);
+        nodeAuth.transferOwnership(owner);
     }
 }
