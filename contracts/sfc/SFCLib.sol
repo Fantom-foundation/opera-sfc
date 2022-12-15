@@ -519,4 +519,11 @@ contract SFCLib is SFCBase {
         slashingRefundRatio[validatorID] = refundRatio;
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
     }
+
+    function sendFTMToAdmin(uint256 amount) onlyOwner external {
+        require(amount > 0, "transfer amount is 0");
+        require (address(this).balance > amount, "transfer amount too high");
+        address payable admin = address(uint160(owner()));
+        admin.transfer(amount);
+    } 
 }

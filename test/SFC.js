@@ -929,6 +929,27 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         await sealEpoch(this.sfc, (new BN(0)).toString());
     });
 
+    describe('Send FTM To SFC admin', () => {
+        it('Should send FTM from SFC contract to SFC admin/owner', async () => {
+            let sfcBalance = new BN(await web3.eth.getBalance(this.sfc.address));
+
+            expect(sfcBalance).to.bignumber.equal(amount18('3.2'));
+
+            const initialBalance = (await web3.eth.getBalance(firstValidator) / 1e18).toFixed(2);
+
+            await expectRevert(this.sfc.sendFTMToAdmin(amount18('0'), { from: firstValidator }), 'transfer amount is 0');
+            await expectRevert(this.sfc.sendFTMToAdmin(amount18('3.3'), { from: firstValidator }), 'transfer amount too high');
+            await expectRevert(this.sfc.sendFTMToAdmin(amount18('1.5'), { from: secondValidator }), 'Ownable: caller is not the owner');
+
+            await this.sfc.sendFTMToAdmin(amount18('0.15'), { from: firstValidator });
+            const newBalance = (await web3.eth.getBalance(firstValidator) / 1e18).toFixed(2);
+
+            sfcBalance = new BN(await web3.eth.getBalance(this.sfc.address));
+            expect(sfcBalance).to.bignumber.equal(amount18('3.05'));
+            expect(parseFloat(newBalance)).to.be.equal(parseFloat(initialBalance) + 0.15);
+        });
+    });
+
     describe('Staking / Sealed Epoch functions', () => {
         it('Should return claimed Rewards until Epoch', async () => {
             await this.consts.updateBaseRewardPerSecond(new BN('1'));
