@@ -22,16 +22,17 @@ contract StakeTokenizer is Spacer, Initializable {
     }
 
     function mintSFTM(uint256 toValidatorID) external {
-        address delegator = msg.sender;
-        uint256 lockedStake = sfc.getLockedStake(delegator, toValidatorID);
-        require(lockedStake > 0, "delegation isn't locked up");
-        require(lockedStake > outstandingSFTM[delegator][toValidatorID], "sFTM is already minted");
-
-        uint256 diff = lockedStake - outstandingSFTM[delegator][toValidatorID];
-        outstandingSFTM[delegator][toValidatorID] = lockedStake;
-
-        // It's important that we mint after updating outstandingSFTM (protection against Re-Entrancy)
-        require(ERC20Mintable(sFTMTokenAddress).mint(delegator, diff), "failed to mint sFTM");
+        revert("sFTM minting is disabled");
+//        address delegator = msg.sender;
+//        uint256 lockedStake = sfc.getLockedStake(delegator, toValidatorID);
+//        require(lockedStake > 0, "delegation isn't locked up");
+//        require(lockedStake > outstandingSFTM[delegator][toValidatorID], "sFTM is already minted");
+//
+//        uint256 diff = lockedStake - outstandingSFTM[delegator][toValidatorID];
+//        outstandingSFTM[delegator][toValidatorID] = lockedStake;
+//
+//        // It's important that we mint after updating outstandingSFTM (protection against Re-Entrancy)
+//        require(ERC20Mintable(sFTMTokenAddress).mint(delegator, diff), "failed to mint sFTM");
     }
 
     function redeemSFTM(uint256 validatorID, uint256 amount) external {
