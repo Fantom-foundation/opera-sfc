@@ -284,6 +284,10 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 expect((await this.sfc.version()).toString()).to.equals('0x333034');
             });
 
+            it('Reverts on transfers', async () => {
+                await expectRevert(web3.eth.sendTransaction({from: secondValidator, to: this.sfc.address, value: 1 }), 'transfers not allowed');
+            });
+
             it('Should create a Validator and return the ID', async () => {
                 await this.sfc.createValidator(pubkey, {
                     from: secondValidator,
