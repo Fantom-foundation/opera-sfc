@@ -11,7 +11,7 @@ const NodeDriverAuth = artifacts.require('NodeDriverAuth');
 const NodeDriver = artifacts.require('NodeDriver');
 const NetworkInitializer = artifacts.require('UnitTestNetworkInitializer');
 const StubEvmWriter = artifacts.require('StubEvmWriter');
-const ConstantsManager = artifacts.require('ConstantsManager');
+const ConstantsManager = artifacts.require('UnitTestConstantsManager');
 
 function amount18(n) {
     return new BN(web3.utils.toWei(n, 'ether'));
@@ -408,8 +408,8 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
             });
 
             it('Should call updateOfflinePenaltyThreshold', async () => {
-                await this.consts.updateOfflinePenaltyThresholdTime(3600);
-                await this.consts.updateOfflinePenaltyThresholdBlocksNum(10);
+                await this.consts.updateOfflinePenaltyThresholdTime(86400);
+                await this.consts.updateOfflinePenaltyThresholdBlocksNum(1000);
             });
         });
     });

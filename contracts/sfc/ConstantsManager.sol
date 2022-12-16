@@ -34,91 +34,108 @@ contract ConstantsManager is Ownable {
     uint256 public targetGasPowerPerSecond;
     uint256 public gasPriceBalancingCounterweight;
 
+    address public secondaryOwner;
+
+    event SecondaryOwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
     function initialize() external initializer {
         Ownable.initialize(msg.sender);
     }
 
-    function updateMinSelfStake(uint256 v) onlyOwner external {
-        require(v <= 1000000000 * 1e18, "too large value");
+    modifier onlyAnyOwner() {
+        require(isOwner() || msg.sender == secondaryOwner, "Ownable: caller is not the owner");
+        _;
+    }
+
+    function setSecondaryOwner(address v) onlyOwner external {
+        emit SecondaryOwnershipTransferred(secondaryOwner, v);
+        secondaryOwner = v;
+    }
+
+    function updateMinSelfStake(uint256 v) onlyAnyOwner external {
+        require(v >= 100000 * 1e18, "too small value");
+        require(v <= 10000000 * 1e18, "too large value");
         minSelfStake = v;
     }
 
-    function updateMaxDelegatedRatio(uint256 v) onlyOwner external {
+    function updateMaxDelegatedRatio(uint256 v) onlyAnyOwner external {
         require(v >= Decimal.unit(), "too small value");
-        require(v <= 1000000 * Decimal.unit(), "too large value");
+        require(v <= 31 * Decimal.unit(), "too large value");
         maxDelegatedRatio = v;
     }
 
-    function updateValidatorCommission(uint256 v) onlyOwner external {
-        require(v <= Decimal.unit(), "too large value");
+    function updateValidatorCommission(uint256 v) onlyAnyOwner external {
+        require(v <= Decimal.unit() / 2, "too large value");
         validatorCommission = v;
     }
 
-    function updateBurntFeeShare(uint256 v) onlyOwner external {
-        require(v <= Decimal.unit(), "too large value");
-        require(v.add(treasuryFeeShare) <= Decimal.unit(), "treasuryFeeShare and burntFeeShare exceed 100%");
+    function updateBurntFeeShare(uint256 v) onlyAnyOwner external {
+        require(v <= Decimal.unit() / 2, "too large value");
         burntFeeShare = v;
     }
 
-    function updateTreasuryFeeShare(uint256 v) onlyOwner external {
-        require(v <= Decimal.unit(), "too large value");
-        require(v.add(burntFeeShare) <= Decimal.unit(), "treasuryFeeShare and burntFeeShare exceed 100%");
+    function updateTreasuryFeeShare(uint256 v) onlyAnyOwner external {
+        require(v <= Decimal.unit() / 2, "too large value");
         treasuryFeeShare = v;
     }
 
-    function updateUnlockedRewardRatio(uint256 v) onlyOwner external {
-        require(v <= Decimal.unit(), "too large value");
+    function updateUnlockedRewardRatio(uint256 v) onlyAnyOwner external {
+        require(v >= (5 * Decimal.unit()) / 100, "too small value");
+        require(v <= Decimal.unit() / 2, "too large value");
         unlockedRewardRatio = v;
     }
 
     function updateMinLockupDuration(uint256 v) onlyOwner external {
-        require(v >= 43200, "too small value");
-        require(v <= 2147483648, "too large value");
+        require(v >= 86400, "too small value");
+        require(v <= 86400 * 30, "too large value");
         minLockupDuration = v;
     }
 
     function updateMaxLockupDuration(uint256 v) onlyOwner external {
-        require(v >= minLockupDuration, "too small value");
-        require(v <= 2147483648, "too large value");
+        require(v >= 86400 * 30, "too small value");
+        require(v <= 86400 * 1460, "too large value");
         maxLockupDuration = v;
     }
 
-    function updateWithdrawalPeriodEpochs(uint256 v) onlyOwner external {
-        require(v >= 1, "too small value");
-        require(v <= 100000000, "too large value");
+    function updateWithdrawalPeriodEpochs(uint256 v) onlyAnyOwner external {
+        require(v >= 2, "too small value");
+        require(v <= 100, "too large value");
         withdrawalPeriodEpochs = v;
     }
 
-    function updateWithdrawalPeriodTime(uint256 v) onlyOwner external {
-        require(v >= 3600, "too small value");
-        require(v <= 2147483648, "too large value");
+    function updateWithdrawalPeriodTime(uint256 v) onlyAnyOwner external {
+        require(v >= 86400, "too small value");
+        require(v <= 30 * 86400, "too large value");
         withdrawalPeriodTime = v;
     }
 
-    function updateBaseRewardPerSecond(uint256 v) onlyOwner external {
-        require(v <= 32.967977168935185184 * 1e18, "too large reward per second");
+    function updateBaseRewardPerSecond(uint256 v) onlyAnyOwner external {
+        require(v >= 0.5 * 1e18, "too small value");
+        require(v <= 32 * 1e18, "too large value");
         baseRewardPerSecond = v;
     }
 
-    function updateOfflinePenaltyThresholdTime(uint256 v) onlyOwner external {
-        require(v >= 60 minutes, "too small value");
+    function updateOfflinePenaltyThresholdTime(uint256 v) onlyAnyOwner external {
+        require(v >= 86400, "too small value");
+        require(v <= 10 * 86400, "too large value");
         offlinePenaltyThresholdTime = v;
     }
 
-    function updateOfflinePenaltyThresholdBlocksNum(uint256 v) onlyOwner external {
-        require(v >= 10, "too small value");
+    function updateOfflinePenaltyThresholdBlocksNum(uint256 v) onlyAnyOwner external {
+        require(v >= 100, "too small value");
+        require(v <= 1000000, "too large value");
         offlinePenaltyThresholdBlocksNum = v;
     }
 
     function updateTargetGasPowerPerSecond(uint256 v) onlyOwner external {
-        require(v >= 1000, "too small value");
+        require(v >= 1000000, "too small value");
         require(v <= 500000000, "too large value");
         targetGasPowerPerSecond = v;
     }
 
     function updateGasPriceBalancingCounterweight(uint256 v) onlyOwner external {
-        require(v >= 1, "too small value");
-        require(v <= 1000000000, "too large value");
+        require(v >= 100, "too small value");
+        require(v <= 10 * 86400, "too large value");
         gasPriceBalancingCounterweight = v;
     }
 }
