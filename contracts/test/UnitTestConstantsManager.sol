@@ -2,11 +2,11 @@ pragma solidity ^0.5.0;
 import "../sfc/ConstantsManager.sol";
 
 contract UnitTestConstantsManager is ConstantsManager {
-    function updateMinSelfStake(uint256 v) onlyAnyOwner external {
+    function updateMinSelfStake(uint256 v) onlyOwner external {
         minSelfStake = v;
     }
 
-    function updateBaseRewardPerSecond(uint256 v) onlyAnyOwner external {
+    function updateBaseRewardPerSecond(uint256 v) onlyOwner external {
         baseRewardPerSecond = v;
     }
 
@@ -14,7 +14,7 @@ contract UnitTestConstantsManager is ConstantsManager {
         gasPriceBalancingCounterweight = v;
     }
 
-    function updateOfflinePenaltyThresholdTime(uint256 v) onlyAnyOwner external {
+    function updateOfflinePenaltyThresholdTime(uint256 v) onlyOwner external {
         offlinePenaltyThresholdTime = v;
     }
 
