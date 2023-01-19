@@ -17,3 +17,64 @@ mapping(address => address) public getRecipient;
 ```
 Во время регистрации транзакции в go-opera в случае если она направлена на target мы увеличиваем balance recipient  на 15% от комиссии, если нет то увеличиваем баланс мультисиг кошелька.
 
+## Gas subsidies
+Данная фича позволит пользователю совершать транзакции не имея при этом средств для оплаты газа. Желающие стать спонсорами регистрируют свой EOA в SFC контракте, где указывают EOA (nominee) за который они собирают платить, максимальное количество газа (опционально), контракт к которому обращается отправитель транзакции (опционально).
+Когда nominee совершает транзакцию, за нее платит спонсор. 
+
+### Решение
+Основано на предложении https://gist.github.com/ARX06/e74988749dd4749f8b8fc8926a342f82
+
+В SFC либо в отдельном контракте храним следующие данные
+```
+struct Sponsor {
+    address from;
+    uint256 gasLimit;
+    address dest;
+}
+
+//nominee => sponsors list
+mapping(address => Sponsor[]) public sponsors; 
+
+```
+Чтобы стать спонсором пользователь вызывает функцию approve
+
+```
+function approve(address _nominee, uint256 _gasLimit, address _dest) public {
+    sponsors[_nominee].push(
+        Sponsor{
+            from: msg.sender,
+            gasLimit: _gasLimit,   //assume unlimited gas if 0
+             dest: _dest           //assume any destination if zero address
+        }
+    );
+}
+```
+Чтобы отозвать спонсорство пользователь вызывает функцию revoke
+```
+function revoke(address _nominee) public {
+    //we omit realization of this function, we can write our own or use OZ enumerable set to manage sponsor list 
+    removeSponsorFromArray(_nominee, msg.sender); 
+}
+```
+Во время транзакции в go-opera мы обращаемся к контракту sfc.getSponsor(from, gasFees, to)
+
+```
+function getSponsor(address _nominee, uint256 gasAmount, address dest) public view returns(address) {
+    Sponsor[] memory sponsorsList = sponsors[_nominee];
+    for(uint256 i=0; i<sponsorList.length; i++) {
+        // wrong dest
+        if(sponsorsList[i].dest != address(0) && sponsorsList[i].dest != dest)
+            continue;
+        // out of tokens
+        if(sponsorsList[i].from.balance < gasAmount)
+            continue;
+        // wrong amount
+        if(sponsorsList[i].gasLimit < gasAmount && sponsorsList[i].gasLimit !=0)
+            continue;
+        return sponsorsList[i]
+    }
+    return address(0);
+}
+```
+метод возвращает адрес спонсора из баланса которого и вычитаются комиссии.
+
