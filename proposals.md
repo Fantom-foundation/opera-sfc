@@ -59,17 +59,17 @@ function revoke(address _nominee) public {
 Во время транзакции в go-opera мы обращаемся к контракту sfc.getSponsor(from, gasFees, to)
 
 ```
-function getSponsor(address _nominee, uint256 gasAmount, address dest) public view returns(address) {
+function getSponsor(address _nominee, uint256 _gasAmount, address _dest) public view returns(address) {
     Sponsor[] memory sponsorsList = sponsors[_nominee];
     for(uint256 i=0; i<sponsorList.length; i++) {
         // wrong dest
-        if(sponsorsList[i].dest != address(0) && sponsorsList[i].dest != dest)
+        if(sponsorsList[i].dest != address(0) && sponsorsList[i].dest != _dest)
             continue;
         // out of tokens
-        if(sponsorsList[i].from.balance < gasAmount)
+        if(sponsorsList[i].from.balance < _gasAmount)
             continue;
         // wrong amount
-        if(sponsorsList[i].gasLimit < gasAmount && sponsorsList[i].gasLimit !=0)
+        if(sponsorsList[i].gasLimit < _gasAmount && sponsorsList[i].gasLimit !=0)
             continue;
         return sponsorsList[i]
     }
