@@ -108,4 +108,13 @@ contract SFCState is Initializable, Ownable {
     address public voteBookAddress;
 
     mapping(address => address) public getRecipient; // target => recipient
+
+    struct Sponsor {
+        address from;
+        uint256 gasLimit;
+        address dest;
+    }
+
+    //nominee => sponsors list
+    mapping(address => Sponsor[]) public sponsors; 
 }
