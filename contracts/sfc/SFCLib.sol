@@ -20,6 +20,7 @@ contract SFCLib is SFCBase {
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
 
+    event NewTargetRecipientRoute(address indexed target, address indexed recipient);
     /*
     Getters
     */
@@ -513,5 +514,11 @@ contract SFCLib is SFCBase {
         require(refundRatio <= Decimal.unit(), "must be less than or equal to 1.0");
         slashingRefundRatio[validatorID] = refundRatio;
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
+    }
+
+    function setTargetRecipientRoute(address target, address recipient) onlyOwner external {
+        require(target != address(0), "wrong target address");
+        getRecipient[target] = recipient;
+        emit NewTargetRecipientRoute(target, recipient);
     }
 }
