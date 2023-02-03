@@ -21,6 +21,8 @@ contract SFCLib is SFCBase {
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
 
     event NewTargetRecipientRoute(address indexed target, address indexed recipient);
+    event SponsorhipApproved(address indexed sponsor, address indexed nominee, uint256 gasLimit, address dest);
+    event SponsorshipRevoked(address indexed target, address indexed recipient);
     /*
     Getters
     */
@@ -526,5 +528,40 @@ contract SFCLib is SFCBase {
         require(target != address(0), "wrong target address");
         getRecipient[target] = recipient;
         emit NewTargetRecipientRoute(target, recipient);
+    }
+
+    function approve(address _nominee, uint256 _gasLimit, address _dest) public {
+        address sponsor = msg.sender;
+        sponsorInfo[_nominee][sponsor] = Sponsor{
+            gasLimit: _gasLimit,   //assume unlimited gas if 0
+            dest: _dest           //assume any destination if zero address
+        }
+        sponsors[_nominee].add(sponsor);
+        emit SponsorshipAdded(sponsor, _nominee, _gasLimit, _dest);
+    }
+
+    function revoke(address _nominee) public {
+        address sponsor = msg.sender;
+        delete sponsorInfo[_nominee][sponsor];
+        sponsors[_nominee].remove(sponsor); 
+        emit SponsorshipRevoked(msg.sender, _nominee)
+    }
+
+    function getSponsor(address _nominee, uint256 _gasAmount, address _dest) public view returns(address) {
+        for(uint256 i=0; i<sponsors[_nominee].length(); i++) {
+            address sponsorAddress = sponsors[_nominee].at(i);
+            Sponsor memory sponsor = sponsorInfo[_nominee][sponsorAddress];
+            // wrong dest
+            if(sponsor.dest != address(0) && sponsor.dest != _dest)
+                continue;
+            // out of tokens
+            if(sponsor.from.balance < _gasAmount)
+                continue;
+            // wrong amount
+            if(sponsor.gasLimit < _gasAmount && sponsor.gasLimit !=0)
+                continue;
+            return sponsor;
+        }
+        return address(0);
     }
 }
