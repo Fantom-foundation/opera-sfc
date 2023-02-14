@@ -28,8 +28,8 @@ mapping(address => address) public getRecipient;
 ![Gas Monetization transaction flowchart](./assets/gas_monetization_flow.png "Gas Monetization transaction flowchart")
 
 ## Gas subsidies
-Данная фича позволит пользователю совершать транзакции не имея при этом средств для оплаты газа. Желающие стать спонсорами регистрируют свой EOA в SFC контракте, где указывают EOA (nominee) за который они собирают платить, максимальное количество газа (опционально), контракт к которому обращается отправитель транзакции (опционально).
-Когда nominee совершает транзакцию, за нее платит спонсор.
+Данная фича позволит пользователю совершать транзакции не имея при этом средств для оплаты газа. Желающие стать спонсорами регистрируют свой EOA в SFC контракте, где указывают адрес контракта (nominee) за обращение к которому со стороны других EOA они собираются платить, максимальное количество газа (опционально).
+Когда тот или иной кошелек совершает транзакцию с контрактом nominee, спонсор оплачивает газ за транзакцию, позволяя пользователям взаимодействовать с ним бесплатно.
 
 ### Решение
 Основано на предложении https://gist.github.com/ARX06/e74988749dd4749f8b8fc8926a342f82
@@ -39,7 +39,6 @@ mapping(address => address) public getRecipient;
 struct Sponsor {
     address from;
     uint256 gasLimit;
-    address dest;
 }
 
 //nominee => sponsors list
@@ -49,12 +48,11 @@ mapping(address => Sponsor[]) public sponsors;
 Чтобы стать спонсором пользователь вызывает функцию approve
 
 ```
-function approve(address _nominee, uint256 _gasLimit, address _dest) public {
+function approve(address _nominee, uint256 _gasLimit) public {
     sponsors[_nominee].push(
         Sponsor{
             from: msg.sender,
-            gasLimit: _gasLimit,   //assume unlimited gas if 0
-             dest: _dest           //assume any destination if zero address
+            gasLimit: _gasLimit   //assume unlimited gas if 0
         }
     );
 }
@@ -66,15 +64,12 @@ function revoke(address _nominee) public {
     removeSponsorFromArray(_nominee, msg.sender); 
 }
 ```
-Во время транзакции в go-opera мы обращаемся к контракту sfc.getSponsor(from, gasFees, to)
+Во время транзакции в go-opera, мы вызываем функцию sfc.getSponsor(dest, gasFees), где dest адрес контракта, к которому обращается пользователь
 
 ```
-function getSponsor(address _nominee, uint256 _gasAmount, address _dest) public view returns(address) {
+function getSponsor(address _nominee, uint256 _gasAmount) public view returns(address) {
     Sponsor[] memory sponsorsList = sponsors[_nominee];
     for(uint256 i=0; i<sponsorList.length; i++) {
-        // wrong dest
-        if(sponsorsList[i].dest != address(0) && sponsorsList[i].dest != _dest)
-            continue;
         // out of tokens
         if(sponsorsList[i].from.balance < _gasAmount)
             continue;
