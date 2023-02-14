@@ -6,7 +6,6 @@ import "./ConstantsManager.sol";
 
 contract SFCState is Initializable, Ownable {
     using SafeMath for uint256;
-    using EnumerableSet for EnumerableSet.AddressSet;
     /**
      * @dev The staking for validation
      */
