@@ -1,11 +1,13 @@
 pragma solidity ^0.5.0;
 
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./NodeDriver.sol";
 import "../ownership/Ownable.sol";
 import "./ConstantsManager.sol";
 
 contract SFCState is Initializable, Ownable {
     using SafeMath for uint256;
+    using EnumerableSet for EnumerableSet.AddressSet;
     /**
      * @dev The staking for validation
      */
@@ -108,4 +110,13 @@ contract SFCState is Initializable, Ownable {
     address public voteBookAddress;
 
     mapping(address => address) public getRecipient; // target => recipient
+
+    struct Sponsor {
+        uint256 gasLimit;
+        address dest;
+    }
+
+    //nominee => sponsors list
+    mapping(address => EnumerableSet.AddressSet) public sponsors; 
+    mapping(address => address => Sponsor) public sponsorInfo;
 }
