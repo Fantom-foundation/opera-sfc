@@ -366,6 +366,7 @@ contract SFCLib is SFCBase {
     }
 
     function _claimRewards(address delegator, uint256 toValidatorID) internal returns (Rewards memory rewards) {
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
         _stashRewards(delegator, toValidatorID);
         rewards = _rewardsStash[delegator][toValidatorID];
         uint256 totalReward = rewards.unlockedReward.add(rewards.lockupBaseReward).add(rewards.lockupExtraReward);
@@ -499,11 +500,16 @@ contract SFCLib is SFCBase {
         _stashRewards(delegator, toValidatorID);
 
         uint256 penalty = _popDelegationUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
-
+        if (ld.endTime < ld.duration + 1665146565) {
+            // if was locked up before rewards have been reduced, then allow to unlock without penalty
+            // this condition may be erased on October 7 2023
+            penalty = 0;
+        }
         ld.lockedStake -= amount;
-        _rawUndelegate(delegator, toValidatorID, penalty, true);
-
-        _burnFTM(penalty);
+        if (penalty != 0) {
+            _rawUndelegate(delegator, toValidatorID, penalty, true);
+            _burnFTM(penalty);
+        }
 
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
