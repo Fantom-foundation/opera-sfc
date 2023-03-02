@@ -1813,3 +1813,78 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         });
     });
 });
+
+contract('SFC', async ([account1, contract1, contract2, sponsor1, sponsor2, sponsor3]) => {
+    let nodeIRaw;
+    beforeEach(async () => {
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
+        nodeIRaw = await NodeDriver.new();
+        const evmWriter = await StubEvmWriter.new();
+        this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
+        const initializer = await NetworkInitializer.new();
+        await initializer.initializeAll(12, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, account1);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
+    });
+
+    describe('Gas subsidies', () => {
+        it('Adds a sponsor to the contract', async () => {
+            let info;
+            const list1 = {from: [sponsor1, sponsor2, sponsor3], limits: [100, 200, 300]};
+            const list2 = {from: [sponsor1, sponsor3], limits: [500, 1000]};
+
+            for(let i=0; i<list1.from.length; i++) {
+                await this.sfc.approveSponsorship(contract1, list1.limits[i], {from: list1.from[i]});
+                info = await this.sfc.getSponsorInfo(contract1, list1.from[i]);
+                expect(info._gasLimit.toNumber()).to.be.equal(list1.limits[i]);
+            }
+            for(let i=0; i<list2.from.length; i++) {
+                await this.sfc.approveSponsorship(contract2, list2.limits[i], {from: list2.from[i]});
+                info = await this.sfc.getSponsorInfo(contract2, list2.from[i]);
+                expect(info._gasLimit.toNumber()).to.be.equal(list2.limits[i]);
+            }
+
+            const contract1Sponsors = await this.sfc.getSponsors(contract1);
+            const contract2Sponsors = await this.sfc.getSponsors(contract2);
+            expect(contract1Sponsors).to.have.same.members(list1.from);    
+            expect(contract2Sponsors).to.have.same.members(list2.from);   
+        });
+        it('Removes a sponsor from the contract', async () => {
+            let info;
+            const list1 = {from: [sponsor1, sponsor2, sponsor3], limits: [100, 200, 300]};
+
+            for(let i=0; i<list1.from.length; i++) {
+                await this.sfc.approveSponsorship(contract1, list1.limits[i], {from: list1.from[i]});
+            }
+            let contract1Sponsors = await this.sfc.getSponsors(contract1);
+            expect(contract1Sponsors).to.have.same.members(list1.from);    
+            
+            await this.sfc.revokeSponsorship(contract1, {from: sponsor2}); 
+            contract1Sponsors = await this.sfc.getSponsors(contract1);
+            expect(contract1Sponsors).to.not.include(sponsor2);    
+
+            await this.sfc.approveSponsorship(contract1, 200, {from: sponsor2}); 
+            contract1Sponsors = await this.sfc.getSponsors(contract1);
+            expect(contract1Sponsors).to.include(sponsor2);    
+
+            info = await this.sfc.getSponsorInfo(contract1, sponsor2);
+            expect(info._gasLimit.toNumber()).to.be.equal(200);
+        });
+        it('Returns a sponsor for the contract', async () => {
+            const list1 = {from: [sponsor1, sponsor2, sponsor3], limits: [100, 200, 300]};
+            for(let i=0; i<list1.from.length; i++) {
+                await this.sfc.approveSponsorship(contract1, list1.limits[i], {from: list1.from[i]});
+            }
+
+            let sponsor = await this.sfc.getSponsor(contract1, 200);
+            expect(sponsor).to.be.equal(sponsor2);
+        });
+        it('Reverts on approval if sponsor already in the list', async () => {
+            await this.sfc.approveSponsorship(contract1, 100, {from: sponsor1}); 
+            await expectRevert(this.sfc.approveSponsorship(contract1, 100, {from: sponsor1}), 'sponsor is already in the list');
+        });
+        it('Reverts on revokation if sponsor not in the list', async () => {
+            await expectRevert(this.sfc.revokeSponsorship(contract1, {from: sponsor1}), 'sponsor is not in the list'); 
+        });
+    });
+});
