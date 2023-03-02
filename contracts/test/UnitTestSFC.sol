@@ -248,6 +248,16 @@ interface SFCUnitTestI {
     function updateVoteBookAddress(address v) external;
 
     function voteBookAddress(address v) external view returns (address);
+
+    function approveSponsorship(address _nominee, uint256 _gasLimit) external;
+
+    function revokeSponsorship(address _nominee) external;
+
+    function getSponsor(address _nominee, uint256 _gasAmount) external view returns(address);
+
+    function getSponsorInfo(address _nominee, address _sponsor) external view returns(uint256 _gasLimit, uint256 _index);
+
+    function getSponsors(address _nominee) external view returns(address[] memory);
 }
 
 
