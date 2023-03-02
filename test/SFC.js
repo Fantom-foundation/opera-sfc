@@ -1813,3 +1813,29 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         });
     });
 });
+
+contract('SFC', async ([account1, account2, account3]) => {
+    let nodeIRaw;
+    beforeEach(async () => {
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
+        nodeIRaw = await NodeDriver.new();
+        const evmWriter = await StubEvmWriter.new();
+        this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
+        const initializer = await NetworkInitializer.new();
+        await initializer.initializeAll(12, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, account1);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
+    });
+
+    describe('Gas monetization', () => {
+        it('Sets a recipient for a target contract', async () => {
+            await this.sfc.setTargetRecipientRoute(account2, account3, {from: account1});
+            const recipient = await this.sfc.getRecipient(account2);
+            expect(recipient).to.be.equal(account3)    
+        });
+        it('Only owner can set a recipient for a target contract', async () => {
+            await expectRevert(this.sfc.setTargetRecipientRoute(account2, account3, {from: account3}), 'Ownable: caller is not the owner');
+        });
+    });
+});
+
