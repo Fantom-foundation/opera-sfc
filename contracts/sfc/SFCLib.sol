@@ -20,6 +20,9 @@ contract SFCLib is SFCBase {
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
 
+
+    event SponsorshipApproved(address indexed sponsor, address indexed nominee, uint256 gasLimit);
+    event SponsorshipRevoked(address indexed sponsor, address indexed nominee);
     /*
     Getters
     */
@@ -519,5 +522,56 @@ contract SFCLib is SFCBase {
         require(refundRatio <= Decimal.unit(), "must be less than or equal to 1.0");
         slashingRefundRatio[validatorID] = refundRatio;
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
+    }
+
+    function approveSponsorship(address _nominee, uint256 _gasLimit) external {
+        address sponsor = msg.sender;
+        uint256 index = getSponsorInfo[_nominee][sponsor].index;
+        require(index == 0, "sponsor is already in the list");
+        sponsors[_nominee].push(sponsor);
+        getSponsorInfo[_nominee][sponsor] = Sponsor({
+            gasLimit: _gasLimit,
+            index: sponsors[_nominee].length
+        });
+        emit SponsorshipApproved(sponsor, _nominee, _gasLimit);
+    }
+
+    function revokeSponsorship(address _nominee) external {
+        address sponsor = msg.sender;
+        uint256 index = getSponsorInfo[_nominee][sponsor].index;
+        require(index != 0, "sponsor is not in the list");
+        
+        address lastSponsor = removeSponsorFromList(_nominee, index);
+        getSponsorInfo[_nominee][lastSponsor].index = index;
+        getSponsorInfo[_nominee][sponsor].index = 0;
+        emit SponsorshipRevoked(msg.sender, _nominee);
+    }
+    
+    function removeSponsorFromList(address _nominee, uint256 index) internal returns(address) {
+        address[] storage list = sponsors[_nominee];
+        uint256 len = list.length;
+        address lastEl = list[len-1];
+        address elToDelete = list[index-1];
+
+        list[index-1] = lastEl;
+        list[len-1] = elToDelete;
+        list.pop();
+        
+        return lastEl;
+    }
+
+    function getSponsor(address _nominee, uint256 _gasAmount) external view returns(address) {
+       address[] memory list = sponsors[_nominee];
+       for(uint256 i=0; i<list.length; i++) {
+            address sponsor = list[i];
+            Sponsor memory info = getSponsorInfo[_nominee][sponsor];
+            if(sponsor.balance >= _gasAmount && info.gasLimit >= _gasAmount)
+                return sponsor;
+        }
+        return address(0);
+    }
+
+    function getSponsors(address _nominee) external view returns(address[] memory) {
+       return sponsors[_nominee];
     }
 }
