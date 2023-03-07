@@ -106,4 +106,6 @@ contract SFCState is Initializable, Ownable {
     ConstantsManager internal c;
 
     address public voteBookAddress;
+
+    mapping(address => address) public getRecipient; // target => recipient
 }
