@@ -44,6 +44,16 @@ contract StakeTokenizer is Spacer, Initializable {
         ERC20Burnable(sFTMTokenAddress).burnFrom(msg.sender, amount);
     }
 
+    function redeemSFTMFor(address payer, address delegator, uint256 validatorID, uint256 amount) external {
+        require(msg.sender == address(sfc), "not SFC");
+        require(outstandingSFTM[delegator][validatorID] >= amount, "low outstanding sFTM balance");
+        require(IERC20(sFTMTokenAddress).allowance(payer, address(this)) >= amount, "insufficient allowance");
+        outstandingSFTM[delegator][validatorID] -= amount;
+
+        // It's important that we burn after updating outstandingSFTM (protection against Re-Entrancy)
+        ERC20Burnable(sFTMTokenAddress).burnFrom(payer, amount);
+    }
+
     function allowedToWithdrawStake(address sender, uint256 validatorID) public view returns(bool) {
         return outstandingSFTM[sender][validatorID] == 0;
     }

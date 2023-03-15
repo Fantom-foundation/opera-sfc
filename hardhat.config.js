@@ -25,7 +25,7 @@ module.exports = {
     testnet: {
       url: 'https://rpc.testnet.fantom.network',
       chainId: 4002,
-      accounts: [`0x${PRIVATE_KEY}`]
+      accounts: []
     }
   },
   etherscan: {

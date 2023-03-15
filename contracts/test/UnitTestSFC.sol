@@ -247,7 +247,7 @@ interface SFCUnitTestI {
 
     function updateVoteBookAddress(address v) external;
 
-    function voteBookAddress(address v) external view returns (address);
+    function voteBookAddress() external view returns (address);
 }
 
 
