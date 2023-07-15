@@ -13,7 +13,6 @@ contract SFCLib is SFCBase {
     event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
-    event InflatedFTM(address indexed receiver, uint256 amount, string justification);
     event BurntFTM(uint256 amount);
     event LockedUpStake(address indexed delegator, uint256 indexed validatorID, uint256 duration, uint256 amount);
     event UnlockedStake(address indexed delegator, uint256 indexed validatorID, uint256 amount, uint256 penalty);
@@ -429,14 +428,6 @@ contract SFCLib is SFCBase {
         _delegate(delegator, toValidatorID, lockupReward.add(rewards.unlockedReward));
         getLockupInfo[delegator][toValidatorID].lockedStake += lockupReward;
         emit RestakedRewards(delegator, toValidatorID, rewards.lockupExtraReward, rewards.lockupBaseReward, rewards.unlockedReward);
-    }
-
-    // mintFTM allows SFC owner to mint an arbitrary amount of FTM tokens
-    // justification is a human readable description of why tokens were minted (e.g. because ERC20 FTM tokens were burnt)
-    function mintFTM(address payable receiver, uint256 amount, string calldata justification) onlyOwner external {
-        _mintNativeToken(amount);
-        receiver.transfer(amount);
-        emit InflatedFTM(receiver, amount, justification);
     }
 
     // burnFTM allows SFC to burn an arbitrary amount of FTM tokens
