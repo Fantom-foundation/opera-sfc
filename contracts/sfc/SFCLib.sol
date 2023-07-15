@@ -207,6 +207,41 @@ contract SFCLib is SFCBase {
         emit Undelegated(delegator, toValidatorID, wrID, amount);
     }
 
+    // liquidateSFTM is used for finalization of last fMint positions with outstanding sFTM balances
+    // it allows to undelegate without the unboding period, and also to unlock stake without a penalty.
+    // Such a simplification, which might be dangerous generally, is okay here because there's only a small amount
+    // of leftover sFTM
+    function liquidateSFTM(address delegator, uint256 toValidatorID, uint256 amount) external {
+        require(msg.sender == sftmFinalizer, "not sFTM finalizer");
+        _stashRewards(delegator, toValidatorID);
+
+        require(amount > 0, "zero amount");
+        StakeTokenizer(stakeTokenizerAddress).redeemSFTMFor(msg.sender, delegator, toValidatorID, amount);
+        require(amount <= getStake[delegator][toValidatorID], "not enough stake");
+        uint256 unlockedStake = getUnlockedStake(delegator, toValidatorID);
+        if (amount < unlockedStake) {
+            LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
+            ld.lockedStake = ld.lockedStake.sub(amount - unlockedStake);
+            emit UnlockedStake(delegator, toValidatorID, amount - unlockedStake, 0);
+        }
+
+        _rawUndelegate(delegator, toValidatorID, amount, true);
+
+        _syncValidator(toValidatorID, false);
+
+        emit Undelegated(delegator, toValidatorID, 0xffffffffff, amount);
+
+        // It's important that we transfer after erasing (protection against Re-Entrancy)
+        (bool sent,) = msg.sender.call.value(amount)("");
+        require(sent, "Failed to send FTM");
+
+        emit Withdrawn(delegator, toValidatorID, 0xffffffffff, amount);
+    }
+
+    function updateSFTMFinalizer(address v) public onlyOwner {
+        sftmFinalizer = v;
+    }
+
     function isSlashed(uint256 validatorID) view public returns (bool) {
         return getValidator[validatorID].status & CHEATER_MASK != 0;
     }

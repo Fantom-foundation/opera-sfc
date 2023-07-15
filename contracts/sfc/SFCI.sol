@@ -131,5 +131,9 @@ interface SFCI {
 
     function updateVoteBookAddress(address v) external;
 
-    function voteBookAddress(address v) external view returns (address);
+    function voteBookAddress() external view returns (address);
+
+    function liquidateSFTM(address delegator, uint256 toValidatorID, uint256 amount) external;
+
+    function updateSFTMFinalizer(address v) external;
 }
