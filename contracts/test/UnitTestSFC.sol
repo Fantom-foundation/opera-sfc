@@ -203,8 +203,6 @@ interface SFCUnitTestI {
 
     function updateTreasuryAddress(address v) external;
 
-    function mintFTM(address receiver, uint256 amount, string calldata justification) external;
-
     function burnFTM(uint256 amount) external;
 
     function sealEpoch(uint256[] calldata offlineTime, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee, uint256 epochGas) external;
