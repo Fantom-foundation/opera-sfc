@@ -257,7 +257,7 @@ contract SFCLib is SFCBase {
         return penalty;
     }
 
-    function withdraw(uint256 toValidatorID, uint256 wrID) public {
+    function _rawWithdraw(uint256 toValidatorID, uint256 wrID, address payable recipient) internal {
         address payable delegator = msg.sender;
         WithdrawalRequest memory request = getWithdrawalRequest[delegator][toValidatorID][wrID];
         require(request.epoch != 0, "request doesn't exist");
@@ -281,11 +281,19 @@ contract SFCLib is SFCBase {
         totalSlashedStake += penalty;
         require(amount > penalty, "stake is fully slashed");
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        (bool sent,) = delegator.call.value(amount.sub(penalty))("");
+        (bool sent,) = recipient.call.value(amount.sub(penalty))("");
         require(sent, "Failed to send FTM");
         _burnFTM(penalty);
 
         emit Withdrawn(delegator, toValidatorID, wrID, amount);
+    }
+
+    function withdraw(uint256 toValidatorID, uint256 wrID) public {
+        _rawWithdraw(toValidatorID, wrID, msg.sender);
+    }
+
+    function withdrawTo(uint256 toValidatorID, uint256 wrID, address recipient) public {
+        _rawWithdraw(toValidatorID, wrID, recipient);
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {

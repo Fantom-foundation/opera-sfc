@@ -181,6 +181,8 @@ interface SFCUnitTestI {
 
     function withdraw(uint256 toValidatorID, uint256 wrID) external;
 
+    function withdrawTo(uint256 toValidatorID, uint256 wrID, address payable recipient) external;
+
     function deactivateValidator(uint256 validatorID, uint256 status) external;
 
     function pendingRewards(address delegator, uint256 toValidatorID) external view returns (uint256);
