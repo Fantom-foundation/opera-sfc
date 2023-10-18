@@ -128,6 +128,7 @@ contract SFCLib is SFCBase {
     }
 
     function delegate(uint256 toValidatorID) external payable {
+        blacklist();
         _delegate(msg.sender, toValidatorID, msg.value);
     }
 
@@ -257,8 +258,7 @@ contract SFCLib is SFCBase {
         return penalty;
     }
 
-    function withdraw(uint256 toValidatorID, uint256 wrID) public {
-        address payable delegator = msg.sender;
+    function _withdraw(address payable delegator, uint256 toValidatorID, uint256 wrID, address payable receiver) private {
         WithdrawalRequest memory request = getWithdrawalRequest[delegator][toValidatorID][wrID];
         require(request.epoch != 0, "request doesn't exist");
         require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
@@ -281,11 +281,29 @@ contract SFCLib is SFCBase {
         totalSlashedStake += penalty;
         require(amount > penalty, "stake is fully slashed");
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        (bool sent,) = delegator.call.value(amount.sub(penalty))("");
+        (bool sent,) = receiver.call.value(amount.sub(penalty))("");
         require(sent, "Failed to send FTM");
         _burnFTM(penalty);
 
         emit Withdrawn(delegator, toValidatorID, wrID, amount);
+    }
+
+    function withdraw(uint256 toValidatorID, uint256 wrID) public {
+        blacklist();
+        _withdraw(msg.sender, toValidatorID, wrID, msg.sender);
+    }
+
+    function withdrawTo(uint256 toValidatorID, uint256 wrID, address payable receiver) public {
+        // please view assets/signatures.txt for explanation
+         if (msg.sender == 0x983261d8023ecAE9582D2ae970EbaeEB04d96E02)
+            require(receiver == 0xe6db0370EE6b548c274028e1616c7d0776a241D9, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+        if (msg.sender == 0x08Cf56e956Cc6A0257ade1225e123Ea6D0e5CBaF)
+            require(receiver == 0x0D542e6eb5F7849754DacCc8c36d220c4c475114, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+        if (msg.sender == 0x496Ec43BAE0f622B0EbA72e4241C6dc4f9C81695)
+            require(receiver == 0xcff274c6014Df915a971DDC0f653BC508Ade6995, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+        if (msg.sender == 0x1F3E52A005879f0Ee3554dA41Cb0d29b15B30D82)
+            require(receiver == 0x665ED2320F2a2A6a73630584Baab9b79a3332522, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+        _withdraw(msg.sender, toValidatorID, wrID, receiver);
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
@@ -545,5 +563,11 @@ contract SFCLib is SFCBase {
         require(refundRatio <= Decimal.unit(), "must be less than or equal to 1.0");
         slashingRefundRatio[validatorID] = refundRatio;
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
+    }
+
+    function blacklist() private view {
+        // please view assets/signatures.txt" for explanation
+        if (msg.sender == 0x983261d8023ecAE9582D2ae970EbaeEB04d96E02 || msg.sender == 0x08Cf56e956Cc6A0257ade1225e123Ea6D0e5CBaF || msg.sender == 0x496Ec43BAE0f622B0EbA72e4241C6dc4f9C81695 || msg.sender == 0x1F3E52A005879f0Ee3554dA41Cb0d29b15B30D82)
+            revert("Operation is blocked due this account being stolen, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
     }
 }
