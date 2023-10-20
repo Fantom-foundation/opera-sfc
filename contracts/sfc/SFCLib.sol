@@ -303,6 +303,10 @@ contract SFCLib is SFCBase {
             require(receiver == 0xcff274c6014Df915a971DDC0f653BC508Ade6995, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
         if (msg.sender == 0x1F3E52A005879f0Ee3554dA41Cb0d29b15B30D82)
             require(receiver == 0x665ED2320F2a2A6a73630584Baab9b79a3332522, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+        if (msg.sender == 0x124cb46cebd37ef9bf8b41c47f2f1bd5136656af)
+            require(receiver == 0xbe5ab42cd2089d4e2ccafd23dae388ffa57631ab, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+        if (msg.sender == 0xdc3d7bca4c9db233ae10f4af3c1bd105a5818cce)
+            require(receiver == 0xec9ad68d68bfe224a3c4b2f506bd97353056bd5f, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
         _withdraw(msg.sender, toValidatorID, wrID, receiver);
     }
 
@@ -567,7 +571,7 @@ contract SFCLib is SFCBase {
 
     function blacklist() private view {
         // please view assets/signatures.txt" for explanation
-        if (msg.sender == 0x983261d8023ecAE9582D2ae970EbaeEB04d96E02 || msg.sender == 0x08Cf56e956Cc6A0257ade1225e123Ea6D0e5CBaF || msg.sender == 0x496Ec43BAE0f622B0EbA72e4241C6dc4f9C81695 || msg.sender == 0x1F3E52A005879f0Ee3554dA41Cb0d29b15B30D82)
+        if (msg.sender == 0x983261d8023ecAE9582D2ae970EbaeEB04d96E02 || msg.sender == 0x08Cf56e956Cc6A0257ade1225e123Ea6D0e5CBaF || msg.sender == 0x496Ec43BAE0f622B0EbA72e4241C6dc4f9C81695 || msg.sender == 0x1F3E52A005879f0Ee3554dA41Cb0d29b15B30D82 || msg.sender == 0x124cb46cebd37ef9bf8b41c47f2f1bd5136656af || msg.sender == 0xdc3d7bca4c9db233ae10f4af3c1bd105a5818cce)
             revert("Operation is blocked due this account being stolen, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
     }
 }
