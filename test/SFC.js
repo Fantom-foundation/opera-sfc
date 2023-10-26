@@ -115,6 +115,27 @@ class BlockchainNode {
 
 const pubkey = '0x00a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
 
+// calc rewards in ether with a round down
+const  calcRewardsJs = (lockDuration, lockedAmount, stakedAmount, totalStakedAmount, rawReward, isValidator) => {
+    let rewards = {extra: 0, base: 0, unlocked: 0, penalty: 0, sum: 0};
+    let commissionFull = Math.floor(rawReward * 15 / 100);
+    let commissionFullLocked = Math.floor(commissionFull * lockedAmount / stakedAmount);
+    let commissionFullUnlocked = commissionFull - commissionFullLocked;
+    if(isValidator) {
+        rewards.extra = Math.floor(commissionFullLocked * 0.7 * lockDuration / (86400 * 365));
+        rewards.base = Math.floor(commissionFullLocked * 0.3);
+        rewards.unlocked = Math.floor(commissionFullUnlocked * 0.3);
+    }
+    let delegatorRewards = rawReward - commissionFull;
+    let accRate = Math.floor(delegatorRewards / totalStakedAmount);
+    rewards.extra += Math.floor(accRate * lockedAmount * 0.7 * lockDuration / (86400 * 365));
+    rewards.base += Math.floor(accRate * lockedAmount * 0.3);
+    rewards.unlocked += Math.floor(accRate * (stakedAmount - lockedAmount)  * 0.3);
+    rewards.penalty = Math.floor(rewards.extra + rewards.base/2);
+    rewards.sum = rewards.extra + rewards.base + rewards.unlocked;
+    return rewards;
+}
+
 contract('SFC', async ([account1, account2]) => {
     let nodeIRaw;
     beforeEach(async () => {
@@ -195,7 +216,7 @@ contract('SFC', async ([account1, account2]) => {
         });
     });
 
-    describe('Genesis Validator', () => {
+   describe('Genesis Validator', () => {
         beforeEach(async () => {
             await this.sfc.enableNonNodeCalls();
             await expect(this.sfc.setGenesisValidator(account1, 1, pubkey, 1 << 3, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
@@ -234,7 +255,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
 
-    describe('Basic functions', () => {
+   describe('Basic functions', () => {
         describe('Constants', () => {
             it('Returns current Epoch', async () => {
                 expect((await this.sfc.currentEpoch()).toString()).to.equals('1');
@@ -429,7 +450,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
 
-    describe('Prevent Genesis Call if not node', () => {
+   describe('Prevent Genesis Call if not node', () => {
         it('Should not be possible add a Genesis Validator if called not by node', async () => {
             await expect(this.sfc.setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('caller is not the NodeDriverAuth contract');
         });
@@ -439,7 +460,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
     });
 
-    describe('Create validators', () => {
+   describe('Create validators', () => {
         it('Should create Validators', async () => {
             await expect(this.sfc.createValidator(pubkey, {
                 from: firstValidator,
@@ -585,7 +606,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 });
 
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
-    describe('Returns Validator', () => {
+   describe('Returns Validator', () => {
         let validator;
         beforeEach(async () => {
             this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
@@ -636,7 +657,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
     });
 
-    describe('EpochSnapshot', () => {
+   describe('EpochSnapshot', () => {
         let validator;
         beforeEach(async () => {
             this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
@@ -695,7 +716,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('18'));
         });
     });
-    describe('Methods tests', async () => {
+   describe('Methods tests', async () => {
         beforeEach(async () => {
             this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
             const nodeIRaw = await NodeDriver.new();
@@ -933,7 +954,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         await sealEpoch(this.sfc, (new BN(0)).toString());
     });
 
-    describe('Staking / Sealed Epoch functions', () => {
+   describe('Staking / Sealed Epoch functions', () => {
         it('Should return claimed Rewards until Epoch', async () => {
             await this.consts.updateBaseRewardPerSecond(new BN('1'));
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -1269,7 +1290,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
     });
 
-    describe('NodeDriver', () => {
+   describe('NodeDriver', () => {
         it('Should not be able to call `setGenesisValidator` if not NodeDriver', async () => {
             await expectRevert(this.nodeI.setGenesisValidator(account1, 1, pubkey, 1 << 3, await this.sfc.currentEpoch(), Date.now(), 0, 0, {
                 from: account2,
@@ -1337,7 +1358,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
     });
 
-    describe('Epoch getters', () => {
+   describe('Epoch getters', () => {
         it('should return EpochvalidatorIds', async () => {
             const currentSealedEpoch = await this.sfc.currentSealedEpoch();
             await this.sfc.getEpochValidatorIDs(currentSealedEpoch);
@@ -1374,7 +1395,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
     });
 
-    describe('Unlock features', () => {
+   describe('Unlock features', () => {
         it('should fail if trying to unlock stake if not lockedup', async () => {
             await expectRevert(this.sfc.unlockStake(1, 10), 'not locked up');
         });
@@ -1398,7 +1419,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
     });
 
-    describe('SFC Rewards getters / Features', () => {
+   describe('SFC Rewards getters / Features', () => {
         it('should return stashed rewards', async () => {
             console.log(await this.sfc.rewardsStash(firstDelegator, 1));
         });
@@ -1435,7 +1456,7 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
         await sealEpoch(this.sfc, new BN(24 * 60 * 60));
     });
 
-    describe('Staking / Sealed Epoch functions', () => {
+   describe('Staking / Sealed Epoch functions', () => {
         it('Should setGenesisDelegation Validator', async () => {
             await this.sfc.setGenesisDelegation(firstDelegator, firstValidatorID, amount18('1'), 0, 0, 0, 0, 0, 100);
             expect(await this.sfc.getStake(firstDelegator, firstValidatorID)).to.bignumber.equals(amount18('1'));
@@ -1487,7 +1508,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         await sealEpoch(this.sfc, (new BN(0)).toString());
     });
 
-    describe('Test Rewards Calculation', () => {
+  describe('Test Rewards Calculation', () => {
         it('Calculation of validators rewards should be equal to 30%', async () => {
             await sealEpoch(this.sfc, (new BN(1000)).toString());
 
@@ -1813,3 +1834,611 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         });
     });
 });
+
+contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondDelegator, thirdDelegator, account1, account2, account3]) => {
+    let testValidator1ID;
+    let testValidator2ID;
+    let testValidator3ID;
+    beforeEach(async () => {
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
+        const nodeIRaw = await NodeDriver.new();
+        const evmWriter = await StubEvmWriter.new();
+        this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
+        const initializer = await NetworkInitializer.new();
+        await initializer.initializeAll(0, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
+        await this.sfc.rebaseTime();
+        await this.sfc.enableNonNodeCalls();
+
+        await this.consts.updateBaseRewardPerSecond('1');
+        await this.consts.updateMaxRelockCount(5);
+
+        await this.sfc.createValidator(pubkey, {
+            from: firstValidator,
+            value: amount18('10')
+        });
+        firstValidatorID = await this.sfc.getValidatorID(firstValidator);
+        await this.sfc.delegate(firstValidatorID, {
+            from: firstDelegator,
+            value: amount18('10')
+        }); 
+       await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 365), amount18('5'),
+          { from: firstValidator });
+       await sealEpoch(this.sfc, (new BN(0)).toString());
+    });
+
+    describe('Test fluid relocks', () => {
+        // orig lock T1 -------------t1----> T2
+        // relock           T3---------------------t2------>T3
+        it('Relock happy path, lock, relock, no premature unlocks', async () => {
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardBeforeLock = calcRewardsJs(0, 0, 10, 20, 86400, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            rewardBeforeRelock = calcRewardsJs(86400 * 14, 5, 10, 20, 86400 * 7, false);
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 14)).toString());
+            rewardAfterUnlock = calcRewardsJs(86400 * 14, 10, 10, 20, 86400 * 14, false);
+
+            expectedReward = rewardBeforeLock.sum + rewardBeforeRelock.sum + rewardAfterUnlock.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedReward.toString());
+        });
+        it('Relock happy path, lock, relock no amount added, no premature unlocks', async () => {
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardBeforeLock = calcRewardsJs(0, 0, 10, 20, 86400, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            rewardBeforeRelock = calcRewardsJs(86400 * 14, 5, 10, 20, 86400 * 7, false);
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 14)).toString());
+            rewardAfterUnlock = calcRewardsJs(86400 * 14, 5, 10, 20, 86400 * 14, false);
+            
+            expectedReward = rewardBeforeLock.sum + rewardBeforeRelock.sum + rewardAfterUnlock.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedReward.toString());
+        });
+        it('Relock happy path, lock, relock, unlock at t1', async () => {
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardBeforeLock = calcRewardsJs(0, 0, 10, 20, 86400, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            rewardBeforeRelock = calcRewardsJs(86400 * 14, 5, 10, 20, 86400 * 7, false);
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 2)).toString());
+            rewardAfterUnlock = calcRewardsJs(86400 * 14, 10, 10, 20, 86400 * 2, false);
+            let expectedPenalty = rewardBeforeRelock.penalty + rewardAfterUnlock.penalty;
+
+            expect((await this.sfc.unlockStake.call(firstValidatorID, amount18('10'), { from: firstDelegator })).toString())
+                .to.equals(expectedPenalty.toString());
+
+            expectedReward = rewardBeforeLock.sum + rewardBeforeRelock.sum + rewardAfterUnlock.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedReward.toString());
+        });
+        it('Relock happy path, lock, relock, unlock at t2', async () => {
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardBeforeLock = calcRewardsJs(0, 0, 10, 20, 86400, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            rewardBeforeRelock = calcRewardsJs(86400 * 14, 5, 10, 20, 86400 * 7, false);
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 12)).toString());
+            rewardAfterUnlock = calcRewardsJs(86400 * 14, 10, 10, 20, 86400 * 12, false);
+            let expectedPenalty = rewardAfterUnlock.penalty;
+            expect((await this.sfc.unlockStake.call(firstValidatorID, amount18('10'), { from: firstDelegator })).toString())
+                .to.equals(expectedPenalty.toString());
+
+            expectedReward = rewardBeforeLock.sum + rewardBeforeRelock.sum + rewardAfterUnlock.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedReward.toString());
+        });
+        it('Cannot relock if relock limit is exceeded', async () => {
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardBeforeLock = calcRewardsJs(0, 0, 10, 20, 86400, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            rewardBeforeRelock = calcRewardsJs(86400 * 14, 5, 10, 20, 86400 * 7, false);
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
+                { from: firstDelegator });
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
+                { from: firstDelegator });
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
+                { from: firstDelegator });
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
+                { from: firstDelegator });
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
+                { from: firstDelegator });
+            await expectRevert(this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
+                { from: firstDelegator }), "relock count exceeded")
+        });
+        it('Partial unlock at t1, unlock amount < original lock amount', async () => {
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardBeforeLock = calcRewardsJs(0, 0, 10, 20, 86400, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            rewardBeforeRelock = calcRewardsJs(86400 * 14, 5, 10, 20, 86400 * 7, false);
+            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('5'),
+                { from: firstDelegator });
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 2)).toString());
+            rewardAfterUnlock = calcRewardsJs(86400 * 14, 10, 10, 20, 86400 * 2, false);
+            let penaltyShareBeforeRelock = Math.floor(rewardBeforeRelock.penalty * 2 / 5);
+            let penaltyShareAfterUnlock = Math.floor(rewardAfterUnlock.penalty * 2 / 10);
+            expectedPenalty = penaltyShareBeforeRelock + penaltyShareAfterUnlock; 
+
+            expect((await this.sfc.unlockStake.call(firstValidatorID, amount18('2'), { from: firstDelegator })).toString())
+                .to.equals(expectedPenalty.toString());
+            expectedReward = rewardBeforeLock.sum + rewardBeforeRelock.sum + rewardAfterUnlock.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedReward.toString());
+        });
+    });
+});
+
+contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondDelegator, thirdDelegator, account1, account2, account3]) => {
+    let testValidator1ID;
+    let testValidator2ID;
+    let testValidator3ID;
+    beforeEach(async () => {
+        this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
+        const nodeIRaw = await NodeDriver.new();
+        const evmWriter = await StubEvmWriter.new();
+        this.nodeI = await NodeDriverAuth.new();
+        this.sfcLib = await UnitTestSFCLib.new();
+        const initializer = await NetworkInitializer.new();
+        await initializer.initializeAll(0, 0, this.sfc.address, this.sfcLib.address, this.nodeI.address, nodeIRaw.address, evmWriter.address, firstValidator);
+        this.consts = await ConstantsManager.at(await this.sfc.constsAddress.call());
+        await this.sfc.rebaseTime();
+        await this.sfc.enableNonNodeCalls();
+
+        await this.consts.updateBaseRewardPerSecond('1');
+        await this.consts.updateMaxRelockCount(5);
+        await this.consts.updateRedelegationPeriodTime(86400*7);//7 days
+
+        await this.sfc.createValidator(pubkey, {
+            from: firstValidator,
+            value: amount18('10')
+        });
+        firstValidatorID = await this.sfc.getValidatorID(firstValidator);
+        await this.sfc.delegate(firstValidatorID, {
+            from: firstDelegator,
+            value: amount18('10')
+        }); 
+        await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 365), amount18('5'),
+          { from: firstValidator });
+
+        await this.sfc.createValidator(pubkey, {
+            from: secondValidator,
+            value: amount18('20')
+        });
+        secondValidatorID = await this.sfc.getValidatorID(secondValidator);
+        await this.sfc.lockStake(secondValidatorID, (60 * 60 * 24 * 300), amount18('20'),
+          { from: secondValidator });
+        await sealEpoch(this.sfc, (new BN(0)).toString());
+    });
+
+    describe('General redelegation', () => {
+        it('Creates a redelegation request', async () => {
+            let amount = amount18('10');
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount,
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await this.sfc.requestRedelegation(firstValidatorID, amount, {from: firstDelegator});
+        });
+        it('Cannot have multiple redelegation requests from one validator at the same time', async () => {
+            let amount = amount18('10');
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount,
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await this.sfc.requestRedelegation(firstValidatorID, amount, {from: firstDelegator});
+            await expectRevert(
+                this.sfc.requestRedelegation(firstValidatorID, amount, {from: firstDelegator}),
+                "has an active request"
+            );
+        });
+        it('Cannot create a redelegation request if amount is bigger than locked stake', async () => {
+            let amountToLock = amount18('5');
+            let amountToRedelegate = amount18('10');
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amountToLock,
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await expectRevert(
+                this.sfc.requestRedelegation(firstValidatorID, amountToRedelegate, {from: firstDelegator}),
+                "not enough locked stake"
+            );
+        });
+        it('Can execute redelegation request after timeout (7 days)', async () => {
+            let amount = amount18('10');
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount,
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await this.sfc.requestRedelegation(firstValidatorID, amount, {from: firstDelegator});
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            await this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator});
+        });
+        it('Cannot execute redelegation request too early', async () => {
+            let amount = amount18('10');
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount,
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await this.sfc.requestRedelegation(firstValidatorID, amount, {from: firstDelegator});
+            await sealEpoch(this.sfc, (new BN((60 * 60 * 24 * 7) - 1)).toString());
+            await expectRevert(
+                this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator}),
+                "not enough time passed"
+            );
+        });
+        it('Cannot execute redelegation request if it does not exist', async () => {
+            let amount = amount18('10');
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount,
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await expectRevert(
+                this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator}),
+                "redelegation request not found"
+            );
+        });
+        it('Cannot execute redelegation request if validator does not exist', async () => {
+            let amount = amount18('10');
+            let nonExistentValidator = 3;
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount,
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await this.sfc.requestRedelegation(firstValidatorID, amount, {from: firstDelegator});
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            await expectRevert(
+                this.sfc.executeRedelegation(firstValidatorID, nonExistentValidator, {from: firstDelegator}),
+                "validator doesn't exist"
+            );
+        });
+        it('Cannot execute redelegation request if validator lockup period will end earlier', async () => {
+            let amount = amount18('10');
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 365), amount, //lock for 365 days vs validator's 300 days 
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await this.sfc.requestRedelegation(firstValidatorID, amount, {from: firstDelegator});
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            await expectRevert(
+                this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator}),
+                "validator lockup period will end earlier"
+            );
+        });
+    });
+
+    describe('Redelegation simple paths', () => {
+        it('Redelegate all tokens from val#1 to val#2, user has no prior locks on val#2', async () => {
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardBeforeLock = calcRewardsJs(0, 0, 10, 20, 43200, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('10'),
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            rewardBeforeRedelegation = calcRewardsJs(86400 * 14, 10, 10, 20, 43200, false);
+            let expectedReward = rewardBeforeLock.sum + rewardBeforeRedelegation.sum;
+            await this.sfc.requestRedelegation(firstValidatorID, amount18('10'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());//apply delegation changes
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            await this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator});
+          
+            // reward should stay the same after redelegation
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedReward.toString());
+            // we redelegate all tokens, so all staking info should be empty
+            let toValidator1Stake = await this.sfc.getStake(firstDelegator, firstValidatorID);
+            let toValidator1LockInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
+            
+            expect(toValidator1Stake).to.be.bignumber.equal(new BN(0));
+            expect(toValidator1LockInfo.lockedStake).to.be.bignumber.equal(new BN(0));
+
+            let toValidator2Stake = await this.sfc.getStake(firstDelegator, secondValidatorID);
+            let toValidator2LockInfo = await this.sfc.getLockupInfo(firstDelegator, secondValidatorID);
+            expect(toValidator2Stake).to.be.bignumber.equal(amount18('10'));
+            expect(toValidator2LockInfo.lockedStake).to.be.bignumber.equal(amount18('10'));
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 6)).toString());
+            let rewardAfterRedelegation = calcRewardsJs(86400*14, 10, 10, 30, 64800*6, false);
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedReward.toString());
+            expect((await this.sfc.pendingRewards(firstDelegator, secondValidatorID)).toString())
+                .to.equals(rewardAfterRedelegation.sum.toString());
+        });
+        it('Redelegate partial amount from val#1 to val#2, user has no prior locks on val#2', async () => {
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardFromVal1BeforeLock = calcRewardsJs(0, 0, 10, 20, 43200, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('10'),
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            rewardFromVal1BeforeRedelegation = calcRewardsJs(86400 * 14, 10, 10, 20, 43200, false);
+            await this.sfc.requestRedelegation(firstValidatorID, amount18('5'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());//apply delegation changes
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            await this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator});
+             
+            rewardFromVal1AfterRedelegation = calcRewardsJs(86400 * 14, 5, 5, 15, 259200, false);
+            let expectedRewardFromVal1 = rewardFromVal1BeforeLock.sum + rewardFromVal1BeforeRedelegation.sum + rewardFromVal1AfterRedelegation.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedRewardFromVal1.toString());
+
+            let toValidator1Stake = await this.sfc.getStake(firstDelegator, firstValidatorID);
+            let toValidator1LockInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
+            
+            expect(toValidator1Stake).to.be.bignumber.equal(amount18('5'));
+            expect(toValidator1LockInfo.lockedStake).to.be.bignumber.equal(amount18('5'));
+
+            let toValidator2Stake = await this.sfc.getStake(firstDelegator, secondValidatorID);
+            let toValidator2LockInfo = await this.sfc.getLockupInfo(firstDelegator, secondValidatorID);
+            expect(toValidator2Stake).to.be.bignumber.equal(amount18('5'));
+            expect(toValidator2LockInfo.lockedStake).to.be.bignumber.equal(amount18('5'));
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 6)).toString());
+            let rewardFromVal1AfterSixDays = calcRewardsJs(86400*14, 5, 5, 15, 194400, false);
+            let rewardFromVal2AfterSixDays = calcRewardsJs(86400*14, 5, 5, 25, 324000, false);
+            expectedRewardFromVal1 += rewardFromVal1AfterSixDays.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedRewardFromVal1.toString());
+            expect((await this.sfc.pendingRewards(firstDelegator, secondValidatorID)).toString())
+                .to.equals(rewardFromVal2AfterSixDays.sum.toString());
+        });
+        it('Redelegate all tokens from val#1 to val#2, user has locked tokens on val#2', async () => {
+            await this.sfc.delegate(secondValidatorID, {
+                from: firstDelegator,
+                value: amount18('10')
+            }); 
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardFromVal1BeforeLock = calcRewardsJs(0, 0, 10, 20, 34560, false);
+            rewardFromVal2BeforeLock = calcRewardsJs(0, 0, 10, 30, 51840, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('10'),
+                { from: firstDelegator });
+            await this.sfc.lockStake(secondValidatorID, (60 * 60 * 24 * 14), amount18('10'),
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            rewardFromVal1BeforeRedelegation = calcRewardsJs(86400 * 14, 10, 10, 20, 34560, false);
+            rewardFromVal2BeforeRedelegation = calcRewardsJs(86400 * 14, 10, 10, 30, 51840, false);
+            await this.sfc.requestRedelegation(firstValidatorID, amount18('10'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());//apply delegation changes
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            await this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator});
+             
+            rewardFromVal2AfterRedelegation = calcRewardsJs(86400 * 14, 10, 10, 30, 453600, false);
+            let expectedRewardFromVal1 = rewardFromVal1BeforeLock.sum + rewardFromVal1BeforeRedelegation.sum;
+            let expectedRewardFromVal2 = rewardFromVal2BeforeLock.sum + rewardFromVal2BeforeRedelegation.sum + rewardFromVal2AfterRedelegation.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedRewardFromVal1.toString());
+            expect((await this.sfc.pendingRewards(firstDelegator, secondValidatorID)).toString())
+                .to.equals(expectedRewardFromVal2.toString());
+
+            let toValidator1Stake = await this.sfc.getStake(firstDelegator, firstValidatorID);
+            let toValidator1LockInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
+            
+            expect(toValidator1Stake).to.be.bignumber.equal(amount18('0'));
+            expect(toValidator1LockInfo.lockedStake).to.be.bignumber.equal(amount18('0'));
+
+            let toValidator2Stake = await this.sfc.getStake(firstDelegator, secondValidatorID);
+            let toValidator2LockInfo = await this.sfc.getLockupInfo(firstDelegator, secondValidatorID);
+            expect(toValidator2Stake).to.be.bignumber.equal(amount18('20'));
+            expect(toValidator2LockInfo.lockedStake).to.be.bignumber.equal(amount18('20'));
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 6)).toString());
+            let rewardFromVal2AfterSixDays = calcRewardsJs(86400*14, 20, 20, 40, 414720, false);
+            expectedRewardFromVal2 += rewardFromVal2AfterSixDays.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedRewardFromVal1.toString());
+            expect((await this.sfc.pendingRewards(firstDelegator, secondValidatorID)).toString())
+                .to.equals(expectedRewardFromVal2.toString());
+        });
+        it('Redelegate partial amount from val#1 to val#2, user has locked tokens on val#2', async () => {
+            await this.sfc.delegate(secondValidatorID, {
+                from: firstDelegator,
+                value: amount18('10')
+            }); 
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            rewardFromVal1BeforeLock = calcRewardsJs(0, 0, 10, 20, 34560, false);
+            rewardFromVal2BeforeLock = calcRewardsJs(0, 0, 10, 30, 51840, false);
+
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('10'),
+                { from: firstDelegator });
+            await this.sfc.lockStake(secondValidatorID, (60 * 60 * 24 * 14), amount18('10'),
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            rewardFromVal1BeforeRedelegation = calcRewardsJs(86400 * 14, 10, 10, 20, 34560, false);
+            rewardFromVal2BeforeRedelegation = calcRewardsJs(86400 * 14, 10, 10, 30, 51840, false);
+            await this.sfc.requestRedelegation(firstValidatorID, amount18('5'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());//apply delegation changes
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            await this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator});
+             
+            rewardFromVal1AfterRedelegation = calcRewardsJs(86400 * 14, 5, 5, 15, 201600, false);
+            rewardFromVal2AfterRedelegation = calcRewardsJs(86400 * 14, 10, 10, 30, 403200, false);
+            let expectedRewardFromVal1 = rewardFromVal1BeforeLock.sum + rewardFromVal1BeforeRedelegation.sum + rewardFromVal1AfterRedelegation.sum;
+            let expectedRewardFromVal2 = rewardFromVal2BeforeLock.sum + rewardFromVal2BeforeRedelegation.sum + rewardFromVal2AfterRedelegation.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedRewardFromVal1.toString());
+            expect((await this.sfc.pendingRewards(firstDelegator, secondValidatorID)).toString())
+                .to.equals(expectedRewardFromVal2.toString());
+
+            let toValidator1Stake = await this.sfc.getStake(firstDelegator, firstValidatorID);
+            let toValidator1LockInfo = await this.sfc.getLockupInfo(firstDelegator, firstValidatorID);
+            
+            expect(toValidator1Stake).to.be.bignumber.equal(amount18('5'));
+            expect(toValidator1LockInfo.lockedStake).to.be.bignumber.equal(amount18('5'));
+
+            let toValidator2Stake = await this.sfc.getStake(firstDelegator, secondValidatorID);
+            let toValidator2LockInfo = await this.sfc.getLockupInfo(firstDelegator, secondValidatorID);
+            expect(toValidator2Stake).to.be.bignumber.equal(amount18('15'));
+            expect(toValidator2LockInfo.lockedStake).to.be.bignumber.equal(amount18('15'));
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 6)).toString());
+            let rewardFromVal1AfterSixDays = calcRewardsJs(86400*14, 5, 5, 15, 155520, false);
+            let rewardFromVal2AfterSixDays = calcRewardsJs(86400*14, 15, 15, 35, 362880, false);
+            expectedRewardFromVal1 += rewardFromVal1AfterSixDays.sum;
+            expectedRewardFromVal2 += rewardFromVal2AfterSixDays.sum;
+            expect((await this.sfc.pendingRewards(firstDelegator, firstValidatorID)).toString())
+                .to.equals(expectedRewardFromVal1.toString());
+            expect((await this.sfc.pendingRewards(firstDelegator, secondValidatorID)).toString())
+                .to.equals(expectedRewardFromVal2.toString());
+        });
+    });
+    describe('Redelegation and penalties', () => {
+        it('Penalties are transfered when redelegating to val#2, no lock on val#2', async () => {
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 100), amount18('5'),
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            rewardFromVal1BeforeRelock = calcRewardsJs(86400 * 100, 5, 10, 20, 43200, false);
+            await this.sfc.relockStake(firstValidatorID, 86400 * 200, amount18('5'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 10)).toString());
+            rewardFromVal1BeforeRedelegation = calcRewardsJs(86400 * 200, 10, 10, 20, 432000, false);
+            await this.sfc.requestRedelegation(firstValidatorID, amount18('10'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());//apply delegation changes
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            await this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator});
+             
+            let expectedPenalty = rewardFromVal1BeforeRelock.penalty + rewardFromVal1BeforeRedelegation.penalty;
+            expect((await this.sfc.unlockStake.call(secondValidatorID, amount18('10'), { from: firstDelegator })).toString())
+                .to.equals(expectedPenalty.toString());
+        });
+        it('Penalties are transfered when redelegating to val#2, user has lock on val#2', async () => {
+            await this.sfc.delegate(secondValidatorID, {
+                from: firstDelegator,
+                value: amount18('10')
+            }); 
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 100), amount18('5'),
+                { from: firstDelegator });
+            await this.sfc.lockStake(secondValidatorID, (60 * 60 * 24 * 100), amount18('10'),
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            rewardFromVal1BeforeRelock = calcRewardsJs(86400 * 100, 5, 10, 20, 34560, false);
+            await this.sfc.relockStake(firstValidatorID, 86400 * 200, amount18('5'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 10)).toString());
+            rewardFromVal1BeforeRedelegation = calcRewardsJs(86400 * 200, 10, 10, 20, 345600, false);
+            rewardFromVal2BeforeRedelegation = calcRewardsJs(86400 * 100, 10, 10, 30, 518400 + 51840, false);
+            await this.sfc.requestRedelegation(firstValidatorID, amount18('10'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());//apply delegation changes
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            rewardFromVal2AfterRedelegation = calcRewardsJs(86400 * 100, 10, 10, 30, 453600, false);
+            await this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator});
+             
+            let expectedPenalty = rewardFromVal1BeforeRelock.penalty + rewardFromVal1BeforeRedelegation.penalty
+                + rewardFromVal2BeforeRedelegation.penalty + rewardFromVal2AfterRedelegation.penalty;
+            expect((await this.sfc.unlockStake.call(secondValidatorID, amount18('20'), { from: firstDelegator })).toString())
+                .to.equals(expectedPenalty.toString());
+        });
+        it('Penalties are split when redelegating partial amount', async () => {
+            await this.sfc.delegate(secondValidatorID, {
+                from: firstDelegator,
+                value: amount18('10')
+            }); 
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 100), amount18('5'),
+                { from: firstDelegator });
+            await this.sfc.lockStake(secondValidatorID, (60 * 60 * 24 * 100), amount18('10'),
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            rewardFromVal1BeforeRelock = calcRewardsJs(86400 * 100, 5, 10, 20, 34560, false);
+            await this.sfc.relockStake(firstValidatorID, 86400 * 200, amount18('5'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 10)).toString());
+            rewardFromVal1BeforeRedelegation = calcRewardsJs(86400 * 200, 10, 10, 20, 345600, false);
+            rewardFromVal2BeforeRedelegation = calcRewardsJs(86400 * 100, 10, 10, 30, 518400 + 51840, false);
+            await this.sfc.requestRedelegation(firstValidatorID, amount18('5'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());//apply delegation changes
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            rewardFromVal2AfterRedelegation = calcRewardsJs(86400 * 100, 10, 10, 30, 403200, false);
+            await this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator});
+            
+            let expectedPenalty = rewardFromVal1BeforeRelock.penalty + Math.floor(rewardFromVal1BeforeRedelegation.penalty / 2)
+                + rewardFromVal2BeforeRedelegation.penalty + rewardFromVal2AfterRedelegation.penalty;
+            expect((await this.sfc.unlockStake.call(secondValidatorID, amount18('15'), { from: firstDelegator })).toString())
+                .to.equals(expectedPenalty.toString());
+        });
+        it('Deletes stale penalties', async () => {
+            await this.sfc.delegate(secondValidatorID, {
+                from: firstDelegator,
+                value: amount18('10')
+            }); 
+            await sealEpoch(this.sfc, (new BN(0)).toString());
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 100), amount18('5'),
+                { from: firstDelegator });
+            await this.sfc.lockStake(secondValidatorID, (60 * 60 * 24 * 250), amount18('10'),
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+
+            rewardFromVal1BeforeRelock = calcRewardsJs(86400 * 100, 5, 10, 20, 34560, false);
+            await this.sfc.relockStake(firstValidatorID, 86400 * 200, amount18('5'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 10)).toString());
+            rewardFromVal1BeforeRedelegation = calcRewardsJs(86400 * 200, 10, 10, 20, 345600, false);
+            rewardFromVal2BeforeRedelegation = calcRewardsJs(86400 * 250, 10, 10, 30, 518400 + 51840, false);
+            await this.sfc.requestRedelegation(firstValidatorID, amount18('5'), {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(0)).toString());//apply delegation changes
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            rewardFromVal2AfterRedelegation = calcRewardsJs(86400 * 250, 10, 10, 30, 403200, false);
+            await this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator});
+            
+            await sealEpoch(this.sfc, (new BN(0)).toString());//apply delegation changes
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 200)).toString());
+            rewardFromVal2After200Days = calcRewardsJs(86400 * 250, 15, 15, 35, 12096000, false);
+            // penalties from val#1 are deleted
+            let expectedPenalty = rewardFromVal2BeforeRedelegation.penalty + rewardFromVal2AfterRedelegation.penalty
+                + rewardFromVal2After200Days.penalty;
+            await this.sfc.refreshPenalties(firstDelegator, secondValidatorID);
+            expect((await this.sfc.unlockStake.call(secondValidatorID, amount18('15'), { from: firstDelegator })).toString())
+                .to.equals(expectedPenalty.toString());
+        });
+    });
+});
+

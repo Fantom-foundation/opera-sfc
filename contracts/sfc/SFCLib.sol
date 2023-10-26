@@ -5,8 +5,11 @@ import "./GasPriceConstants.sol";
 import "./SFCBase.sol";
 import "./StakeTokenizer.sol";
 import "./NodeDriver.sol";
+import "./libraries/StakingHelper.sol";
 
 contract SFCLib is SFCBase {
+    using StakingHelper for *;
+
     event CreatedValidator(uint256 indexed validatorID, address indexed auth, uint256 createdEpoch, uint256 createdTime);
     event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
     event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
@@ -18,6 +21,8 @@ contract SFCLib is SFCBase {
     event UnlockedStake(address indexed delegator, uint256 indexed validatorID, uint256 amount, uint256 penalty);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
+    event RequestedRedelegation(address indexed delegator, uint256 indexed fromValidatorID, uint256 amount);
+    event Redelegated(address indexed delegator, uint256 indexed fromValidatorID, uint256 indexed toValidatorID, uint256 amount);
 
     /*
     Getters
@@ -66,7 +71,6 @@ contract SFCLib is SFCBase {
             lastValidatorID = validatorID;
         }
     }
-
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyDriver {
         _rawDelegate(delegator, toValidatorID, stake, false);
         _rewardsStash[delegator][toValidatorID].unlockedReward = rewards;
@@ -165,7 +169,7 @@ contract SFCLib is SFCBase {
     }
 
     function _rawUndelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict) internal {
-        getStake[delegator][toValidatorID] -= amount;
+        getStake[delegator][toValidatorID] = getStake[delegator][toValidatorID].sub(amount);
         getValidator[toValidatorID].receivedStake = getValidator[toValidatorID].receivedStake.sub(amount);
         totalStake = totalStake.sub(amount);
         if (getValidator[toValidatorID].status == OK_STATUS) {
@@ -205,6 +209,103 @@ contract SFCLib is SFCBase {
         _syncValidator(toValidatorID, false);
 
         emit Undelegated(delegator, toValidatorID, wrID, amount);
+    }
+
+    // At the request phase we undelegate and unlock (no penalties applied) tokens from the fromValidator
+    // we do not specify the toValidator because of the delay, if toValidator will cease to exist
+    // during this period, user's funds will be stuck, for this reason we allow user to choose 
+    // the toValidator after the redelegation period
+    function requestRedelegation(uint256 fromValidatorID, uint256 amount) external {
+        address delegator = msg.sender;
+        RedelegationRequest storage rdRequest = getRedelegationRequest[delegator][fromValidatorID];
+        // fail early
+        require(rdRequest.time == 0, "has an active request");
+
+        LockedDelegation storage fromLock = getLockupInfo[delegator][fromValidatorID];
+        // we allow only locked tokens redelegation, so user won't suffer penalties when undelegating
+        // and unlocking with standard functions, if the user wants to redelegate his unlocked stake 
+        // he is free to use undelegate() function
+        require(amount > 0, "zero amount");
+        require(amount <= getLockedStake(delegator, fromValidatorID), "not enough locked stake");
+        require(_checkAllowedToWithdraw(delegator, fromValidatorID), "outstanding sFTM balance");
+
+        _stashRewards(delegator, fromValidatorID);
+        _rawUndelegate(delegator, fromValidatorID, amount, true); 
+        
+        // stash accumulated penalties and update stashed lock rewards
+        // if the user has an empty penalties array (never relocked)
+        refreshPenalties(delegator, fromValidatorID);
+        Penalty[] storage penalties = getPenaltyInfo[delegator][fromValidatorID];
+        uint256 penalty = _popDelegationUnlockPenalty(delegator, fromValidatorID, fromLock.lockedStake, fromLock.lockedStake);
+        penalties.push(Penalty(penalty, fromLock.endTime, fromLock.lockedStake));
+        // save prev lock info and set a timestamp
+        // later we transfer lock info from val#1 to val#2, 
+        // expect that val#2 already has locks from the user
+        rdRequest.time = _now() + c.redelegationPeriodTime();
+        rdRequest.prevLockDuration = fromLock.duration;
+        rdRequest.prevLockEndTime = fromLock.endTime;
+        rdRequest.amount = amount;
+        rdRequest.penalties = penalties;
+        // update fromValidator lockup info
+        if(fromLock.lockedStake <= amount) {
+            delete getPenaltyInfo[delegator][fromValidatorID];
+            delete getLockupInfo[delegator][fromValidatorID];
+        } else {
+            uint256 fromLockedStake = fromLock.lockedStake;
+            // reduce remaining penalty and lock according to the redelegation amount
+            getPenaltyInfo._getStashedPenaltyForUnlock(delegator, fromValidatorID, amount);
+            fromLock.lockedStake = fromLockedStake.sub(amount);
+        }
+        emit UnlockedStake(delegator, fromValidatorID, amount, 0);
+        emit RequestedRedelegation(delegator, fromValidatorID, amount);
+    }
+    
+    // execute the redelegation, if the toValidator do not exist or has reached his limit,
+    // the user will have to specify another one, we assume that there are at least one active validator
+    // that will accept the redelegation (e.g. the validator we redelegated from) so the user's tokens  won't get stuck
+    function executeRedelegation(uint256 fromValidatorID, uint256 toValidatorID) external {
+        address delegator = msg.sender;
+        RedelegationRequest memory rdRequest = getRedelegationRequest[delegator][fromValidatorID];
+
+        require(rdRequest.time != 0, "redelegation request not found");
+        require(rdRequest.time <= _now(), "not enough time passed");
+
+        _stashRewards(delegator, fromValidatorID);
+        _delegate(delegator, toValidatorID, rdRequest.amount);
+
+        LockedDelegation storage toLock = getLockupInfo[delegator][toValidatorID];
+        // can't redelegate to valiator where user has a lock that will end earlier than his previous one
+        // if delegator has previous lock for this validator, just increase the amount
+        if(toLock.lockedStake != 0) {
+            uint256 toLockedStake = toLock.lockedStake;
+            toLock.lockedStake = toLockedStake.add(rdRequest.amount);
+
+            emit LockedUpStake(delegator, toValidatorID, toLock.duration, rdRequest.amount);
+        } else {
+        // create a new locka with previous params
+            address validatorAddr = getValidator[toValidatorID].auth;
+            if (delegator != validatorAddr) {
+                require(
+                    getLockupInfo[validatorAddr][toValidatorID].endTime >= rdRequest.prevLockEndTime,
+                    "validator lockup period will end earlier"
+                );
+            }
+
+            //_stashRewards(delegator, toValidatorID);
+            toLock.lockedStake = toLock.lockedStake.add(rdRequest.amount);
+            toLock.fromEpoch = currentEpoch(); 
+            toLock.endTime = rdRequest.prevLockEndTime;
+            toLock.duration = rdRequest.prevLockDuration;
+
+            emit LockedUpStake(delegator, toValidatorID, rdRequest.prevLockDuration, rdRequest.amount);
+        }
+        // move penalties
+        refreshPenalties(delegator, toValidatorID);
+        Penalty[] memory result = StakingHelper._splitPenalties(rdRequest.penalties, rdRequest.amount);
+        getPenaltyInfo._movePenalties(delegator, toValidatorID, result);
+       
+        delete getRedelegationRequest[delegator][fromValidatorID];
+        emit Redelegated(delegator, fromValidatorID, toValidatorID, rdRequest.amount);
     }
 
     // liquidateSFTM is used for finalization of last fMint positions with outstanding sFTM balances
@@ -367,7 +468,6 @@ contract SFCLib is SFCBase {
         uint256 wholeStake = getStake[delegator][toValidatorID];
         uint256 unlockedStake = wholeStake.sub(ld.lockedStake);
         uint256 fullReward;
-
         // count reward for locked stake during lockup epochs
         fullReward = _newRewardsOf(ld.lockedStake, toValidatorID, stashedUntil, lockedUntil);
         Rewards memory plReward = _scaleLockupReward(fullReward, ld.duration);
@@ -390,13 +490,9 @@ contract SFCLib is SFCBase {
         return currentRate.sub(stashedRate).mul(stakeAmount).div(Decimal.unit());
     }
 
-    function _pendingRewards(address delegator, uint256 toValidatorID) internal view returns (Rewards memory) {
+    function pendingRewards(address delegator, uint256 toValidatorID) external view returns (uint256) {
         Rewards memory reward = _newRewards(delegator, toValidatorID);
-        return sumRewards(_rewardsStash[delegator][toValidatorID], reward);
-    }
-
-    function pendingRewards(address delegator, uint256 toValidatorID) public view returns (uint256) {
-        Rewards memory reward = _pendingRewards(delegator, toValidatorID);
+        reward = sumRewards(_rewardsStash[delegator][toValidatorID], reward); 
         return reward.unlockedReward.add(reward.lockupBaseReward).add(reward.lockupExtraReward);
     }
 
@@ -412,6 +508,7 @@ contract SFCLib is SFCBase {
         if (!isLockedUp(delegator, toValidatorID)) {
             delete getLockupInfo[delegator][toValidatorID];
             delete getStashedLockupRewards[delegator][toValidatorID];
+            delete getPenaltyInfo[delegator][toValidatorID];
         }
         return nonStashedReward.lockupBaseReward != 0 || nonStashedReward.lockupExtraReward != 0 || nonStashedReward.unlockedReward != 0;
     }
@@ -428,7 +525,7 @@ contract SFCLib is SFCBase {
         return rewards;
     }
 
-    function claimRewards(uint256 toValidatorID) public {
+    function claimRewards(uint256 toValidatorID) external {
         address payable delegator = msg.sender;
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
@@ -438,7 +535,7 @@ contract SFCLib is SFCBase {
         emit ClaimedRewards(delegator, toValidatorID, rewards.lockupExtraReward, rewards.lockupBaseReward, rewards.unlockedReward);
     }
 
-    function restakeRewards(uint256 toValidatorID) public {
+    function restakeRewards(uint256 toValidatorID) external {
         address delegator = msg.sender;
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
 
@@ -460,12 +557,8 @@ contract SFCLib is SFCBase {
         }
     }
 
-    function epochEndTime(uint256 epoch) view internal returns (uint256) {
-        return getEpochSnapshot[epoch].endTime;
-    }
-
     function _isLockedUpAtEpoch(address delegator, uint256 toValidatorID, uint256 epoch) internal view returns (bool) {
-        return getLockupInfo[delegator][toValidatorID].fromEpoch <= epoch && epochEndTime(epoch) <= getLockupInfo[delegator][toValidatorID].endTime;
+        return getLockupInfo[delegator][toValidatorID].fromEpoch <= epoch && getEpochSnapshot[epoch].endTime <= getLockupInfo[delegator][toValidatorID].endTime;
     }
 
     function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns (bool) {
@@ -507,19 +600,34 @@ contract SFCLib is SFCBase {
         emit LockedUpStake(delegator, toValidatorID, lockupDuration, amount);
     }
 
-    function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) public {
+    function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) external {
         address delegator = msg.sender;
         require(amount > 0, "zero amount");
         require(!isLockedUp(delegator, toValidatorID), "already locked up");
         _lockStake(delegator, toValidatorID, lockupDuration, amount);
     }
 
-    function relockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) public {
+    function relockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) external {
         address delegator = msg.sender;
+        refreshPenalties(delegator, toValidatorID);
+        // stash the previous penalty and clean getStashedLockupRewards
+        LockedDelegation memory ld = getLockupInfo[delegator][toValidatorID];
+        Penalty[] storage penalties = getPenaltyInfo[delegator][toValidatorID];
+        require(penalties.length < c.maxRelockCount(), "relock count exceeded");
+        
+        _stashRewards(delegator, toValidatorID);
+        uint256 penalty = _popDelegationUnlockPenalty(delegator, toValidatorID, ld.lockedStake, ld.lockedStake);
+
+        penalties.push(Penalty(penalty, ld.endTime, ld.lockedStake));
         _lockStake(delegator, toValidatorID, lockupDuration, amount);
     }
 
-    function _popDelegationUnlockPenalty(address delegator, uint256 toValidatorID, uint256 unlockAmount, uint256 totalAmount) internal returns (uint256) {
+    function _popDelegationUnlockPenalty(
+        address delegator,
+        uint256 toValidatorID,
+        uint256 unlockAmount,
+        uint256 totalAmount
+    ) internal returns (uint256) {
         uint256 lockupExtraRewardShare = getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward.mul(unlockAmount).div(totalAmount);
         uint256 lockupBaseRewardShare = getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward.mul(unlockAmount).div(totalAmount);
         uint256 penalty = lockupExtraRewardShare + lockupBaseRewardShare / 2;
@@ -529,6 +637,20 @@ contract SFCLib is SFCBase {
             penalty = unlockAmount;
         }
         return penalty;
+    }
+
+    // delete stale penalties
+    function refreshPenalties(address delegator, uint256 toValidatorID) public {
+        Penalty[] storage penalties = getPenaltyInfo[delegator][toValidatorID];
+        for(uint256 i=0; i<penalties.length;) {
+            Penalty memory penalty = penalties[i];
+            if(penalty.penaltyEnd < _now()) {
+                penalties[i] = penalties[penalties.length - 1];
+                penalties.pop();
+            } else {
+                i++;
+            }
+        }
     }
 
     function unlockStake(uint256 toValidatorID, uint256 amount) external returns (uint256) {
@@ -543,6 +665,12 @@ contract SFCLib is SFCBase {
         _stashRewards(delegator, toValidatorID);
 
         uint256 penalty = _popDelegationUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
+        // add stashed penalty if applicable
+        refreshPenalties(delegator, toValidatorID);
+        uint256 stashedPenalty = getPenaltyInfo._getStashedPenaltyForUnlock(delegator, toValidatorID, amount);
+        penalty = penalty.add(stashedPenalty);
+
+        if(penalty > amount) penalty = amount;
         if (ld.endTime < ld.duration + 1665146565) {
             // if was locked up before rewards have been reduced, then allow to unlock without penalty
             // this condition may be erased on October 7 2023

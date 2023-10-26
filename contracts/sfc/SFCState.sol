@@ -108,4 +108,20 @@ contract SFCState is Initializable, Ownable {
     address public voteBookAddress;
 
     address internal sftmFinalizer;
+    // New storage variables, no variables in SFCBase and SFCLib
+    // so we are probably safe
+    struct Penalty {
+        uint256 penalty;
+        uint256 penaltyEnd;
+        uint256 amountLockedForPenalty;//locked stake at the moment of the snapshot
+    }
+    struct RedelegationRequest {
+        uint256 time;
+        uint256 prevLockDuration;
+        uint256 prevLockEndTime;
+        uint256 amount;
+        Penalty[] penalties;
+    }
+    mapping(address => mapping(uint256 => Penalty[])) public getPenaltyInfo;
+    mapping(address => mapping(uint256 => RedelegationRequest)) public getRedelegationRequest;
 }
