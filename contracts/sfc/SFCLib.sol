@@ -7,6 +7,7 @@ import "./StakeTokenizer.sol";
 import "./NodeDriver.sol";
 import "./libraries/StakingHelper.sol";
 
+import "hardhat/console.sol";
 contract SFCLib is SFCBase {
     using StakingHelper for *;
 
@@ -613,7 +614,8 @@ contract SFCLib is SFCBase {
         // stash the previous penalty and clean getStashedLockupRewards
         LockedDelegation memory ld = getLockupInfo[delegator][toValidatorID];
         Penalty[] storage penalties = getPenaltyInfo[delegator][toValidatorID];
-        require(penalties.length < c.maxRelockCount(), "relock count exceeded");
+        // only one relock at the same time
+        require(penalties.length < 1, "relock count exceeded");
         
         _stashRewards(delegator, toValidatorID);
         uint256 penalty = _popDelegationUnlockPenalty(delegator, toValidatorID, ld.lockedStake, ld.lockedStake);

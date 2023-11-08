@@ -1852,7 +1852,6 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
         await this.sfc.enableNonNodeCalls();
 
         await this.consts.updateBaseRewardPerSecond('1');
-        await this.consts.updateMaxRelockCount(5);
 
         await this.sfc.createValidator(pubkey, {
             from: firstValidator,
@@ -1965,14 +1964,6 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             rewardBeforeRelock = calcRewardsJs(86400 * 14, 5, 10, 20, 86400 * 7, false);
             await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
                 { from: firstDelegator });
-            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
-                { from: firstDelegator });
-            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
-                { from: firstDelegator });
-            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
-                { from: firstDelegator });
-            await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
-                { from: firstDelegator });
             await expectRevert(this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
                 { from: firstDelegator }), "relock count exceeded")
         });
@@ -2020,7 +2011,6 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
         await this.sfc.enableNonNodeCalls();
 
         await this.consts.updateBaseRewardPerSecond('1');
-        await this.consts.updateMaxRelockCount(5);
         await this.consts.updateRedelegationPeriodTime(86400*7);//7 days
 
         await this.sfc.createValidator(pubkey, {

@@ -33,8 +33,6 @@ contract ConstantsManager is Ownable {
     uint256 public offlinePenaltyThresholdTime;
     uint256 public targetGasPowerPerSecond;
     uint256 public gasPriceBalancingCounterweight;
-    // the number of re-locks allowed to a user
-    uint256 public maxRelockCount;
     // the number of seconds that redelegated stake is locked for
     uint256 public redelegationPeriodTime;
 
@@ -136,10 +134,6 @@ contract ConstantsManager is Ownable {
         require(v >= 100, "too small value");
         require(v <= 10 * 86400, "too large value");
         gasPriceBalancingCounterweight = v;
-    }
-
-    function updateMaxRelockCount(uint256 v) onlyOwner external {
-        maxRelockCount = v;
     }
 
     function updateRedelegationPeriodTime(uint256 v) onlyOwner external {
