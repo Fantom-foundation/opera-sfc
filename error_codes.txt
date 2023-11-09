@@ -1,0 +1,44 @@
+SFCBase
+
+caller is not the NodeDriverAuth contract - CA
+gov votes recounting failed - VF
+validator doesn't exist - VD
+
+SFCLib
+
+locked stake is greater than the whole stake - GT
+insufficient self-stake - IS
+empty pubkey - EP
+validator already exists - VE
+validator doesn't exist - VD
+validator isn't active - VA
+validator's delegations limit is exceeded - VL
+zero amount - ZA
+gov votes recounting failed - VF
+not enough unlocked stake - NU
+outstanding sFTM balance - OB
+wrID already exists - WE
+has an active request - AR
+not enough locked stake - NL
+redelegation request not found - NR
+not enough time passed - TP
+validator lockup period will end earlier - PE
+not sFTM finalizer - NF
+not enough stake - NS
+Failed to send FTM - FF
+request doesn't exist - RE
+not enough epochs passed - EP
+stake is fully slashed - SS
+wrong status - WS
+nothing to stash - SF
+zero rewards - ZR
+incorrect duration - ID
+lockup duration cannot decrease - LD
+already locked up - AL
+relock count exceeded - RC
+not locked up - LU
+validator isn't slashed - VS
+must be less than or equal to 1.0 - MB
+
+Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt - WR
+Operation is blocked due this account being stolen, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt - BL
