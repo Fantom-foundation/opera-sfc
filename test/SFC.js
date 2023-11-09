@@ -230,13 +230,13 @@ contract('SFC', async ([account1, account2]) => {
         it('should reject sealEpoch if not called by Node', async () => {
             await expect(this.sfc.sealEpoch([1], [1], [1], [1], 0, {
                 from: account1,
-            })).to.be.rejectedWith('caller is not the NodeDriverAuth contract');
+            })).to.be.rejectedWith('CA');
         });
 
         it('should reject SealEpochValidators if not called by Node', async () => {
             await expect(this.sfc.sealEpochValidators([1], {
                 from: account1,
-            })).to.be.rejectedWith('caller is not the NodeDriverAuth contract');
+            })).to.be.rejectedWith('CA');
         });
     });
 });
@@ -323,14 +323,14 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 await expectRevert(this.sfc.createValidator(pubkey, {
                     from: secondValidator,
                     value: 1,
-                }), 'insufficient self-stake');
+                }), 'IS');
             });
 
             it('Should fail if pubkey is empty', async () => {
                 await expectRevert(this.sfc.createValidator(web3.utils.stringToHex(''), {
                     from: secondValidator,
                     value: amount18('10'),
-                }), 'empty pubkey');
+                }), 'EP');
             });
 
             it('Should create two Validators and return the correct last validator ID', async () => {
@@ -364,7 +364,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
                 await expect(this.sfc.createValidator(pubkey, {
                     from: secondValidator,
                     value: amount18('0.3'),
-                })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'insufficient self-stake'");
+                })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'IS'");
             });
 
             it('Returns current Epoch', async () => {
@@ -452,11 +452,11 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 
    describe('Prevent Genesis Call if not node', () => {
         it('Should not be possible add a Genesis Validator if called not by node', async () => {
-            await expect(this.sfc.setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('caller is not the NodeDriverAuth contract');
+            await expect(this.sfc.setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('CA');
         });
 
         it('Should not be possible add a Genesis Delegation if called not by node', async () => {
-            await expect(this.sfc.setGenesisDelegation(firstDelegator, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.rejectedWith('caller is not the NodeDriverAuth contract');
+            await expect(this.sfc.setGenesisDelegation(firstDelegator, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.rejectedWith('CA');
         });
     });
 
@@ -500,7 +500,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await expect(this.sfc.delegate(1, {
                 from: firstDelegator,
                 value: amount18('10'),
-            })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'validator doesn't exist'");
+            })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'VD'");
             await expect(this.sfc.createValidator(pubkey, {
                 from: firstValidator,
                 value: amount18('10'),
@@ -509,7 +509,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await expect(this.sfc.delegate(2, {
                 from: secondDelegator,
                 value: amount18('10'),
-            })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'validator doesn't exist'");
+            })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'VD'");
             await expect(this.sfc.createValidator(pubkey, {
                 from: secondValidator,
                 value: amount18('15'),
@@ -518,7 +518,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await expect(this.sfc.delegate(3, {
                 from: thirdDelegator,
                 value: amount18('10'),
-            })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'validator doesn't exist'");
+            })).to.be.rejectedWith("VM Exception while processing transaction: reverted with reason string 'VD'");
             await expect(this.sfc.createValidator(pubkey, {
                 from: thirdValidator,
                 value: amount18('20'),
@@ -736,7 +736,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
                 from: firstValidator,
                 value: amount18('0.3175')
                     .sub(new BN(1)),
-            }), 'insufficient self-stake');
+            }), 'IS');
             await this.node.handle(await this.sfc.createValidator(pubkey, {
                 from: firstValidator,
                 value: amount18('0.3175'),
@@ -744,7 +744,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             await expectRevert(this.sfc.createValidator(pubkey, {
                 from: firstValidator,
                 value: amount18('0.3175'),
-            }), 'validator already exists');
+            }), 'VE');
             await this.node.handle(await this.sfc.createValidator(pubkey, {
                 from: secondValidator,
                 value: amount18('0.5'),
@@ -1073,7 +1073,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
 
         it('Should not be able to deactivate validator if not Node', async () => {
             await this.sfc.disableNonNodeCalls();
-            await expect(this.sfc.deactivateValidator(1, 0)).to.be.rejectedWith('caller is not the NodeDriverAuth contract');
+            await expect(this.sfc.deactivateValidator(1, 0)).to.be.rejectedWith('CA');
         });
 
         it('Should seal Epochs', async () => {
@@ -1310,7 +1310,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
 
         it('Should not be able to call `deactivateValidator` with wrong status', async () => {
-            await expectRevert(this.sfc.deactivateValidator(1, 0), 'wrong status');
+            await expectRevert(this.sfc.deactivateValidator(1, 0), 'WS');
         });
 
         it('Should deactivate Validator', async () => {
@@ -1397,11 +1397,11 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
 
    describe('Unlock features', () => {
         it('should fail if trying to unlock stake if not lockedup', async () => {
-            await expectRevert(this.sfc.unlockStake(1, 10), 'not locked up');
+            await expectRevert(this.sfc.unlockStake(1, 10), 'LU');
         });
 
         it('should fail if trying to unlock stake if amount is 0', async () => {
-            await expectRevert(this.sfc.unlockStake(1, 0), 'zero amount');
+            await expectRevert(this.sfc.unlockStake(1, 0), 'ZA');
         });
 
         it('should return if slashed', async () => {
@@ -1409,13 +1409,13 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
 
         it('should fail if delegating to an unexisting validator', async () => {
-            await expectRevert(this.sfc.delegate(4), "validator doesn't exist");
+            await expectRevert(this.sfc.delegate(4), "VD");
         });
 
         it('should fail if delegating to an unexisting validator (2)', async () => {
             await expectRevert(this.sfc.delegate(4, {
                 value: 10000,
-            }), "validator doesn't exist");
+            }), "VD");
         });
     });
 
@@ -1520,19 +1520,19 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         });
 
         it('Should not be able withdraw if request does not exist', async () => {
-            await expectRevert(this.sfc.withdraw(testValidator1ID, 0), "request doesn't exist");
+            await expectRevert(this.sfc.withdraw(testValidator1ID, 0), "RE");
         });
 
         it('Should not be able to undelegate 0 amount', async () => {
             await sealEpoch(this.sfc, (new BN(1000)).toString());
 
-            await expectRevert(this.sfc.undelegate(testValidator1ID, 0, 0), 'zero amount');
+            await expectRevert(this.sfc.undelegate(testValidator1ID, 0, 0), 'ZA');
         });
 
         it('Should not be able to undelegate if not enough unlocked stake', async () => {
             await sealEpoch(this.sfc, (new BN(1000)).toString());
 
-            await expectRevert(this.sfc.undelegate(testValidator1ID, 0, 10), 'not enough unlocked stake');
+            await expectRevert(this.sfc.undelegate(testValidator1ID, 0, 10), 'NU');
         });
 
         it('Should not be able to unlock if not enough unlocked stake', async () => {
@@ -1542,7 +1542,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
                 from: thirdDelegator,
                 value: amount18('1'),
             });
-            await expectRevert(this.sfc.unlockStake(testValidator1ID, 10, { from: thirdDelegator }), 'not locked up');
+            await expectRevert(this.sfc.unlockStake(testValidator1ID, 10, { from: thirdDelegator }), 'LU');
         });
 
         it('should return the unlocked stake', async () => {
@@ -1566,7 +1566,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
             await sealEpoch(this.sfc, (new BN(1000)).toString());
 
-            await expectRevert(this.sfc.claimRewards(testValidator1ID, { from: thirdDelegator }), 'zero rewards');
+            await expectRevert(this.sfc.claimRewards(testValidator1ID, { from: thirdDelegator }), 'ZR');
         });
     });
 });
@@ -1623,7 +1623,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
             await expectRevert(this.sfc.lockStake(testValidator1ID, (2 * 60 * 60 * 24 * 365), amount18('0'), {
                 from: thirdDelegator,
-            }), 'zero amount');
+            }), 'ZA');
         });
 
         it('Should not be able to lock more than a year', async () => {
@@ -1636,7 +1636,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
             await expectRevert(this.sfc.lockStake(testValidator3ID, (2 * 60 * 60 * 24 * 365), amount18('1'), {
                 from: thirdDelegator,
-            }), 'incorrect duration');
+            }), 'ID');
         });
 
         it('Should not be able to lock more than validator lockup period', async () => {
@@ -1648,7 +1648,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
             });
 
             await expectRevert(this.sfc.lockStake(testValidator3ID, (60 * 60 * 24 * 365), amount18('1'),
-                { from: thirdDelegator }), 'validator lockup period will end earlier');
+                { from: thirdDelegator }), 'PE');
         });
 
         it('Should not be able to lock more than validator lockup period', async () => {
@@ -1660,7 +1660,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
             });
 
             await expectRevert(this.sfc.lockStake(testValidator3ID, (60 * 60 * 24 * 365), amount18('1'),
-                { from: thirdDelegator }), 'validator lockup period will end earlier');
+                { from: thirdDelegator }), 'PE');
         });
 
         it('Should be able to lock for 1 month', async () => {
@@ -1690,7 +1690,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 14)).toString());
 
-            await expectRevert(this.sfc.unlockStake(testValidator3ID, amount18('10')), 'not locked up');
+            await expectRevert(this.sfc.unlockStake(testValidator3ID, amount18('10')), 'LU');
         });
 
         it('Should not be able to unlock more than locked stake', async () => {
@@ -1706,7 +1706,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 14)).toString());
 
-            await expectRevert(this.sfc.unlockStake(testValidator3ID, amount18('10'), { from: thirdDelegator }), 'not enough locked stake');
+            await expectRevert(this.sfc.unlockStake(testValidator3ID, amount18('10'), { from: thirdDelegator }), 'NL');
         });
 
         it('Should scale unlocking penalty', async () => {
@@ -1726,7 +1726,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
             expect(await this.sfc.unlockStake.call(testValidator3ID, amount18('0.5'), { from: thirdDelegator })).to.be.bignumber.equal(amount18('0.042705090286425902'));
             expect(await this.sfc.unlockStake.call(testValidator3ID, amount18('0.01'), { from: thirdDelegator })).to.be.bignumber.equal(amount18('0.000854101805728517'));
             await this.sfc.unlockStake(testValidator3ID, amount18('0.5'), { from: thirdDelegator });
-            await expectRevert(this.sfc.unlockStake(testValidator3ID, amount18('0.51'), { from: thirdDelegator }), 'not enough locked stake');
+            await expectRevert(this.sfc.unlockStake(testValidator3ID, amount18('0.51'), { from: thirdDelegator }), 'NL');
             expect(await this.sfc.unlockStake.call(testValidator3ID, amount18('0.5'), { from: thirdDelegator })).to.be.bignumber.equal(amount18('0.042705090286425903'));
             expect(await this.sfc.unlockStake.call(testValidator3ID, amount18('0.01'), { from: thirdDelegator })).to.be.bignumber.equal(amount18('0.000854101805728517'));
         });
@@ -1824,13 +1824,13 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
 
             await expectRevert(this.sfc.updateSlashingRefundRatio(testValidator3ID, 1, {
                 from: firstValidator,
-            }), "validator isn't slashed");
+            }), "VS");
 
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 14)).toString());
         });
 
         it('Should not sync if validator does not exist', async () => {
-            await expectRevert(this.sfc._syncValidator(33, false), "validator doesn't exist");
+            await expectRevert(this.sfc._syncValidator(33, false), "VD");
         });
     });
 });
@@ -1965,7 +1965,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
                 { from: firstDelegator });
             await expectRevert(this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
-                { from: firstDelegator }), "relock count exceeded")
+                { from: firstDelegator }), "RC")
         });
         it('Partial unlock at t1, unlock amount < original lock amount', async () => {
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -2051,7 +2051,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await this.sfc.requestRedelegation(firstValidatorID, amount, {from: firstDelegator});
             await expectRevert(
                 this.sfc.requestRedelegation(firstValidatorID, amount, {from: firstDelegator}),
-                "has an active request"
+                "AR"
             );
         });
         it('Cannot create a redelegation request if amount is bigger than locked stake', async () => {
@@ -2062,7 +2062,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             await expectRevert(
                 this.sfc.requestRedelegation(firstValidatorID, amountToRedelegate, {from: firstDelegator}),
-                "not enough locked stake"
+                "NL"
             );
         });
         it('Can execute redelegation request after timeout (7 days)', async () => {
@@ -2083,7 +2083,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await sealEpoch(this.sfc, (new BN((60 * 60 * 24 * 7) - 1)).toString());
             await expectRevert(
                 this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator}),
-                "not enough time passed"
+                "TP"
             );
         });
         it('Cannot execute redelegation request if it does not exist', async () => {
@@ -2093,7 +2093,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             await expectRevert(
                 this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator}),
-                "redelegation request not found"
+                "NR"
             );
         });
         it('Cannot execute redelegation request if validator does not exist', async () => {
@@ -2106,7 +2106,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
             await expectRevert(
                 this.sfc.executeRedelegation(firstValidatorID, nonExistentValidator, {from: firstDelegator}),
-                "validator doesn't exist"
+                "VD"
             );
         });
         it('Cannot execute redelegation request if validator lockup period will end earlier', async () => {
@@ -2118,7 +2118,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
             await expectRevert(
                 this.sfc.executeRedelegation(firstValidatorID, secondValidatorID, {from: firstDelegator}),
-                "validator lockup period will end earlier"
+                "PE"
             );
         });
     });

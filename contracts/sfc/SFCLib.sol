@@ -7,7 +7,6 @@ import "./StakeTokenizer.sol";
 import "./NodeDriver.sol";
 import "./libraries/StakingHelper.sol";
 
-import "hardhat/console.sol";
 contract SFCLib is SFCBase {
     using StakingHelper for *;
 
@@ -77,7 +76,7 @@ contract SFCLib is SFCBase {
         _rewardsStash[delegator][toValidatorID].unlockedReward = rewards;
         _mintNativeToken(stake);
         if (lockedStake != 0) {
-            require(lockedStake <= stake, "locked stake is greater than the whole stake");
+            require(lockedStake <= stake, "GT");
             LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
             ld.lockedStake = lockedStake;
             ld.fromEpoch = lockupFromEpoch;
@@ -93,8 +92,8 @@ contract SFCLib is SFCBase {
     */
 
     function createValidator(bytes calldata pubkey) external payable {
-        require(msg.value >= c.minSelfStake(), "insufficient self-stake");
-        require(pubkey.length > 0, "empty pubkey");
+        require(msg.value >= c.minSelfStake(), "IS");
+        require(pubkey.length > 0, "EP");
         _createValidator(msg.sender, pubkey);
         _delegate(msg.sender, lastValidatorID, msg.value);
     }
@@ -105,7 +104,7 @@ contract SFCLib is SFCBase {
     }
 
     function _rawCreateValidator(address auth, uint256 validatorID, bytes memory pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) internal {
-        require(getValidatorID[auth] == 0, "validator already exists");
+        require(getValidatorID[auth] == 0, "VE");
         getValidatorID[auth] = validatorID;
         getValidator[validatorID].status = status;
         getValidator[validatorID].createdEpoch = createdEpoch;
@@ -138,14 +137,14 @@ contract SFCLib is SFCBase {
     }
 
     function _delegate(address delegator, uint256 toValidatorID, uint256 amount) internal {
-        require(_validatorExists(toValidatorID), "validator doesn't exist");
-        require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
+        require(_validatorExists(toValidatorID), "VD");
+        require(getValidator[toValidatorID].status == OK_STATUS, "VA");
         _rawDelegate(delegator, toValidatorID, amount, true);
-        require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
+        require(_checkDelegatedStakeLimit(toValidatorID), "VL");
     }
 
     function _rawDelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict) internal {
-        require(amount > 0, "zero amount");
+        require(amount > 0, "ZA");
 
         _stashRewards(delegator, toValidatorID);
 
@@ -166,7 +165,7 @@ contract SFCLib is SFCBase {
 
     function recountVotes(address delegator, address validatorAuth, bool strict, uint256 gas) external {
         (bool success,) = voteBookAddress.call.gas(gas)(abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth));
-        require(success || !strict, "gov votes recounting failed");
+        require(success || !strict, "VF");
     }
 
     function _rawUndelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict) internal {
@@ -180,8 +179,8 @@ contract SFCLib is SFCBase {
         uint256 selfStakeAfterwards = getSelfStake(toValidatorID);
         if (selfStakeAfterwards != 0) {
             if (getValidator[toValidatorID].status == OK_STATUS) {
-                require(selfStakeAfterwards >= c.minSelfStake(), "insufficient self-stake");
-                require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
+                require(selfStakeAfterwards >= c.minSelfStake(), "IS");
+                require(_checkDelegatedStakeLimit(toValidatorID), "VL");
             }
         } else {
             _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
@@ -195,11 +194,11 @@ contract SFCLib is SFCBase {
 
         _stashRewards(delegator, toValidatorID);
 
-        require(amount > 0, "zero amount");
-        require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough unlocked stake");
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
+        require(amount > 0, "ZA");
+        require(amount <= getUnlockedStake(delegator, toValidatorID), "NU");
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "OB");
 
-        require(getWithdrawalRequest[delegator][toValidatorID][wrID].amount == 0, "wrID already exists");
+        require(getWithdrawalRequest[delegator][toValidatorID][wrID].amount == 0, "WE");
 
         _rawUndelegate(delegator, toValidatorID, amount, true);
 
@@ -220,15 +219,15 @@ contract SFCLib is SFCBase {
         address delegator = msg.sender;
         RedelegationRequest storage rdRequest = getRedelegationRequest[delegator][fromValidatorID];
         // fail early
-        require(rdRequest.time == 0, "has an active request");
+        require(rdRequest.time == 0, "AR");
 
         LockedDelegation storage fromLock = getLockupInfo[delegator][fromValidatorID];
         // we allow only locked tokens redelegation, so user won't suffer penalties when undelegating
         // and unlocking with standard functions, if the user wants to redelegate his unlocked stake 
         // he is free to use undelegate() function
-        require(amount > 0, "zero amount");
-        require(amount <= getLockedStake(delegator, fromValidatorID), "not enough locked stake");
-        require(_checkAllowedToWithdraw(delegator, fromValidatorID), "outstanding sFTM balance");
+        require(amount > 0, "ZA");
+        require(amount <= getLockedStake(delegator, fromValidatorID), "NL");
+        require(_checkAllowedToWithdraw(delegator, fromValidatorID), "OB");
 
         _stashRewards(delegator, fromValidatorID);
         _rawUndelegate(delegator, fromValidatorID, amount, true); 
@@ -268,8 +267,8 @@ contract SFCLib is SFCBase {
         address delegator = msg.sender;
         RedelegationRequest memory rdRequest = getRedelegationRequest[delegator][fromValidatorID];
 
-        require(rdRequest.time != 0, "redelegation request not found");
-        require(rdRequest.time <= _now(), "not enough time passed");
+        require(rdRequest.time != 0, "NR");
+        require(rdRequest.time <= _now(), "TP");
 
         _stashRewards(delegator, fromValidatorID);
         _delegate(delegator, toValidatorID, rdRequest.amount);
@@ -288,7 +287,7 @@ contract SFCLib is SFCBase {
             if (delegator != validatorAddr) {
                 require(
                     getLockupInfo[validatorAddr][toValidatorID].endTime >= rdRequest.prevLockEndTime,
-                    "validator lockup period will end earlier"
+                    "PE"
                 );
             }
 
@@ -314,12 +313,12 @@ contract SFCLib is SFCBase {
     // Such a simplification, which might be dangerous generally, is okay here because there's only a small amount
     // of leftover sFTM
     function liquidateSFTM(address delegator, uint256 toValidatorID, uint256 amount) external {
-        require(msg.sender == sftmFinalizer, "not sFTM finalizer");
+        require(msg.sender == sftmFinalizer, "NF");
         _stashRewards(delegator, toValidatorID);
 
-        require(amount > 0, "zero amount");
+        require(amount > 0, "ZA");
         StakeTokenizer(stakeTokenizerAddress).redeemSFTMFor(msg.sender, delegator, toValidatorID, amount);
-        require(amount <= getStake[delegator][toValidatorID], "not enough stake");
+        require(amount <= getStake[delegator][toValidatorID], "NS");
         uint256 unlockedStake = getUnlockedStake(delegator, toValidatorID);
         if (amount < unlockedStake) {
             LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
@@ -335,7 +334,7 @@ contract SFCLib is SFCBase {
 
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         (bool sent,) = msg.sender.call.value(amount)("");
-        require(sent, "Failed to send FTM");
+        require(sent, "FF");
 
         emit Withdrawn(delegator, toValidatorID, 0xffffffffff, amount);
     }
@@ -362,8 +361,8 @@ contract SFCLib is SFCBase {
 
     function _withdraw(address payable delegator, uint256 toValidatorID, uint256 wrID, address payable receiver) private {
         WithdrawalRequest memory request = getWithdrawalRequest[delegator][toValidatorID][wrID];
-        require(request.epoch != 0, "request doesn't exist");
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
+        require(request.epoch != 0, "RE");
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "OB");
 
         uint256 requestTime = request.time;
         uint256 requestEpoch = request.epoch;
@@ -372,8 +371,8 @@ contract SFCLib is SFCBase {
             requestEpoch = getValidator[toValidatorID].deactivatedEpoch;
         }
 
-        require(_now() >= requestTime + c.withdrawalPeriodTime(), "not enough time passed");
-        require(currentEpoch() >= requestEpoch + c.withdrawalPeriodEpochs(), "not enough epochs passed");
+        require(_now() >= requestTime + c.withdrawalPeriodTime(), "TP");
+        require(currentEpoch() >= requestEpoch + c.withdrawalPeriodEpochs(), "EP");
 
         uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID].amount;
         bool isCheater = isSlashed(toValidatorID);
@@ -381,10 +380,10 @@ contract SFCLib is SFCBase {
         delete getWithdrawalRequest[delegator][toValidatorID][wrID];
 
         totalSlashedStake += penalty;
-        require(amount > penalty, "stake is fully slashed");
+        require(amount > penalty, "SS");
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         (bool sent,) = receiver.call.value(amount.sub(penalty))("");
-        require(sent, "Failed to send FTM");
+        require(sent, "FF");
         _burnFTM(penalty);
 
         emit Withdrawn(delegator, toValidatorID, wrID, amount);
@@ -398,18 +397,18 @@ contract SFCLib is SFCBase {
     function withdrawTo(uint256 toValidatorID, uint256 wrID, address payable receiver) public {
         // please view assets/signatures.txt for explanation
          if (msg.sender == 0x983261d8023ecAE9582D2ae970EbaeEB04d96E02)
-            require(receiver == 0xe6db0370EE6b548c274028e1616c7d0776a241D9, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+            require(receiver == 0xe6db0370EE6b548c274028e1616c7d0776a241D9, "WR");
         if (msg.sender == 0x08Cf56e956Cc6A0257ade1225e123Ea6D0e5CBaF)
-            require(receiver == 0x0D542e6eb5F7849754DacCc8c36d220c4c475114, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+            require(receiver == 0x0D542e6eb5F7849754DacCc8c36d220c4c475114, "WR");
         if (msg.sender == 0x496Ec43BAE0f622B0EbA72e4241C6dc4f9C81695)
-            require(receiver == 0xcff274c6014Df915a971DDC0f653BC508Ade6995, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+            require(receiver == 0xcff274c6014Df915a971DDC0f653BC508Ade6995, "WR");
         if (msg.sender == 0x1F3E52A005879f0Ee3554dA41Cb0d29b15B30D82)
-            require(receiver == 0x665ED2320F2a2A6a73630584Baab9b79a3332522, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+            require(receiver == 0x665ED2320F2a2A6a73630584Baab9b79a3332522, "WR");
         _withdraw(msg.sender, toValidatorID, wrID, receiver);
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
-        require(status != OK_STATUS, "wrong status");
+        require(status != OK_STATUS, "WS");
 
         _setValidatorDeactivated(validatorID, status);
         _syncValidator(validatorID, false);
@@ -498,7 +497,7 @@ contract SFCLib is SFCBase {
     }
 
     function stashRewards(address delegator, uint256 toValidatorID) external {
-        require(_stashRewards(delegator, toValidatorID), "nothing to stash");
+        require(_stashRewards(delegator, toValidatorID), "SF");
     }
 
     function _stashRewards(address delegator, uint256 toValidatorID) internal returns (bool updated) {
@@ -515,11 +514,11 @@ contract SFCLib is SFCBase {
     }
 
     function _claimRewards(address delegator, uint256 toValidatorID) internal returns (Rewards memory rewards) {
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "OB");
         _stashRewards(delegator, toValidatorID);
         rewards = _rewardsStash[delegator][toValidatorID];
         uint256 totalReward = rewards.unlockedReward.add(rewards.lockupBaseReward).add(rewards.lockupExtraReward);
-        require(totalReward != 0, "zero rewards");
+        require(totalReward != 0, "ZR");
         delete _rewardsStash[delegator][toValidatorID];
         // It's important that we mint after erasing (protection against Re-Entrancy)
         _mintNativeToken(totalReward);
@@ -531,7 +530,7 @@ contract SFCLib is SFCBase {
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         (bool sent,) = delegator.call.value(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward))("");
-        require(sent, "Failed to send FTM");
+        require(sent, "FF");
 
         emit ClaimedRewards(delegator, toValidatorID, rewards.lockupExtraReward, rewards.lockupBaseReward, rewards.unlockedReward);
     }
@@ -577,21 +576,21 @@ contract SFCLib is SFCBase {
     }
 
     function _lockStake(address delegator, uint256 toValidatorID, uint256 lockupDuration, uint256 amount) internal {
-        require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough stake");
-        require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
+        require(amount <= getUnlockedStake(delegator, toValidatorID), "NS");
+        require(getValidator[toValidatorID].status == OK_STATUS, "VA");
 
-        require(lockupDuration >= c.minLockupDuration() && lockupDuration <= c.maxLockupDuration(), "incorrect duration");
+        require(lockupDuration >= c.minLockupDuration() && lockupDuration <= c.maxLockupDuration(), "ID");
         uint256 endTime = _now().add(lockupDuration);
         address validatorAddr = getValidator[toValidatorID].auth;
         if (delegator != validatorAddr) {
-            require(getLockupInfo[validatorAddr][toValidatorID].endTime >= endTime, "validator lockup period will end earlier");
+            require(getLockupInfo[validatorAddr][toValidatorID].endTime >= endTime, "PE");
         }
 
         _stashRewards(delegator, toValidatorID);
 
         // check lockup duration after _stashRewards, which has erased previous lockup if it has unlocked already
         LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
-        require(lockupDuration >= ld.duration, "lockup duration cannot decrease");
+        require(lockupDuration >= ld.duration, "LD");
 
         ld.lockedStake = ld.lockedStake.add(amount);
         ld.fromEpoch = currentEpoch();
@@ -603,8 +602,8 @@ contract SFCLib is SFCBase {
 
     function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) external {
         address delegator = msg.sender;
-        require(amount > 0, "zero amount");
-        require(!isLockedUp(delegator, toValidatorID), "already locked up");
+        require(amount > 0, "ZA");
+        require(!isLockedUp(delegator, toValidatorID), "AL");
         _lockStake(delegator, toValidatorID, lockupDuration, amount);
     }
 
@@ -615,7 +614,7 @@ contract SFCLib is SFCBase {
         LockedDelegation memory ld = getLockupInfo[delegator][toValidatorID];
         Penalty[] storage penalties = getPenaltyInfo[delegator][toValidatorID];
         // only one relock at the same time
-        require(penalties.length < 1, "relock count exceeded");
+        require(penalties.length < 1, "RC");
         
         _stashRewards(delegator, toValidatorID);
         uint256 penalty = _popDelegationUnlockPenalty(delegator, toValidatorID, ld.lockedStake, ld.lockedStake);
@@ -659,10 +658,10 @@ contract SFCLib is SFCBase {
         address delegator = msg.sender;
         LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
 
-        require(amount > 0, "zero amount");
-        require(isLockedUp(delegator, toValidatorID), "not locked up");
-        require(amount <= ld.lockedStake, "not enough locked stake");
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
+        require(amount > 0, "ZA");
+        require(isLockedUp(delegator, toValidatorID), "LU");
+        require(amount <= ld.lockedStake, "NL");
+        require(_checkAllowedToWithdraw(delegator, toValidatorID), "OB");
 
         _stashRewards(delegator, toValidatorID);
 
@@ -689,8 +688,8 @@ contract SFCLib is SFCBase {
     }
 
     function updateSlashingRefundRatio(uint256 validatorID, uint256 refundRatio) onlyOwner external {
-        require(isSlashed(validatorID), "validator isn't slashed");
-        require(refundRatio <= Decimal.unit(), "must be less than or equal to 1.0");
+        require(isSlashed(validatorID), "VS");
+        require(refundRatio <= Decimal.unit(), "MB");
         slashingRefundRatio[validatorID] = refundRatio;
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
     }
@@ -698,6 +697,6 @@ contract SFCLib is SFCBase {
     function blacklist() private view {
         // please view assets/signatures.txt" for explanation
         if (msg.sender == 0x983261d8023ecAE9582D2ae970EbaeEB04d96E02 || msg.sender == 0x08Cf56e956Cc6A0257ade1225e123Ea6D0e5CBaF || msg.sender == 0x496Ec43BAE0f622B0EbA72e4241C6dc4f9C81695 || msg.sender == 0x1F3E52A005879f0Ee3554dA41Cb0d29b15B30D82)
-            revert("Operation is blocked due this account being stolen, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
+            revert("BL");
     }
 }
