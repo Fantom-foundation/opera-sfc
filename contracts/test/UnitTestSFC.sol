@@ -247,7 +247,7 @@ interface SFCUnitTestI {
 
     function voteBookAddress() external view returns (address);
 
-    function requestRedelegation(uint256, uint256) external;
+    function requestRedelegation(uint256, uint256, uint256) external;
     
     function executeRedelegation(uint256, uint256) external;
 

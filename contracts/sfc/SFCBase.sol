@@ -19,7 +19,7 @@ contract SFCBase is SFCState {
     }
 
     modifier onlyDriver() {
-        require(isNode(msg.sender), "CA");
+        require(isNode(msg.sender), "caller is not the NodeDriverAuth contract");
         _;
     }
 
@@ -78,7 +78,7 @@ contract SFCBase is SFCState {
             // Don't allow recountVotes to use up all the gas
             (bool success,) = voteBookAddress.call.gas(8000000)(abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth));
             // Don't revert if recountVotes failed unless strict mode enabled
-            require(success || !strict, "VF");
+            require(success || !strict, "gov votes recounting failed");
         }
     }
 
@@ -99,7 +99,7 @@ contract SFCBase is SFCState {
     }
 
     function _syncValidator(uint256 validatorID, bool syncPubkey) public {
-        require(_validatorExists(validatorID), "VD");
+        require(_validatorExists(validatorID), "validator doesn't exist");
         // emit special log for node
         uint256 weight = getValidator[validatorID].receivedStake;
         if (getValidator[validatorID].status != OK_STATUS) {
