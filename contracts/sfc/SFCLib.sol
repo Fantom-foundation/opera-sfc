@@ -21,7 +21,7 @@ contract SFCLib is SFCBase {
     event UnlockedStake(address indexed delegator, uint256 indexed validatorID, uint256 amount, uint256 penalty);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
-    event RequestedRedelegation(address indexed delegator, uint256 indexed fromValidatorID, uint256 amount);
+    event RequestedRedelegation(address indexed delegator, uint256 indexed fromValidatorID, uint256 amount, uint256 rdID);
     event Redelegated(address indexed delegator, uint256 indexed fromValidatorID, uint256 indexed toValidatorID, uint256 amount);
 
     /*
@@ -215,16 +215,17 @@ contract SFCLib is SFCBase {
     // we do not specify the toValidator because of the delay, if toValidator will cease to exist
     // during this period, user's funds will be stuck, for this reason we allow user to choose 
     // the toValidator after the redelegation period
-    function requestRedelegation(uint256 fromValidatorID, uint256 unlockedAmount, uint256 lockedAmount) external {
+    function requestRedelegation(uint256 fromValidatorID, uint256 unlockedAmount, uint256 lockedAmount) external returns(uint256 id) {
         address delegator = msg.sender;
-        RedelegationRequest storage rdRequest = getRedelegationRequest[delegator][fromValidatorID];
-        // fail early
-        require(rdRequest.time == 0, "has an active request");
-
+        id = ++rdID;
+        RedelegationRequest storage rdRequest = getRedelegationRequest[delegator][rdID];
         LockedDelegation storage fromLock = getLockupInfo[delegator][fromValidatorID];
-        // check locked amounts
+        // check amounts
+        // lockedAmount - how many locked tokens to redelegate
+        // unlockedAmount - how many unlocked tokens to redelegate
         require(lockedAmount + unlockedAmount > 0, "zero amount");
         require(lockedAmount <= getLockedStake(delegator, fromValidatorID), "not enough locked stake");
+        require(unlockedAmount <= getUnlockedStake(delegator, fromValidatorID), "not enough unlocked stake");
         require(_checkAllowedToWithdraw(delegator, fromValidatorID), "outstanding sFTM balance");
 
         _stashRewards(delegator, fromValidatorID);
@@ -239,7 +240,8 @@ contract SFCLib is SFCBase {
         // save prev lock info and set a timestamp
         // later we transfer lock info from val#1 to val#2, 
         // expect that val#2 already has locks from the user
-        rdRequest.time = _now() + c.redelegationPeriodTime();
+        rdRequest.fromValidatorID = fromValidatorID;
+        rdRequest.time = _now() + c.withdrawalPeriodTime();
         rdRequest.prevLockDuration = fromLock.duration;
         rdRequest.prevLockEndTime = fromLock.endTime;
         rdRequest.amount = lockedAmount + unlockedAmount;
@@ -255,20 +257,20 @@ contract SFCLib is SFCBase {
             fromLock.lockedStake = fromLockedStake.sub(lockedAmount);
         }
         emit UnlockedStake(delegator, fromValidatorID, lockedAmount, 0);
-        emit RequestedRedelegation(delegator, fromValidatorID, lockedAmount + unlockedAmount);
+        emit RequestedRedelegation(delegator, fromValidatorID, lockedAmount + unlockedAmount, rdID);
     }
     
-    // execute the redelegation, if the toValidator do not exist or has reached his limit,
+    // execute the redelegation, if the toValidator does not exist or has reached his limit,
     // the user will have to specify another one, we assume that there are at least one active validator
     // that will accept the redelegation (e.g. the validator we redelegated from) so the user's tokens  won't get stuck
-    function executeRedelegation(uint256 fromValidatorID, uint256 toValidatorID) external {
+    function executeRedelegation(uint256 rdID, uint256 toValidatorID) external {
         address delegator = msg.sender;
-        RedelegationRequest memory rdRequest = getRedelegationRequest[delegator][fromValidatorID];
+        RedelegationRequest memory rdRequest = getRedelegationRequest[delegator][rdID];
 
         require(rdRequest.time != 0, "redelegation request not found");
         require(rdRequest.time <= _now(), "not enough time passed");
 
-        _stashRewards(delegator, fromValidatorID);
+        _stashRewards(delegator, toValidatorID);
         _delegate(delegator, toValidatorID, rdRequest.amount);
 
         LockedDelegation storage toLock = getLockupInfo[delegator][toValidatorID];
@@ -280,7 +282,7 @@ contract SFCLib is SFCBase {
 
             emit LockedUpStake(delegator, toValidatorID, toLock.duration, rdRequest.amount);
         } else {
-        // create a new locka with previous params
+        // create a new lock with previous params
             address validatorAddr = getValidator[toValidatorID].auth;
             if (delegator != validatorAddr) {
                 require(
@@ -289,7 +291,6 @@ contract SFCLib is SFCBase {
                 );
             }
 
-            //_stashRewards(delegator, toValidatorID);
             toLock.lockedStake = toLock.lockedStake.add(rdRequest.amount);
             toLock.fromEpoch = currentEpoch(); 
             toLock.endTime = rdRequest.prevLockEndTime;
@@ -302,8 +303,8 @@ contract SFCLib is SFCBase {
         Penalty[] memory result = StakingHelper._splitPenalties(rdRequest.penalties, rdRequest.amount);
         getPenaltyInfo._movePenalties(delegator, toValidatorID, result);
        
-        delete getRedelegationRequest[delegator][fromValidatorID];
-        emit Redelegated(delegator, fromValidatorID, toValidatorID, rdRequest.amount);
+        delete getRedelegationRequest[delegator][rdID];
+        emit Redelegated(delegator, rdRequest.fromValidatorID, toValidatorID, rdRequest.amount);
     }
 
     // liquidateSFTM is used for finalization of last fMint positions with outstanding sFTM balances

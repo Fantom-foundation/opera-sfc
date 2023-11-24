@@ -116,12 +116,16 @@ contract SFCState is Initializable, Ownable {
         uint256 amountLockedForPenalty;//locked stake at the moment of the snapshot
     }
     struct RedelegationRequest {
+        uint256 fromValidatorID;
         uint256 time;
         uint256 prevLockDuration;
         uint256 prevLockEndTime;
         uint256 amount;
         Penalty[] penalties;
     }
+    // delegator => validatorID => penalties info
     mapping(address => mapping(uint256 => Penalty[])) public getPenaltyInfo;
+    // delegator => rdID => redelegation info
     mapping(address => mapping(uint256 => RedelegationRequest)) public getRedelegationRequest;
+    uint256 rdID; //redelegation request ID
 }
