@@ -7,6 +7,7 @@ import "./StakeTokenizer.sol";
 import "./NodeDriver.sol";
 import "./libraries/StakingHelper.sol";
 
+import "hardhat/console.sol";
 contract SFCLib is SFCBase {
     using StakingHelper for *;
 
@@ -132,7 +133,7 @@ contract SFCLib is SFCBase {
     }
 
     function delegate(uint256 toValidatorID) external payable {
-        blacklist();
+        //blacklist();
         _delegate(msg.sender, toValidatorID, msg.value);
     }
 
@@ -219,7 +220,6 @@ contract SFCLib is SFCBase {
         address delegator = msg.sender;
         id = ++rdID;
         RedelegationRequest storage rdRequest = getRedelegationRequest[delegator][rdID];
-        LockedDelegation storage fromLock = getLockupInfo[delegator][fromValidatorID];
         // check amounts
         // lockedAmount - how many locked tokens to redelegate
         // unlockedAmount - how many unlocked tokens to redelegate
@@ -231,32 +231,41 @@ contract SFCLib is SFCBase {
         _stashRewards(delegator, fromValidatorID);
         _rawUndelegate(delegator, fromValidatorID, lockedAmount + unlockedAmount, true); 
         
-        // stash accumulated penalties and update stashed lock rewards
-        // if the user has an empty penalties array (never relocked)
-        refreshPenalties(delegator, fromValidatorID);
-        Penalty[] storage penalties = getPenaltyInfo[delegator][fromValidatorID];
-        uint256 penalty = _popDelegationUnlockPenalty(delegator, fromValidatorID, fromLock.lockedStake, fromLock.lockedStake);
-        penalties.push(Penalty(penalty, fromLock.endTime, fromLock.lockedStake));
-        // save prev lock info and set a timestamp
-        // later we transfer lock info from val#1 to val#2, 
-        // expect that val#2 already has locks from the user
-        rdRequest.fromValidatorID = fromValidatorID;
-        rdRequest.time = _now() + c.withdrawalPeriodTime();
-        rdRequest.prevLockDuration = fromLock.duration;
-        rdRequest.prevLockEndTime = fromLock.endTime;
-        rdRequest.amount = lockedAmount + unlockedAmount;
-        rdRequest.penalties = penalties;
-        // update fromValidator lockup info
-        if(fromLock.lockedStake <= lockedAmount) {
-            delete getPenaltyInfo[delegator][fromValidatorID];
-            delete getLockupInfo[delegator][fromValidatorID];
+        if(lockedAmount > 0) {
+            // stash accumulated penalties and update stashed lock rewards
+            // if the user has an empty penalties array (never relocked)
+            refreshPenalties(delegator, fromValidatorID);
+            LockedDelegation storage fromLock = getLockupInfo[delegator][fromValidatorID];
+            Penalty[] storage penalties = getPenaltyInfo[delegator][fromValidatorID];
+            uint256 penalty = _popDelegationUnlockPenalty(delegator, fromValidatorID, fromLock.lockedStake, fromLock.lockedStake);
+            penalties.push(Penalty(penalty, fromLock.endTime, fromLock.lockedStake));
+            // save prev lock info and set a timestamp
+            // later we transfer lock info from val#1 to val#2, 
+            // expect that val#2 already has locks from the user
+            rdRequest.fromValidatorID = fromValidatorID;
+            rdRequest.time = _now() + c.withdrawalPeriodTime();
+            rdRequest.prevLockDuration = fromLock.duration;
+            rdRequest.prevLockEndTime = fromLock.endTime;
+            rdRequest.lockedAmount = lockedAmount;
+            rdRequest.unlockedAmount = unlockedAmount;
+            rdRequest.penalties = penalties;
+            // update fromValidator lockup info
+            if(fromLock.lockedStake <= lockedAmount) {
+                delete getPenaltyInfo[delegator][fromValidatorID];
+                delete getLockupInfo[delegator][fromValidatorID];
+            } else {
+                uint256 fromLockedStake = fromLock.lockedStake;
+                // reduce remaining penalty and lock according to the redelegation amount
+                getPenaltyInfo._getStashedPenaltyForUnlock(delegator, fromValidatorID, lockedAmount);
+                fromLock.lockedStake = fromLockedStake.sub(lockedAmount);
+            }
+            emit UnlockedStake(delegator, fromValidatorID, lockedAmount, 0);
         } else {
-            uint256 fromLockedStake = fromLock.lockedStake;
-            // reduce remaining penalty and lock according to the redelegation amount
-            getPenaltyInfo._getStashedPenaltyForUnlock(delegator, fromValidatorID, lockedAmount);
-            fromLock.lockedStake = fromLockedStake.sub(lockedAmount);
+            // just update unlocked stake for the toValidatorID
+            rdRequest.fromValidatorID = fromValidatorID;
+            rdRequest.time = _now() + c.withdrawalPeriodTime();
+            rdRequest.unlockedAmount = unlockedAmount;
         }
-        emit UnlockedStake(delegator, fromValidatorID, lockedAmount, 0);
         emit RequestedRedelegation(delegator, fromValidatorID, lockedAmount + unlockedAmount, rdID);
     }
     
@@ -271,40 +280,41 @@ contract SFCLib is SFCBase {
         require(rdRequest.time <= _now(), "not enough time passed");
 
         _stashRewards(delegator, toValidatorID);
-        _delegate(delegator, toValidatorID, rdRequest.amount);
+        _delegate(delegator, toValidatorID, rdRequest.lockedAmount + rdRequest.unlockedAmount);
 
-        LockedDelegation storage toLock = getLockupInfo[delegator][toValidatorID];
-        // can't redelegate to valiator where user has a lock that will end earlier than his previous one
-        // if delegator has previous lock for this validator, just increase the amount
-        if(toLock.lockedStake != 0) {
-            uint256 toLockedStake = toLock.lockedStake;
-            toLock.lockedStake = toLockedStake.add(rdRequest.amount);
+        if(rdRequest.lockedAmount > 0) {
+            LockedDelegation storage toLock = getLockupInfo[delegator][toValidatorID];
+            // can't redelegate to valiator where user has a lock that will end earlier than his previous one
+            // if delegator has previous lock for this validator, just increase the amount
+            if(toLock.lockedStake != 0) {
+                uint256 toLockedStake = toLock.lockedStake;
+                toLock.lockedStake = toLockedStake.add(rdRequest.lockedAmount);
 
-            emit LockedUpStake(delegator, toValidatorID, toLock.duration, rdRequest.amount);
-        } else {
-        // create a new lock with previous params
-            address validatorAddr = getValidator[toValidatorID].auth;
-            if (delegator != validatorAddr) {
-                require(
-                    getLockupInfo[validatorAddr][toValidatorID].endTime >= rdRequest.prevLockEndTime,
-                    "validator lockup period will end earlier"
-                );
+                emit LockedUpStake(delegator, toValidatorID, toLock.duration, rdRequest.lockedAmount);
+            } else {
+            // create a new lock with previous params
+                address validatorAddr = getValidator[toValidatorID].auth;
+                if (delegator != validatorAddr) {
+                    require(
+                        getLockupInfo[validatorAddr][toValidatorID].endTime >= rdRequest.prevLockEndTime,
+                        "validator lockup period will end earlier"
+                    );
+                }
+
+                toLock.lockedStake = toLock.lockedStake.add(rdRequest.lockedAmount);
+                toLock.fromEpoch = currentEpoch(); 
+                toLock.endTime = rdRequest.prevLockEndTime;
+                toLock.duration = rdRequest.prevLockDuration;
+
+                emit LockedUpStake(delegator, toValidatorID, rdRequest.prevLockDuration, rdRequest.lockedAmount);
             }
-
-            toLock.lockedStake = toLock.lockedStake.add(rdRequest.amount);
-            toLock.fromEpoch = currentEpoch(); 
-            toLock.endTime = rdRequest.prevLockEndTime;
-            toLock.duration = rdRequest.prevLockDuration;
-
-            emit LockedUpStake(delegator, toValidatorID, rdRequest.prevLockDuration, rdRequest.amount);
-        }
-        // move penalties
-        refreshPenalties(delegator, toValidatorID);
-        Penalty[] memory result = StakingHelper._splitPenalties(rdRequest.penalties, rdRequest.amount);
-        getPenaltyInfo._movePenalties(delegator, toValidatorID, result);
-       
+            // move penalties
+            refreshPenalties(delegator, toValidatorID);
+            Penalty[] memory result = StakingHelper._splitPenalties(rdRequest.penalties, rdRequest.lockedAmount);
+            getPenaltyInfo._movePenalties(delegator, toValidatorID, result);
+        } 
         delete getRedelegationRequest[delegator][rdID];
-        emit Redelegated(delegator, rdRequest.fromValidatorID, toValidatorID, rdRequest.amount);
+        emit Redelegated(delegator, rdRequest.fromValidatorID, toValidatorID, rdRequest.lockedAmount + rdRequest.unlockedAmount);
     }
 
     // liquidateSFTM is used for finalization of last fMint positions with outstanding sFTM balances
@@ -389,11 +399,11 @@ contract SFCLib is SFCBase {
     }
 
     function withdraw(uint256 toValidatorID, uint256 wrID) public {
-        blacklist();
+        //blacklist();
         _withdraw(msg.sender, toValidatorID, wrID, msg.sender);
     }
 
-    function withdrawTo(uint256 toValidatorID, uint256 wrID, address payable receiver) public {
+    /*function withdrawTo(uint256 toValidatorID, uint256 wrID, address payable receiver) public {
         // please view assets/signatures.txt for explanation
          if (msg.sender == 0x983261d8023ecAE9582D2ae970EbaeEB04d96E02)
             require(receiver == 0xe6db0370EE6b548c274028e1616c7d0776a241D9, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
@@ -404,7 +414,7 @@ contract SFCLib is SFCBase {
         if (msg.sender == 0x1F3E52A005879f0Ee3554dA41Cb0d29b15B30D82)
             require(receiver == 0x665ED2320F2a2A6a73630584Baab9b79a3332522, "Wrong receiver, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
         _withdraw(msg.sender, toValidatorID, wrID, receiver);
-    }
+    }*/
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
         require(status != OK_STATUS, "wrong status");
@@ -613,7 +623,7 @@ contract SFCLib is SFCBase {
         LockedDelegation memory ld = getLockupInfo[delegator][toValidatorID];
         Penalty[] storage penalties = getPenaltyInfo[delegator][toValidatorID];
         // only one relock at the same time
-        require(penalties.length < 1, "relock count exceeded");
+        require(penalties.length < 1, "too many relocks");
         
         _stashRewards(delegator, toValidatorID);
         uint256 penalty = _popDelegationUnlockPenalty(delegator, toValidatorID, ld.lockedStake, ld.lockedStake);
@@ -643,8 +653,7 @@ contract SFCLib is SFCBase {
     function refreshPenalties(address delegator, uint256 toValidatorID) public {
         Penalty[] storage penalties = getPenaltyInfo[delegator][toValidatorID];
         for(uint256 i=0; i<penalties.length;) {
-            Penalty memory penalty = penalties[i];
-            if(penalty.penaltyEnd < _now()) {
+            if(penalties[i].penaltyEnd < _now()) {
                 penalties[i] = penalties[penalties.length - 1];
                 penalties.pop();
             } else {
@@ -693,9 +702,9 @@ contract SFCLib is SFCBase {
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
     }
 
-    function blacklist() private view {
+    /*function blacklist() private view {
         // please view assets/signatures.txt" for explanation
         if (msg.sender == 0x983261d8023ecAE9582D2ae970EbaeEB04d96E02 || msg.sender == 0x08Cf56e956Cc6A0257ade1225e123Ea6D0e5CBaF || msg.sender == 0x496Ec43BAE0f622B0EbA72e4241C6dc4f9C81695 || msg.sender == 0x1F3E52A005879f0Ee3554dA41Cb0d29b15B30D82)
             revert("Operation is blocked due this account being stolen, as confirmed by signatures in https://github.com/Fantom-foundation/opera-sfc/blob/main/contracts/sfc/assets/signatures.txt");
-    }
+    }*/
 }

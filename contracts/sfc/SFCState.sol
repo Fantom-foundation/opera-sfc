@@ -120,7 +120,8 @@ contract SFCState is Initializable, Ownable {
         uint256 time;
         uint256 prevLockDuration;
         uint256 prevLockEndTime;
-        uint256 amount;
+        uint256 lockedAmount;
+        uint256 unlockedAmount;
         Penalty[] penalties;
     }
     // delegator => validatorID => penalties info
