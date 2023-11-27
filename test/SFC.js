@@ -216,7 +216,7 @@ contract('SFC', async ([account1, account2]) => {
         });
     });
 
-   describe('Genesis Validator', () => {
+  describe('Genesis Validator', () => {
         beforeEach(async () => {
             await this.sfc.enableNonNodeCalls();
             await expect(this.sfc.setGenesisValidator(account1, 1, pubkey, 1 << 3, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.fulfilled;
@@ -255,7 +255,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator]) => {
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
 
-   describe('Basic functions', () => {
+  describe('Basic functions', () => {
         describe('Constants', () => {
             it('Returns current Epoch', async () => {
                 expect((await this.sfc.currentEpoch()).toString()).to.equals('1');
@@ -450,7 +450,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         this.node = new BlockchainNode(this.sfc, firstValidator);
     });
 
-   describe('Prevent Genesis Call if not node', () => {
+  describe('Prevent Genesis Call if not node', () => {
         it('Should not be possible add a Genesis Validator if called not by node', async () => {
             await expect(this.sfc.setGenesisValidator(secondValidator, 1, pubkey, 0, await this.sfc.currentEpoch(), Date.now(), 0, 0)).to.be.rejectedWith('caller is not the NodeDriverAuth contract');
         });
@@ -460,7 +460,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
     });
 
-   describe('Create validators', () => {
+  describe('Create validators', () => {
         it('Should create Validators', async () => {
             await expect(this.sfc.createValidator(pubkey, {
                 from: firstValidator,
@@ -606,7 +606,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
 });
 
 contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDelegator, secondDelegator, thirdDelegator]) => {
-   describe('Returns Validator', () => {
+  describe('Returns Validator', () => {
         let validator;
         beforeEach(async () => {
             this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
@@ -657,7 +657,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
         });
     });
 
-   describe('EpochSnapshot', () => {
+  describe('EpochSnapshot', () => {
         let validator;
         beforeEach(async () => {
             this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
@@ -716,7 +716,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, firstDe
             expect(await this.sfc.currentEpoch.call()).to.be.bignumber.equal(new BN('18'));
         });
     });
-   describe('Methods tests', async () => {
+  describe('Methods tests', async () => {
         beforeEach(async () => {
             this.sfc = await SFCI.at((await UnitTestSFC.new()).address);
             const nodeIRaw = await NodeDriver.new();
@@ -954,7 +954,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         await sealEpoch(this.sfc, (new BN(0)).toString());
     });
 
-   describe('Staking / Sealed Epoch functions', () => {
+  describe('Staking / Sealed Epoch functions', () => {
         it('Should return claimed Rewards until Epoch', async () => {
             await this.consts.updateBaseRewardPerSecond(new BN('1'));
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -1143,7 +1143,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
     });
 
-    describe('Stake lockup', () => {
+   describe('Stake lockup', () => {
         beforeEach('lock stakes', async () => {
             // Lock 75% of stake for 60% of a maximum lockup period
             // Should receive (0.3 * 0.25 + (0.3 + 0.7 * 0.6) * 0.75) / 0.3 = 2.05 times more rewards
@@ -1290,7 +1290,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
     });
 
-   describe('NodeDriver', () => {
+  describe('NodeDriver', () => {
         it('Should not be able to call `setGenesisValidator` if not NodeDriver', async () => {
             await expectRevert(this.nodeI.setGenesisValidator(account1, 1, pubkey, 1 << 3, await this.sfc.currentEpoch(), Date.now(), 0, 0, {
                 from: account2,
@@ -1358,7 +1358,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
     });
 
-   describe('Epoch getters', () => {
+  describe('Epoch getters', () => {
         it('should return EpochvalidatorIds', async () => {
             const currentSealedEpoch = await this.sfc.currentSealedEpoch();
             await this.sfc.getEpochValidatorIDs(currentSealedEpoch);
@@ -1395,7 +1395,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
     });
 
-   describe('Unlock features', () => {
+  describe('Unlock features', () => {
         it('should fail if trying to unlock stake if not lockedup', async () => {
             await expectRevert(this.sfc.unlockStake(1, 10), 'not locked up');
         });
@@ -1419,7 +1419,7 @@ contract('SFC', async ([firstValidator, secondValidator, thirdValidator, testVal
         });
     });
 
-   describe('SFC Rewards getters / Features', () => {
+  describe('SFC Rewards getters / Features', () => {
         it('should return stashed rewards', async () => {
             console.log(await this.sfc.rewardsStash(firstDelegator, 1));
         });
@@ -1456,7 +1456,7 @@ contract('SFC', async ([firstValidator, firstDelegator]) => {
         await sealEpoch(this.sfc, new BN(24 * 60 * 60));
     });
 
-   describe('Staking / Sealed Epoch functions', () => {
+  describe('Staking / Sealed Epoch functions', () => {
         it('Should setGenesisDelegation Validator', async () => {
             await this.sfc.setGenesisDelegation(firstDelegator, firstValidatorID, amount18('1'), 0, 0, 0, 0, 0, 100);
             expect(await this.sfc.getStake(firstDelegator, firstValidatorID)).to.bignumber.equals(amount18('1'));
@@ -1508,7 +1508,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         await sealEpoch(this.sfc, (new BN(0)).toString());
     });
 
-  describe('Test Rewards Calculation', () => {
+ describe('Test Rewards Calculation', () => {
         it('Calculation of validators rewards should be equal to 30%', async () => {
             await sealEpoch(this.sfc, (new BN(1000)).toString());
 
@@ -1617,7 +1617,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         await sealEpoch(this.sfc, (new BN(0)).toString());
     });
 
-    describe('Test Calculation Rewards with Lockup', () => {
+   describe('Test Calculation Rewards with Lockup', () => {
         it('Should not be able to lock 0 amount', async () => {
             await sealEpoch(this.sfc, (new BN(1000)).toString());
 
@@ -1818,7 +1818,7 @@ contract('SFC', async ([firstValidator, testValidator, firstDelegator, secondDel
         await sealEpoch(this.sfc, (new BN(0)).toString());
     });
 
-    describe('Test Rewards with lockup Calculation', () => {
+   describe('Test Rewards with lockup Calculation', () => {
         it('Should not update slashing refund ratio', async () => {
             await sealEpoch(this.sfc, (new BN(1000)).toString());
 
@@ -1867,7 +1867,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
        await sealEpoch(this.sfc, (new BN(0)).toString());
     });
 
-    describe('Test fluid relocks', () => {
+   describe('Test fluid relocks', () => {
         // orig lock T1 -------------t1----> T2
         // relock           T3---------------------t2------>T3
         it('Relock happy path, lock, relock, no premature unlocks', async () => {
@@ -1965,7 +1965,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
                 { from: firstDelegator });
             await expectRevert(this.sfc.relockStake(firstValidatorID, (60 * 60 * 24 * 14), amount18('0'),
-                { from: firstDelegator }), "relock count exceeded")
+                { from: firstDelegator }), "too many relocks")
         });
         it('Partial unlock at t1, unlock amount < original lock amount', async () => {
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
@@ -2042,6 +2042,26 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             await this.sfc.requestRedelegation(firstValidatorID, 0, amount, {from: firstDelegator});
         });
+        it('Creates and executes multiple redelegation requests', async () => {
+            let amount = amount18('5');
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount,
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await this.sfc.requestRedelegation(firstValidatorID, 0, amount, {from: firstDelegator});
+            await this.sfc.requestRedelegation(firstValidatorID, amount, 0, {from: firstDelegator});
+
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24 * 7)).toString());
+            await this.sfc.executeRedelegation(1, secondValidatorID, {from: firstDelegator});
+            await this.sfc.executeRedelegation(2, secondValidatorID, {from: firstDelegator});
+
+            let secondValidatorLocked = await this.sfc.getLockedStake(firstDelegator, secondValidatorID);
+            let secondValidatorUnlocked = await this.sfc.getUnlockedStake(firstDelegator, secondValidatorID);
+            
+            expect(secondValidatorLocked).to.be.bignumber.equal(amount);
+            expect(secondValidatorUnlocked).to.be.bignumber.equal(amount);
+            
+            
+        });
         it('Cannot create a redelegation request if amount is bigger than locked stake', async () => {
             let amountToLock = amount18('5');
             let amountToRedelegate = amount18('10');
@@ -2051,6 +2071,16 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
             await expectRevert(
                 this.sfc.requestRedelegation(firstValidatorID, 0, amountToRedelegate, {from: firstDelegator}),
                 "not enough locked stake"
+            );
+        });
+        it('Cannot create a redelegation request if amount is bigger than unlocked stake', async () => {
+            let amount = amount18('10');
+            await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 14), amount,
+                { from: firstDelegator });
+            await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
+            await expectRevert(
+                this.sfc.requestRedelegation(firstValidatorID, amount, amount, {from: firstDelegator}),
+                "not enough unlocked stake"
             );
         });
         it('Can execute redelegation request after timeout (7 days)', async () => {
@@ -2111,7 +2141,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
         });
     });
 
-    describe('Redelegation simple paths', () => {
+   describe('Redelegation simple paths', () => {
         it('Redelegate all tokens from val#1 to val#2, user has no prior locks on val#2', async () => {
             await sealEpoch(this.sfc, (new BN(60 * 60 * 24)).toString());
             rewardBeforeLock = calcRewardsJs(0, 0, 10, 20, 43200, false);
@@ -2298,7 +2328,7 @@ contract('SFC', async ([firstValidator, secondValidator, firstDelegator, secondD
                 .to.equals(expectedRewardFromVal2.toString());
         });
     });
-    describe('Redelegation and penalties', () => {
+   describe('Redelegation and penalties', () => {
         it('Penalties are transfered when redelegating to val#2, no lock on val#2', async () => {
             await sealEpoch(this.sfc, (new BN(0)).toString());
             await this.sfc.lockStake(firstValidatorID, (60 * 60 * 24 * 100), amount18('5'),
