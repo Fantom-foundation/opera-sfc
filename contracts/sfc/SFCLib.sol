@@ -7,7 +7,6 @@ import "./StakeTokenizer.sol";
 import "./NodeDriver.sol";
 import "./libraries/StakingHelper.sol";
 
-import "hardhat/console.sol";
 contract SFCLib is SFCBase {
     using StakingHelper for *;
 
