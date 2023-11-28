@@ -134,4 +134,10 @@ interface SFCI {
     function liquidateSFTM(address delegator, uint256 toValidatorID, uint256 amount) external;
 
     function updateSFTMFinalizer(address v) external;
+
+    function requestRedelegation(uint256 fromValidatorID, uint256 amount) external;
+
+    function executeRedelegation(uint256 fromValidatorID, uint256 toValidatorID) external;
+
+    function refreshPenalties(address delegator, uint256 toValidatorID) external;
 }
