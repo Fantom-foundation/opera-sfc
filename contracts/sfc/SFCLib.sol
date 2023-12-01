@@ -218,13 +218,13 @@ contract SFCLib is SFCBase {
         StakeTokenizer(stakeTokenizerAddress).redeemSFTMFor(msg.sender, delegator, toValidatorID, amount);
         require(amount <= getStake[delegator][toValidatorID], "not enough stake");
         uint256 unlockedStake = getUnlockedStake(delegator, toValidatorID);
-        if (amount < unlockedStake) {
+        if (amount > unlockedStake) {
             LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
             ld.lockedStake = ld.lockedStake.sub(amount - unlockedStake);
             emit UnlockedStake(delegator, toValidatorID, amount - unlockedStake, 0);
         }
 
-        _rawUndelegate(delegator, toValidatorID, amount, true);
+        _rawUndelegate(delegator, toValidatorID, amount, false);
 
         _syncValidator(toValidatorID, false);
 
