@@ -168,7 +168,7 @@ contract SFC is SFCBase, Version {
         if (treasuryAddress != address(0)) {
             uint256 feeShare = ctx.epochFee * c.treasuryFeeShare() / Decimal.unit();
             _mintNativeToken(feeShare);
-            treasuryAddress.call.value(feeShare)("");
+            treasuryAddress.call.value(feeShare).gas(1000000)("");
         }
     }
 
