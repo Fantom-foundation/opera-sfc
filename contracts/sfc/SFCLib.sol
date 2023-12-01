@@ -536,7 +536,7 @@ contract SFCLib is SFCBase {
         ld.lockedStake -= amount;
         if (penalty != 0) {
             _rawUndelegate(delegator, toValidatorID, penalty, true);
-            _burnFTM(penalty);
+            treasuryAddress.call.value(penalty)("");
         }
 
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
