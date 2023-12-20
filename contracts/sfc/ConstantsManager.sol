@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "../common/SafeMath.sol";
 import "../ownership/Ownable.sol";
 import "../common/Decimal.sol";
 
