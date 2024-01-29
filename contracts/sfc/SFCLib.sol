@@ -484,14 +484,15 @@ contract SFCLib is SFCBase {
         // stash the previous penalty and clean getStashedLockupRewards
         LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
         if (relock) {
+            _truncateLegacyNonStashedPenalty(delegator, toValidatorID, ld.lockedStake, ld.duration);
             Penalty[] storage penalties = getStashedPenalties[delegator][toValidatorID];
 
             uint256 penalty = _popNonStashedUnlockPenalty(delegator, toValidatorID, ld.lockedStake, ld.lockedStake);
             if (penalty != 0) {
                 penalties.push(Penalty(penalty, ld.endTime));
+                require(penalties.length <= 30, "too many ongoing relocks");
+                require(amount > ld.lockedStake / 100 || penalties.length <= 3 || endTime >= ld.endTime + 14 * 24 * 60 * 60, "too frequent relocks (github.com/Fantom-foundation/opera-sfc/wiki/Lockup-calls-reference#re-lock-stake)");
             }
-            require(penalties.length <= 30, "too many ongoing relocks");
-            require(amount > ld.lockedStake / 100 || penalties.length <= 3 || endTime >= ld.endTime + 14 * 24 * 60 * 60, "too frequent relocks (github.com/Fantom-foundation/opera-sfc/wiki/Lockup-calls-reference#re-lock-stake)");
         }
 
         // check lockup duration after _stashRewards, which has erased previous lockup if it has unlocked already
@@ -518,12 +519,27 @@ contract SFCLib is SFCBase {
         _lockStake(delegator, toValidatorID, lockupDuration, amount, true);
     }
 
+    function _truncateLegacyNonStashedPenalty(address delegator, uint256 toValidatorID, uint256 lockupAmount, uint256 duration) internal {
+        Rewards storage r = getStashedLockupRewards[delegator][toValidatorID];
+        { // this block of code can be removed after a year from implementing multi penalty
+            uint256 avgFullReward = lockupAmount.mul(2219685438).mul(duration).div(1e18); // 0.000000002219685438 is reward per second per wei at 7% APR
+            Rewards memory avgReward = _scaleLockupReward(avgFullReward, duration);
+            uint256 maxReasonablePenalty = avgReward.lockupBaseReward / 2 + avgReward.lockupExtraReward;
+            uint256 storedPenalty = r.lockupExtraReward + r.lockupBaseReward / 2;
+            if (storedPenalty > 0 && storedPenalty > maxReasonablePenalty) {
+                r.lockupExtraReward = r.lockupExtraReward.mul(maxReasonablePenalty).div(storedPenalty);
+                r.lockupBaseReward = r.lockupBaseReward.mul(maxReasonablePenalty).div(storedPenalty);
+            }
+        }
+    }
+
     function _popNonStashedUnlockPenalty(address delegator, uint256 toValidatorID, uint256 unlockAmount, uint256 totalAmount) internal returns (uint256) {
-        uint256 lockupExtraRewardShare = getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward.mul(unlockAmount).div(totalAmount);
-        uint256 lockupBaseRewardShare = getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward.mul(unlockAmount).div(totalAmount);
+        Rewards storage r = getStashedLockupRewards[delegator][toValidatorID];
+        uint256 lockupExtraRewardShare = r.lockupExtraReward.mul(unlockAmount).div(totalAmount);
+        uint256 lockupBaseRewardShare = r.lockupBaseReward.mul(unlockAmount).div(totalAmount);
         uint256 penalty = lockupExtraRewardShare + lockupBaseRewardShare / 2;
-        getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward = getStashedLockupRewards[delegator][toValidatorID].lockupExtraReward.sub(lockupExtraRewardShare);
-        getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward = getStashedLockupRewards[delegator][toValidatorID].lockupBaseReward.sub(lockupBaseRewardShare);
+        r.lockupExtraReward = r.lockupExtraReward.sub(lockupExtraRewardShare);
+        r.lockupBaseReward = r.lockupBaseReward.sub(lockupBaseRewardShare);
         return penalty;
     }
 
@@ -556,17 +572,10 @@ contract SFCLib is SFCBase {
 
         _stashRewards(delegator, toValidatorID);
 
+        _truncateLegacyNonStashedPenalty(delegator, toValidatorID, ld.lockedStake, ld.duration);
         uint256 penalty = _popWholeUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
         if (penalty > amount) {
             penalty = amount;
-        }
-        { // this block of code can be removed after a year from implementing multi penalty
-            uint256 avgFullReward = amount.mul(2219685438).mul(ld.duration).div(1e18); // 0.000000002219685438 is reward per second per wei at 7% APR
-            Rewards memory avgReward = _scaleLockupReward(avgFullReward, ld.duration);
-            uint256 maxReasonablePenalty = avgReward.lockupBaseReward / 2 + avgReward.lockupExtraReward;
-            if (penalty > maxReasonablePenalty) {
-                penalty = maxReasonablePenalty;
-            }
         }
         ld.lockedStake -= amount;
         if (penalty != 0) {
@@ -588,7 +597,7 @@ contract SFCLib is SFCBase {
     function _delStalePenalties(address delegator, uint256 toValidatorID) public {
         Penalty[] storage penalties = getStashedPenalties[delegator][toValidatorID];
         for (uint256 i = 0; i < penalties.length;) {
-            if (penalties[i].end < _now()) {
+            if (penalties[i].end < _now() || penalties[i].amount == 0) {
                 penalties[i] = penalties[penalties.length - 1];
                 penalties.pop();
             } else {
