@@ -398,6 +398,7 @@ contract SFCLib is SFCBase {
             delete getLockupInfo[delegator][toValidatorID];
             delete getStashedLockupRewards[delegator][toValidatorID];
         }
+        _truncateLegacyPenalty(delegator, toValidatorID);
         return nonStashedReward.lockupBaseReward != 0 || nonStashedReward.lockupExtraReward != 0 || nonStashedReward.unlockedReward != 0;
     }
 
@@ -484,7 +485,6 @@ contract SFCLib is SFCBase {
         // stash the previous penalty and clean getStashedLockupRewards
         LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
         if (relock) {
-            _truncateLegacyNonStashedPenalty(delegator, toValidatorID, ld.lockedStake, ld.duration);
             Penalty[] storage penalties = getStashedPenalties[delegator][toValidatorID];
 
             uint256 penalty = _popNonStashedUnlockPenalty(delegator, toValidatorID, ld.lockedStake, ld.lockedStake);
@@ -517,20 +517,6 @@ contract SFCLib is SFCBase {
         address delegator = msg.sender;
         require(isLockedUp(delegator, toValidatorID), "not locked up");
         _lockStake(delegator, toValidatorID, lockupDuration, amount, true);
-    }
-
-    function _truncateLegacyNonStashedPenalty(address delegator, uint256 toValidatorID, uint256 lockupAmount, uint256 duration) internal {
-        Rewards storage r = getStashedLockupRewards[delegator][toValidatorID];
-        { // this block of code can be removed after a year from implementing multi penalty
-            uint256 avgFullReward = lockupAmount.mul(2219685438).mul(duration).div(1e18); // 0.000000002219685438 is reward per second per wei at 7% APR
-            Rewards memory avgReward = _scaleLockupReward(avgFullReward, duration);
-            uint256 maxReasonablePenalty = avgReward.lockupBaseReward / 2 + avgReward.lockupExtraReward;
-            uint256 storedPenalty = r.lockupExtraReward + r.lockupBaseReward / 2;
-            if (storedPenalty > 0 && storedPenalty > maxReasonablePenalty) {
-                r.lockupExtraReward = r.lockupExtraReward.mul(maxReasonablePenalty).div(storedPenalty);
-                r.lockupBaseReward = r.lockupBaseReward.mul(maxReasonablePenalty).div(storedPenalty);
-            }
-        }
     }
 
     function _popNonStashedUnlockPenalty(address delegator, uint256 toValidatorID, uint256 unlockAmount, uint256 totalAmount) internal returns (uint256) {
@@ -572,7 +558,6 @@ contract SFCLib is SFCBase {
 
         _stashRewards(delegator, toValidatorID);
 
-        _truncateLegacyNonStashedPenalty(delegator, toValidatorID, ld.lockedStake, ld.duration);
         uint256 penalty = _popWholeUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
         if (penalty > amount) {
             penalty = amount;
@@ -603,6 +588,102 @@ contract SFCLib is SFCBase {
             } else {
                 i++;
             }
+        }
+    }
+
+    // code below can be erased after 1 year since deployment of multipenalties
+
+    function _getAvgEpochStep(uint256 duration) internal view returns(uint256) {
+        // estimate number of epochs such that we would make approximately 15 iterations
+        uint256 tryEpochs = currentSealedEpoch / 5;
+        if (tryEpochs > 10000) {
+            tryEpochs = 10000;
+        }
+        uint256 tryEndTime = getEpochSnapshot[currentSealedEpoch - tryEpochs].endTime;
+        if (tryEndTime == 0 || tryEpochs == 0) {
+            return 0;
+        }
+        uint256 secondsPerEpoch = _now().sub(tryEndTime) / tryEpochs;
+        return duration / (secondsPerEpoch * 15 + 1);
+    }
+
+    function _getAvgReceivedStake(uint256 validatorID, uint256 duration, uint256 step) internal view returns(uint256) {
+        uint256 receivedStakeSum = getValidator[validatorID].receivedStake;
+        uint256 samples = 1;
+
+        uint256 until = _now().sub(duration);
+        for (uint256 i = 1; i <= 30; i++) {
+            uint256 e = currentSealedEpoch - i * step;
+            EpochSnapshot storage s = getEpochSnapshot[e];
+            if (s.endTime < until) {
+                break;
+            }
+            uint256 sample = s.receivedStake[validatorID];
+            if (sample != 0) {
+                samples++;
+                receivedStakeSum += sample;
+            }
+        }
+        return receivedStakeSum / samples;
+    }
+
+    function _getAvgUptime(uint256 validatorID, uint256 duration, uint256 step) internal view returns(uint256) {
+        uint256 until = _now().sub(duration);
+        uint256 oldUptimeCounter = 0;
+        uint256 newUptimeCounter = 0;
+        for (uint256 i = 0; i <= 30; i++) {
+            uint256 e = currentSealedEpoch - i * step;
+            EpochSnapshot storage s = getEpochSnapshot[e];
+            uint256 endTime = s.endTime;
+            if (endTime < until) {
+                if (i <= 2) {
+                    return duration;
+                }
+                break;
+            }
+            uint256 uptimeCounter = s.accumulatedUptime[validatorID];
+            if (uptimeCounter != 0) {
+                oldUptimeCounter = uptimeCounter;
+                if (newUptimeCounter == 0) {
+                    newUptimeCounter = uptimeCounter;
+                }
+            }
+        }
+        uint256 uptime = newUptimeCounter - oldUptimeCounter;
+        if (uptime > duration*4/5) {
+            return duration;
+        }
+        return uptime;
+    }
+
+    function _truncateLegacyPenalty(address delegator, uint256 toValidatorID) internal {
+        Rewards storage r = getStashedLockupRewards[delegator][toValidatorID];
+        uint256 storedPenalty = r.lockupExtraReward + r.lockupBaseReward / 2;
+        if (storedPenalty == 0) {
+            return;
+        }
+        LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
+        uint256 duration = ld.duration;
+        uint256 lockedStake = ld.lockedStake;
+        uint256 step = _getAvgEpochStep(duration);
+        if (step == 0) {
+            return;
+        }
+        uint256 RPS = _getAvgUptime(toValidatorID, duration, step).mul(2092846271).div(duration); // corresponds to 6.6% APR
+        uint256 selfStake = getStake[delegator][toValidatorID];
+
+        uint256 avgFullReward = selfStake.mul(RPS).mul(duration).div(1e18).mul(Decimal.unit().sub(c.validatorCommission())).div(Decimal.unit()); // reward for self-stake
+        if (getValidator[toValidatorID].auth == delegator) { // reward for received portion of stake
+            uint256 receivedStakeAvg = _getAvgReceivedStake(toValidatorID, duration, step).mul(11).div(10);
+            avgFullReward += receivedStakeAvg.mul(RPS).mul(duration).div(1e18).mul(c.validatorCommission()).div(Decimal.unit());
+        }
+        avgFullReward = avgFullReward.mul(lockedStake).div(selfStake);
+        Rewards memory avgReward = _scaleLockupReward(avgFullReward, duration);
+        uint256 maxReasonablePenalty = avgReward.lockupBaseReward / 2 + avgReward.lockupExtraReward;
+        maxReasonablePenalty = maxReasonablePenalty;
+        if (storedPenalty > maxReasonablePenalty) {
+            r.lockupExtraReward = r.lockupExtraReward.mul(maxReasonablePenalty).div(storedPenalty);
+            r.lockupBaseReward = r.lockupBaseReward.mul(maxReasonablePenalty).div(storedPenalty);
         }
     }
 }

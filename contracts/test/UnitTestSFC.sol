@@ -62,6 +62,14 @@ contract UnitTestSFCLib is SFCLib, UnitTestSFCBase {
         }
         return SFCBase.isNode(addr);
     }
+
+    function _getAvgEpochStep(uint256) internal view returns(uint256) {
+        return 1;
+    }
+
+    function _getAvgUptime(uint256, uint256 duration, uint256) internal view returns(uint256) {
+        return duration;
+    }
 }
 
 contract UnitTestNetworkInitializer {
