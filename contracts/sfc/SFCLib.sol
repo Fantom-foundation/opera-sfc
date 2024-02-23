@@ -290,7 +290,7 @@ contract SFCLib is SFCBase {
     }
 
     function withdraw(uint256 toValidatorID, uint256 wrID) public {
-        _withdraw(msg.sender, toValidatorID, wrID, msg.sender);
+        _withdraw(msg.sender, toValidatorID, wrID, _receiverOf(msg.sender));
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
@@ -420,7 +420,7 @@ contract SFCLib is SFCBase {
         address payable delegator = msg.sender;
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
-        (bool sent,) = delegator.call.value(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward))("");
+        (bool sent,) = _receiverOf(delegator).call.value(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward))("");
         require(sent, "Failed to send FTM");
 
         emit ClaimedRewards(delegator, toValidatorID, rewards.lockupExtraReward, rewards.lockupBaseReward, rewards.unlockedReward);
@@ -471,6 +471,7 @@ contract SFCLib is SFCBase {
     }
 
     function _lockStake(address delegator, uint256 toValidatorID, uint256 lockupDuration, uint256 amount, bool relock) internal {
+        require(!_redirected(delegator), "redirected");
         require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough stake");
         require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
 
@@ -557,6 +558,7 @@ contract SFCLib is SFCBase {
         require(isLockedUp(delegator, toValidatorID), "not locked up");
         require(amount <= ld.lockedStake, "not enough locked stake");
         require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
+        require(!_redirected(delegator), "redirected");
 
         _stashRewards(delegator, toValidatorID);
 
@@ -591,6 +593,99 @@ contract SFCLib is SFCBase {
                 i++;
             }
         }
+    }
+
+    function redirectedAccs() private pure returns(address[] memory, address[] memory) {
+        // the addresses below were reported as stolen by their owners via the signatures below:
+//        I redirect SFC withdrawals to account 0x80f93310709624636852d0111fd6c4A6e02ED0aA due to a potential attacker gaining access to my account.
+//        {
+//        "address": "0x93419fcb5d9dc7989439f0512d4f737421ed48d9",
+//        "msg": "0x4920726564697265637420534643207769746864726177616c7320746f206163636f756e74203078383066393333313037303936323436333638353264303131316664366334413665303245443061412064756520746f206120706f74656e7469616c2061747461636b6572206761696e696e672061636365737320746f206d79206163636f756e742e",
+//        "sig": "1c4f3168e01d499a657f0d1cd453b26e5f69aaf14372983ff62e54a1d53959e55edb0746f4aea0959899b06bf31dc6a0160f6ac428cd75d4657184ab2337e46e1c",
+//        "version": "3",
+//        "signer": "MEW"
+//        }
+//        --
+//        I redirect SFC withdrawals to account 0x91B20102Dfd2ff1b00D0915266584009d0b1Ae39 due to a potential attacker gaining access to my account.
+//        {
+//        "address": "0xfbcae1b28ca5039dafec4f10a89e022bc8118394",
+//        "msg": "0x4920726564697265637420534643207769746864726177616c7320746f206163636f756e74203078393142323031303244666432666631623030443039313532363635383430303964306231416533392064756520746f206120706f74656e7469616c2061747461636b6572206761696e696e672061636365737320746f206d79206163636f756e742e",
+//        "sig": "c98431cc1b6f26b8248ca83f860721f31ec79097831e69c28d352512182bbfa93911564ed46ba11547b544c4d65380781a4f3cc6afe9f075d43a24e0947853151c",
+//        "version": "3",
+//        "signer": "MEW"
+//        }
+//        --
+//        I redirect SFC withdrawals to account 0xCA3C54c11172A7263300a801E9937780b5143c08 due to a potential attacker gaining access to my account.
+//        {
+//        "address": "0x15c2ec517905fb3282f26f3ac3e12889755a2ed7",
+//        "msg": "0x4920726564697265637420534643207769746864726177616c7320746f206163636f756e74203078434133433534633131313732413732363333303061383031453939333737383062353134336330382064756520746f206120706f74656e7469616c2061747461636b6572206761696e696e672061636365737320746f206d79206163636f756e742e",
+//        "sig": "8d933ea6b1dfaa70c92d7dd8f68e9c821934eabd9c454dc792a90c9c58d0c4ec5c60d7737e7b8ed38cfdfe3bd7fce9a2c38133b9a98d6699088d79edb09ec3c21b",
+//        "version": "3",
+//        "signer": "MEW"
+//        }
+// --
+// I redirect SFC withdrawals to account 0x5A1CAd027EACE4C052f5DEE0f42Da6c62E39b779 due to a potential attacker gaining access to my account.
+// {
+//  "address": "0xbdAaEC5f9317cC63D26FD7d79aD17372Ccd7d763",
+//  "msg": "0x4920726564697265637420534643207769746864726177616c7320746f206163636f756e74203078354131434164303237454143453443303532663544454530663432446136633632453339623737392064756520746f206120706f74656e7469616c2061747461636b6572206761696e696e672061636365737320746f206d79206163636f756e742e",
+//  "sig": "0e9b3ce37f665ab03bdfd3095671249e1b2842b1dd314fd4281bbed527ea69014ca510227e57f973b35ef175c1214fb1a842be70ff5a9290cb260799c544eed900",
+//  "version": "3",
+//  "signer": "MEW"
+// }
+// --
+// I redirect SFC withdrawals to account 0x4A15B527475977D9B0CB3fcfE825d6Aa7428fAFC due to a potential attacker gaining access to my account.
+// {
+//  "address": "0xf72148504819A1D1B038694B02d299F65BfA312d",
+//  "msg": "0x4920726564697265637420534643207769746864726177616c7320746f206163636f756e74203078344131354235323734373539373744394230434233666366453832356436416137343238664146432064756520746f206120706f74656e7469616c2061747461636b6572206761696e696e672061636365737320746f206d79206163636f756e742e",
+//  "sig": "cf6386edbbee504c07ae95cb7c5ef06e7e0f57b34d51ab4e4047b5cb326af9bc236f544a3ced994cd20601047966e683aaaf329772fbb6bf37f0bd12200d1e6100",
+//  "version": "3",
+//  "signer": "MEW"
+// }
+        // The contract does not lock these positions; instead, it restricts withdrawals exclusively to the account designated in the signature.
+        // This measure prevents an attacker from transferring FTM following a withdrawal.
+
+        address[] memory froms = new address[](5);
+        address[] memory tos = new address[](5);
+        assert(froms.length == tos.length);
+        froms[0] = 0x93419FcB5d9DC7989439f0512d4F737421ed48D9;
+        tos[0] = 0x80f93310709624636852d0111fd6c4A6e02ED0aA;
+        froms[1] = 0xFbCAe1B28ca5039DAFec4f10A89e022Bc8118394;
+        tos[1] = 0x91B20102Dfd2ff1b00D0915266584009d0b1Ae39;
+        froms[2] = 0x15C2EC517905fB3282f26F3aC3e12889755a2ed7;
+        tos[2] = 0xCA3C54c11172A7263300a801E9937780b5143c08;
+        froms[3] = 0xbdAaEC5f9317cC63D26FD7d79aD17372Ccd7d763;
+        tos[3] = 0x5A1CAd027EACE4C052f5DEE0f42Da6c62E39b779;
+        froms[4] = 0xf72148504819A1D1B038694B02d299F65BfA312d;
+        tos[4] = 0x4A15B527475977D9B0CB3fcfE825d6Aa7428fAFC;
+        return (froms, tos);
+    }
+
+    function _redirected(address addr) internal view returns(bool) {
+        (address[] memory froms,) = redirectedAccs();
+        for (uint256 i = 0; i < froms.length; i++) {
+            if (addr == froms[i]) {
+                return true;
+            }
+        }
+        return getRedirection[addr] != address(0);
+    }
+
+    function _redirectedTo(address addr) internal view returns(address) {
+        (address[] memory froms, address[] memory tos) = redirectedAccs();
+        for (uint256 i = 0; i < froms.length; i++) {
+            if (addr == froms[i]) {
+                return tos[i];
+            }
+        }
+        return getRedirection[addr];
+    }
+
+    function _receiverOf(address addr) internal view returns(address payable) {
+        address to = _redirectedTo(addr);
+        if (to == address(0)) {
+            return address(uint160(addr));
+        }
+        return address(uint160(to));
     }
 
     // code below can be erased after 1 year since deployment of multipenalties

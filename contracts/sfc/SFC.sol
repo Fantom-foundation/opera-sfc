@@ -99,6 +99,20 @@ contract SFC is SFCBase, Version {
         _syncValidator(validatorID, true);
     }
 
+    function initiateRedirection(address from, address to) onlyOwner external {
+        require(getRedirection[from] != to, "already compelte");
+        require(from != to, "same address");
+        getRedirectionRequest[from] = to;
+    }
+
+    function redirect(address to) external {
+        address from = msg.sender;
+        require(to != address(0), "zero address");
+        require(getRedirectionRequest[from] == to, "no request");
+        getRedirection[from] = to;
+        getRedirectionRequest[from] = address(0);
+    }
+
     /*
     Epoch callbacks
     */

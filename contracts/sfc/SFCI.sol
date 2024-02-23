@@ -151,4 +151,10 @@ interface SFCI {
     function updateSFTMFinalizer(address v) external;
 
     function updateValidatorPubkey(bytes calldata pubkey) external;
+
+    function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external;
+
+    function initiateRedirection(address from, address to) external;
+
+    function redirect(address to) external;
 }
