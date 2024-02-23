@@ -35,6 +35,43 @@ contract SFC is SFCBase, Version {
     }
 
     /*
+    Getters
+    */
+
+    function getEpochValidatorIDs(uint256 epoch) public view returns (uint256[] memory) {
+        return getEpochSnapshot[epoch].validatorIDs;
+    }
+
+    function getEpochReceivedStake(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].receivedStake[validatorID];
+    }
+
+    function getEpochAccumulatedRewardPerToken(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].accumulatedRewardPerToken[validatorID];
+    }
+
+    function getEpochAccumulatedUptime(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].accumulatedUptime[validatorID];
+    }
+
+    function getEpochAccumulatedOriginatedTxsFee(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].accumulatedOriginatedTxsFee[validatorID];
+    }
+
+    function getEpochOfflineTime(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].offlineTime[validatorID];
+    }
+
+    function getEpochOfflineBlocks(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].offlineBlocks[validatorID];
+    }
+
+    function rewardsStash(address delegator, uint256 validatorID) public view returns (uint256) {
+        Rewards memory stash = _rewardsStash[delegator][validatorID];
+        return stash.lockupBaseReward.add(stash.lockupExtraReward).add(stash.unlockedReward);
+    }
+
+    /*
     Constructor
     */
 
@@ -71,6 +108,10 @@ contract SFC is SFCBase, Version {
 
     function updateVoteBookAddress(address v) onlyOwner external {
         voteBookAddress = v;
+    }
+
+    function updateSFTMFinalizer(address v) external onlyOwner {
+        sftmFinalizer = v;
     }
 
     function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external {
