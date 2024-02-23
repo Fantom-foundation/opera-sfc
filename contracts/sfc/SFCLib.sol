@@ -163,7 +163,7 @@ contract SFCLib is SFCBase {
         require(success || !strict, "gov votes recounting failed");
     }
 
-    function _rawUndelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict) internal {
+    function _rawUndelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict, bool forceful, bool checkDelegatedStake) internal {
         getStake[delegator][toValidatorID] -= amount;
         getValidator[toValidatorID].receivedStake = getValidator[toValidatorID].receivedStake.sub(amount);
         totalStake = totalStake.sub(amount);
@@ -172,11 +172,15 @@ contract SFCLib is SFCBase {
         }
 
         uint256 selfStakeAfterwards = getSelfStake(toValidatorID);
-        if (selfStakeAfterwards != 0) {
-            if (getValidator[toValidatorID].status == OK_STATUS) {
-                require(selfStakeAfterwards >= c.minSelfStake(), "insufficient self-stake");
-                require(_checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
+        if (selfStakeAfterwards != 0 && getValidator[toValidatorID].status == OK_STATUS) {
+            if (!(selfStakeAfterwards >= c.minSelfStake())) {
+                if (forceful) {
+                    revert("insufficient self-stake");
+                } else {
+                    _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
+                }
             }
+            require(!checkDelegatedStake || _checkDelegatedStakeLimit(toValidatorID), "validator's delegations limit is exceeded");
         } else {
             _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
         }
@@ -195,7 +199,7 @@ contract SFCLib is SFCBase {
 
         require(getWithdrawalRequest[delegator][toValidatorID][wrID].amount == 0, "wrID already exists");
 
-        _rawUndelegate(delegator, toValidatorID, amount, true);
+        _rawUndelegate(delegator, toValidatorID, amount, true, false, true);
 
         getWithdrawalRequest[delegator][toValidatorID][wrID].amount = amount;
         getWithdrawalRequest[delegator][toValidatorID][wrID].epoch = currentEpoch();
@@ -224,7 +228,7 @@ contract SFCLib is SFCBase {
             emit UnlockedStake(delegator, toValidatorID, amount - unlockedStake, 0);
         }
 
-        _rawUndelegate(delegator, toValidatorID, amount, false);
+        _rawUndelegate(delegator, toValidatorID, amount, false, true, false);
 
         _syncValidator(toValidatorID, false);
 
@@ -564,7 +568,7 @@ contract SFCLib is SFCBase {
         }
         ld.lockedStake -= amount;
         if (penalty != 0) {
-            _rawUndelegate(delegator, toValidatorID, penalty, true);
+            _rawUndelegate(delegator, toValidatorID, penalty, true, false, false);
             treasuryAddress.call.value(penalty)("");
         }
 
