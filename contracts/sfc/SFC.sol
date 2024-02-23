@@ -34,9 +34,6 @@ contract SFC is SFCBase, Version {
         _delegate(libAddress);
     }
 
-    event UpdatedBaseRewardPerSec(uint256 value);
-    event UpdatedOfflinePenaltyThreshold(uint256 blocksNum, uint256 period);
-
     /*
     Constructor
     */

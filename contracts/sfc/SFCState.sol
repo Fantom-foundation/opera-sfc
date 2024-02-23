@@ -108,4 +108,11 @@ contract SFCState is Initializable, Ownable {
     address public voteBookAddress;
 
     address internal sftmFinalizer;
+
+    struct Penalty {
+        uint256 amount;
+        uint256 end;
+    }
+    // delegator => validatorID => penalties info
+    mapping(address => mapping(uint256 => Penalty[])) public getStashedPenalties;
 }
