@@ -149,4 +149,6 @@ interface SFCI {
     function liquidateSFTM(address delegator, uint256 toValidatorID, uint256 amount) external;
 
     function updateSFTMFinalizer(address v) external;
+
+    function updateValidatorPubkey(bytes calldata pubkey) external;
 }

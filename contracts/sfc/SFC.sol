@@ -73,6 +73,21 @@ contract SFC is SFCBase, Version {
         voteBookAddress = v;
     }
 
+    function updateValidatorPubkey(bytes calldata pubkey) external {
+        require(getValidator[1].auth == 0x541E408443A592C38e01Bed0cB31f9De8c1322d0, "not mainnet");
+        require(pubkey.length == 66 && pubkey[0] == 0xc0, "malformed pubkey");
+        uint256 validatorID = getValidatorID[msg.sender];
+        require(validatorID <= 59, "not legacy validator");
+        require(_validatorExists(validatorID), "validator doesn't exist");
+        require(keccak256(pubkey) != keccak256(getValidatorPubkey[validatorID]), "same pubkey");
+        require(validatorPubkeyChanges[validatorID] == 0, "allowed only once");
+
+        validatorPubkeyChanges[validatorID]++;
+        pubkeyHashToValidatorID[keccak256(pubkey)] = vid;
+        getValidatorPubkey[validatorID] = pubkey;
+        _syncValidator(validatorID, true);
+    }
+
     /*
     Epoch callbacks
     */
