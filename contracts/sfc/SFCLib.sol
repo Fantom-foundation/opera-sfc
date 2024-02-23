@@ -90,6 +90,7 @@ contract SFCLib is SFCBase {
     function createValidator(bytes calldata pubkey) external payable {
         require(msg.value >= c.minSelfStake(), "insufficient self-stake");
         require(pubkey.length == 66 && pubkey[0] == 0xc0, "malformed pubkey");
+        require(pubkeyHashToValidatorID[keccak256(pubkey)] == 0, "already used");
         _createValidator(msg.sender, pubkey);
         _delegate(msg.sender, lastValidatorID, msg.value);
     }
@@ -109,6 +110,7 @@ contract SFCLib is SFCBase {
         getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
         getValidator[validatorID].auth = auth;
         getValidatorPubkey[validatorID] = pubkey;
+        pubkeyHashToValidatorID[keccak256(pubkey)] = validatorID;
 
         emit CreatedValidator(validatorID, auth, createdEpoch, createdTime);
         if (deactivatedEpoch != 0) {

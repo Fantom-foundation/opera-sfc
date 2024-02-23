@@ -73,6 +73,16 @@ contract SFC is SFCBase, Version {
         voteBookAddress = v;
     }
 
+    function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external {
+        for (uint256 vid = start; vid < end; vid++) {
+            bytes memory pubkey = getValidatorPubkey[vid];
+            if (pubkey.length > 0 && pubkeyHashToValidatorID[keccak256(pubkey)] != vid) {
+                require(pubkeyHashToValidatorID[keccak256(pubkey)] == 0, "already exists");
+                pubkeyHashToValidatorID[keccak256(pubkey)] = vid;
+            }
+        }
+    }
+
     function updateValidatorPubkey(bytes calldata pubkey) external {
         require(getValidator[1].auth == 0x541E408443A592C38e01Bed0cB31f9De8c1322d0, "not mainnet");
         require(pubkey.length == 66 && pubkey[0] == 0xc0, "malformed pubkey");
@@ -80,10 +90,11 @@ contract SFC is SFCBase, Version {
         require(validatorID <= 59, "not legacy validator");
         require(_validatorExists(validatorID), "validator doesn't exist");
         require(keccak256(pubkey) != keccak256(getValidatorPubkey[validatorID]), "same pubkey");
+        require(pubkeyHashToValidatorID[keccak256(pubkey)] == 0, "already used");
         require(validatorPubkeyChanges[validatorID] == 0, "allowed only once");
 
         validatorPubkeyChanges[validatorID]++;
-        pubkeyHashToValidatorID[keccak256(pubkey)] = vid;
+        pubkeyHashToValidatorID[keccak256(pubkey)] = validatorID;
         getValidatorPubkey[validatorID] = pubkey;
         _syncValidator(validatorID, true);
     }
