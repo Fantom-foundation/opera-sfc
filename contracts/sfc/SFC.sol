@@ -35,6 +35,43 @@ contract SFC is SFCBase, Version {
     }
 
     /*
+    Getters
+    */
+
+    function getEpochValidatorIDs(uint256 epoch) public view returns (uint256[] memory) {
+        return getEpochSnapshot[epoch].validatorIDs;
+    }
+
+    function getEpochReceivedStake(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].receivedStake[validatorID];
+    }
+
+    function getEpochAccumulatedRewardPerToken(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].accumulatedRewardPerToken[validatorID];
+    }
+
+    function getEpochAccumulatedUptime(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].accumulatedUptime[validatorID];
+    }
+
+    function getEpochAccumulatedOriginatedTxsFee(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].accumulatedOriginatedTxsFee[validatorID];
+    }
+
+    function getEpochOfflineTime(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].offlineTime[validatorID];
+    }
+
+    function getEpochOfflineBlocks(uint256 epoch, uint256 validatorID) public view returns (uint256) {
+        return getEpochSnapshot[epoch].offlineBlocks[validatorID];
+    }
+
+    function rewardsStash(address delegator, uint256 validatorID) public view returns (uint256) {
+        Rewards memory stash = _rewardsStash[delegator][validatorID];
+        return stash.lockupBaseReward.add(stash.lockupExtraReward).add(stash.unlockedReward);
+    }
+
+    /*
     Constructor
     */
 
@@ -71,6 +108,50 @@ contract SFC is SFCBase, Version {
 
     function updateVoteBookAddress(address v) onlyOwner external {
         voteBookAddress = v;
+    }
+
+    function updateSFTMFinalizer(address v) external onlyOwner {
+        sftmFinalizer = v;
+    }
+
+    function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external {
+        for (uint256 vid = start; vid < end; vid++) {
+            bytes memory pubkey = getValidatorPubkey[vid];
+            if (pubkey.length > 0 && pubkeyHashToValidatorID[keccak256(pubkey)] != vid) {
+                require(pubkeyHashToValidatorID[keccak256(pubkey)] == 0, "already exists");
+                pubkeyHashToValidatorID[keccak256(pubkey)] = vid;
+            }
+        }
+    }
+
+    function updateValidatorPubkey(bytes calldata pubkey) external {
+        require(getValidator[1].auth == 0x541E408443A592C38e01Bed0cB31f9De8c1322d0, "not mainnet");
+        require(pubkey.length == 66 && pubkey[0] == 0xc0, "malformed pubkey");
+        uint256 validatorID = getValidatorID[msg.sender];
+        require(validatorID <= 59, "not legacy validator");
+        require(_validatorExists(validatorID), "validator doesn't exist");
+        require(keccak256(pubkey) != keccak256(getValidatorPubkey[validatorID]), "same pubkey");
+        require(pubkeyHashToValidatorID[keccak256(pubkey)] == 0, "already used");
+        require(validatorPubkeyChanges[validatorID] == 0, "allowed only once");
+
+        validatorPubkeyChanges[validatorID]++;
+        pubkeyHashToValidatorID[keccak256(pubkey)] = validatorID;
+        getValidatorPubkey[validatorID] = pubkey;
+        _syncValidator(validatorID, true);
+    }
+
+    function initiateRedirection(address from, address to) onlyOwner external {
+        require(getRedirection[from] != to, "already compelte");
+        require(from != to, "same address");
+        getRedirectionRequest[from] = to;
+    }
+
+    function redirect(address to) external {
+        address from = msg.sender;
+        require(to != address(0), "zero address");
+        require(getRedirectionRequest[from] == to, "no request");
+        getRedirection[from] = to;
+        getRedirectionRequest[from] = address(0);
     }
 
     /*

@@ -115,4 +115,12 @@ contract SFCState is Initializable, Ownable {
     }
     // delegator => validatorID => penalties info
     mapping(address => mapping(uint256 => Penalty[])) public getStashedPenalties;
+
+    mapping(uint256 => uint256) internal validatorPubkeyChanges;
+
+    mapping(bytes32 => uint256) internal pubkeyHashToValidatorID;
+
+    mapping(address => address) public getRedirectionRequest;
+
+    mapping(address => address) public getRedirection;
 }
