@@ -120,6 +120,8 @@ contract SFCState is Initializable, Ownable {
 
     mapping(bytes32 => uint256) internal pubkeyHashToValidatorID;
 
+    address public redirectionAuthorizer;
+
     mapping(address => address) public getRedirectionRequest;
 
     mapping(address => address) public getRedirection;
