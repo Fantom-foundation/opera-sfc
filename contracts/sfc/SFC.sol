@@ -140,8 +140,20 @@ contract SFC is SFCBase, Version {
         _syncValidator(validatorID, true);
     }
 
-    function initiateRedirection(address from, address to) onlyOwner external {
-        require(getRedirection[from] != to, "already compelte");
+    function setRedirectionAuthorizer(address v) onlyOwner external {
+        require(redirectionAuthorizer != v, "same");
+        redirectionAuthorizer = v;
+    }
+
+    event AnnouncedRedirection(address indexed from, address indexed to);
+
+    function announceRedirection(address to) external {
+        emit AnnouncedRedirection(msg.sender, to);
+    }
+
+    function initiateRedirection(address from, address to) external {
+        require(msg.sender == redirectionAuthorizer, "not authorized");
+        require(getRedirection[from] != to, "already complete");
         require(from != to, "same address");
         getRedirectionRequest[from] = to;
     }

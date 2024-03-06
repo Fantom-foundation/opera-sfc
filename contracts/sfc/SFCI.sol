@@ -15,6 +15,7 @@ interface SFCI {
 
     event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
+    event AnnouncedRedirection(address indexed from, address indexed to);
 
     function currentSealedEpoch() external view returns (uint256);
 
@@ -153,6 +154,10 @@ interface SFCI {
     function updateValidatorPubkey(bytes calldata pubkey) external;
 
     function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external;
+
+    function setRedirectionAuthorizer(address v) external;
+
+    function announceRedirection(address to) external;
 
     function initiateRedirection(address from, address to) external;
 
