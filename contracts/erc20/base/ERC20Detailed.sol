@@ -1,12 +1,13 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
-import "./IERC20.sol";
 import "../../common/Initializable.sol";
+import {ERC20} from "./ERC20.sol";
 
 /**
  * @dev Optional functions from the ERC20 standard.
  */
-contract ERC20Detailed is Initializable, IERC20 {
+contract ERC20Detailed is ERC20 {
     string private _name;
     string private _symbol;
     uint8 private _decimals;
@@ -16,10 +17,10 @@ contract ERC20Detailed is Initializable, IERC20 {
      * these values are immutable: they can only be set once during
      * construction.
      */
-    function initialize(string memory name, string memory symbol, uint8 decimals) internal initializer {
-        _name = name;
-        _symbol = symbol;
-        _decimals = decimals;
+    function initialize(string memory tokenName, string memory tokenSymbol, uint8 tokenDecimals) internal initializer {
+        _name = tokenName;
+        _symbol = tokenSymbol;
+        _decimals = tokenDecimals;
     }
 
     /**

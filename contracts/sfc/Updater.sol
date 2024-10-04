@@ -1,4 +1,5 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
 import "./NodeDriver.sol";
 import "./SFC.sol";
@@ -24,7 +25,15 @@ contract Updater {
     address public voteBook;
     address public owner;
 
-    constructor(address _sfcFrom, address _sfcLib, address _sfcConsts, address _govTo, address _govFrom, address _voteBook, address _owner) public {
+    constructor(
+        address _sfcFrom,
+        address _sfcLib,
+        address _sfcConsts,
+        address _govTo,
+        address _govFrom,
+        address _voteBook,
+        address _owner
+    ) {
         sfcFrom = _sfcFrom;
         sfcLib = _sfcLib;
         sfcConsts = _sfcConsts;
@@ -32,8 +41,17 @@ contract Updater {
         govFrom = _govFrom;
         voteBook = _voteBook;
         owner = _owner;
-        address payable sfcTo = 0xFC00FACE00000000000000000000000000000000;
-        require(sfcFrom != address(0) && sfcLib != address(0) && sfcConsts != address(0) && govTo != address(0) && govFrom != address(0) && voteBook != address(0) && owner != address(0), "0 address");
+        address sfcTo = address(0xFC00FACE00000000000000000000000000000000);
+        require(
+            sfcFrom != address(0) &&
+                sfcLib != address(0) &&
+                sfcConsts != address(0) &&
+                govTo != address(0) &&
+                govFrom != address(0) &&
+                voteBook != address(0) &&
+                owner != address(0),
+            "0 address"
+        );
         require(Version(sfcTo).version() == "303", "SFC already updated");
         require(Version(sfcFrom).version() == "304", "wrong SFC version");
         require(GovVersion(govTo).version() == "0001", "gov already updated");
@@ -41,7 +59,7 @@ contract Updater {
     }
 
     function execute() external {
-        address payable sfcTo = 0xFC00FACE00000000000000000000000000000000;
+        address payable sfcTo = payable(address(0xFC00FACE00000000000000000000000000000000));
 
         ConstantsManager consts = ConstantsManager(sfcConsts);
         consts.initialize();

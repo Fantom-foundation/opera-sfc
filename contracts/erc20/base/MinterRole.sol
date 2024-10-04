@@ -1,7 +1,7 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
 import "./Roles.sol";
-
 
 contract MinterRole {
     using Roles for Roles.Role;

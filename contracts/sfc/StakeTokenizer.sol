@@ -1,4 +1,5 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
 import "./SFC.sol";
 import "../erc20/base/ERC20Burnable.sol";
@@ -23,16 +24,16 @@ contract StakeTokenizer is Spacer, Initializable {
 
     function mintSFTM(uint256 toValidatorID) external {
         revert("sFTM minting is disabled");
-//        address delegator = msg.sender;
-//        uint256 lockedStake = sfc.getLockedStake(delegator, toValidatorID);
-//        require(lockedStake > 0, "delegation isn't locked up");
-//        require(lockedStake > outstandingSFTM[delegator][toValidatorID], "sFTM is already minted");
-//
-//        uint256 diff = lockedStake - outstandingSFTM[delegator][toValidatorID];
-//        outstandingSFTM[delegator][toValidatorID] = lockedStake;
-//
-//        // It's important that we mint after updating outstandingSFTM (protection against Re-Entrancy)
-//        require(ERC20Mintable(sFTMTokenAddress).mint(delegator, diff), "failed to mint sFTM");
+        //        address delegator = msg.sender;
+        //        uint256 lockedStake = sfc.getLockedStake(delegator, toValidatorID);
+        //        require(lockedStake > 0, "delegation isn't locked up");
+        //        require(lockedStake > outstandingSFTM[delegator][toValidatorID], "sFTM is already minted");
+        //
+        //        uint256 diff = lockedStake - outstandingSFTM[delegator][toValidatorID];
+        //        outstandingSFTM[delegator][toValidatorID] = lockedStake;
+        //
+        //        // It's important that we mint after updating outstandingSFTM (protection against Re-Entrancy)
+        //        require(ERC20Mintable(sFTMTokenAddress).mint(delegator, diff), "failed to mint sFTM");
     }
 
     function redeemSFTM(uint256 validatorID, uint256 amount) external {
@@ -54,7 +55,7 @@ contract StakeTokenizer is Spacer, Initializable {
         ERC20Burnable(sFTMTokenAddress).burnFrom(payer, amount);
     }
 
-    function allowedToWithdrawStake(address sender, uint256 validatorID) public view returns(bool) {
+    function allowedToWithdrawStake(address sender, uint256 validatorID) public view returns (bool) {
         return outstandingSFTM[sender][validatorID] == 0;
     }
 }

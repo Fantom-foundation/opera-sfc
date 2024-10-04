@@ -1,4 +1,5 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
 import "./SFCI.sol";
 import "./NodeDriver.sol";
@@ -7,7 +8,16 @@ import "./ConstantsManager.sol";
 
 contract NetworkInitializer {
     // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
-    function initializeAll(uint256 sealedEpoch, uint256 totalSupply, address payable _sfc, address _lib, address _auth, address _driver, address _evmWriter, address _owner) external {
+    function initializeAll(
+        uint256 sealedEpoch,
+        uint256 totalSupply,
+        address payable _sfc,
+        address _lib,
+        address _auth,
+        address _driver,
+        address _evmWriter,
+        address _owner
+    ) external {
         NodeDriver(_driver).initialize(_auth, _evmWriter);
         NodeDriverAuth(_auth).initialize(_sfc, _driver, _owner);
 
@@ -31,6 +41,5 @@ contract NetworkInitializer {
         consts.transferOwnership(_owner);
 
         SFCI(_sfc).initialize(sealedEpoch, totalSupply, _auth, _lib, address(consts), _owner);
-        selfdestruct(address(0));
     }
 }

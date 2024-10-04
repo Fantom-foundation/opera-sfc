@@ -1,8 +1,8 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
 import "./ERC20.sol";
 import "./MinterRole.sol";
-
 
 /**
  * @title ERC20Mintable
@@ -31,15 +31,7 @@ contract ERC20Mintable is ERC20, MinterRole {
      * @param amount The amount of tokens to mint.
      * @return A boolean that indicates if the operation was successful.
      */
-    function mint(
-        address to,
-        uint256 amount
-    )
-    public
-    onlyMinter
-    onlyBeforeMintingFinished
-    returns (bool)
-    {
+    function mint(address to, uint256 amount) public onlyMinter onlyBeforeMintingFinished returns (bool) {
         _mint(to, amount);
         return true;
     }
@@ -48,12 +40,7 @@ contract ERC20Mintable is ERC20, MinterRole {
      * @dev Function to stop minting new tokens.
      * @return True if the operation was successful.
      */
-    function finishMinting()
-    public
-    onlyMinter
-    onlyBeforeMintingFinished
-    returns (bool)
-    {
+    function finishMinting() public onlyMinter onlyBeforeMintingFinished returns (bool) {
         _mintingFinished = true;
         emit MintingFinished();
         return true;

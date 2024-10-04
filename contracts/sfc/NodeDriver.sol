@@ -1,18 +1,15 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
-import "../common/SafeMath.sol";
 import "../common/Initializable.sol";
 import "../ownership/Ownable.sol";
 import "./SFCI.sol";
-
 
 interface NodeDriverExecutable {
     function execute() external;
 }
 
 contract NodeDriverAuth is Initializable, Ownable {
-    using SafeMath for uint256;
-
     SFCI internal sfc;
     NodeDriver internal driver;
 
@@ -50,13 +47,18 @@ contract NodeDriverAuth is Initializable, Ownable {
         _execute(executable, owner(), _getCodeHash(address(this)), _getCodeHash(address(driver)));
     }
 
-    function mutExecute(address executable, address newOwner, bytes32 selfCodeHash, bytes32 driverCodeHash) external onlyOwner {
+    function mutExecute(
+        address executable,
+        address newOwner,
+        bytes32 selfCodeHash,
+        bytes32 driverCodeHash
+    ) external onlyOwner {
         _execute(executable, newOwner, selfCodeHash, driverCodeHash);
     }
 
     function incBalance(address acc, uint256 diff) external onlySFC {
         require(acc == address(sfc), "recipient is not the SFC contract");
-        driver.setBalance(acc, address(acc).balance.add(diff));
+        driver.setBalance(acc, address(acc).balance + diff);
     }
 
     function upgradeCode(address acc, address from) external onlyOwner {
@@ -77,6 +79,7 @@ contract NodeDriverAuth is Initializable, Ownable {
     }
 
     function updateMinGasPrice(uint256 minGasPrice) external onlySFC {
+        // prettier-ignore
         driver.updateNetworkRules(bytes(strConcat("{\"Economy\":{\"MinGasPrice\":", uint256ToStr(minGasPrice), "}}")));
     }
 
@@ -96,12 +99,50 @@ contract NodeDriverAuth is Initializable, Ownable {
         driver.updateValidatorPubkey(validatorID, pubkey);
     }
 
-    function setGenesisValidator(address _auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyDriver {
-        sfc.setGenesisValidator(_auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
+    function setGenesisValidator(
+        address _auth,
+        uint256 validatorID,
+        bytes calldata pubkey,
+        uint256 status,
+        uint256 createdEpoch,
+        uint256 createdTime,
+        uint256 deactivatedEpoch,
+        uint256 deactivatedTime
+    ) external onlyDriver {
+        sfc.setGenesisValidator(
+            _auth,
+            validatorID,
+            pubkey,
+            status,
+            createdEpoch,
+            createdTime,
+            deactivatedEpoch,
+            deactivatedTime
+        );
     }
 
-    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyDriver {
-        sfc.setGenesisDelegation(delegator, toValidatorID, stake, lockedStake, lockupFromEpoch, lockupEndTime, lockupDuration, earlyUnlockPenalty, rewards);
+    function setGenesisDelegation(
+        address delegator,
+        uint256 toValidatorID,
+        uint256 stake,
+        uint256 lockedStake,
+        uint256 lockupFromEpoch,
+        uint256 lockupEndTime,
+        uint256 lockupDuration,
+        uint256 earlyUnlockPenalty,
+        uint256 rewards
+    ) external onlyDriver {
+        sfc.setGenesisDelegation(
+            delegator,
+            toValidatorID,
+            stake,
+            lockedStake,
+            lockupFromEpoch,
+            lockupEndTime,
+            lockupDuration,
+            earlyUnlockPenalty,
+            rewards
+        );
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
@@ -112,14 +153,22 @@ contract NodeDriverAuth is Initializable, Ownable {
         sfc.sealEpochValidators(nextValidatorIDs);
     }
 
-    function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee, uint256 usedGas) external onlyDriver {
+    function sealEpoch(
+        uint256[] calldata offlineTimes,
+        uint256[] calldata offlineBlocks,
+        uint256[] calldata uptimes,
+        uint256[] calldata originatedTxsFee,
+        uint256 usedGas
+    ) external onlyDriver {
         sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee, usedGas);
     }
 
     function isContract(address account) internal view returns (bool) {
         uint256 size;
         // solhint-disable-next-line no-inline-assembly
-        assembly {size := extcodesize(account)}
+        assembly {
+            size := extcodesize(account)
+        }
         return size > 0;
     }
 
@@ -140,9 +189,11 @@ contract NodeDriverAuth is Initializable, Ownable {
         bytes memory bstr = new bytes(decimals);
         uint strIdx = decimals - 1;
         while (num != 0) {
-            bstr[strIdx] = byte(uint8(48 + num % 10));
+            bstr[strIdx] = bytes1(uint8(48 + (num % 10)));
             num /= 10;
-            strIdx--;
+            if (strIdx > 0) {
+                strIdx--;
+            }
         }
         return string(bstr);
     }
@@ -169,7 +220,9 @@ contract NodeDriverAuth is Initializable, Ownable {
 
     function _getCodeHash(address addr) internal view returns (bytes32) {
         bytes32 codeHash;
-        assembly {codeHash := extcodehash(addr)}
+        assembly {
+            codeHash := extcodehash(addr)
+        }
         return codeHash;
     }
 }
@@ -212,8 +265,8 @@ contract NodeDriver is Initializable {
         evmWriter.copyCode(acc, from);
     }
 
-    function swapCode(address acc, address with) external onlyBackend {
-        evmWriter.swapCode(acc, with);
+    function swapCode(address acc, address where) external onlyBackend {
+        evmWriter.swapCode(acc, where);
     }
 
     function setStorage(address acc, bytes32 key, bytes32 value) external onlyBackend {
@@ -251,12 +304,50 @@ contract NodeDriver is Initializable {
 
     // Methods which are called only by the node
 
-    function setGenesisValidator(address _auth, uint256 validatorID, bytes calldata pubkey, uint256 status, uint256 createdEpoch, uint256 createdTime, uint256 deactivatedEpoch, uint256 deactivatedTime) external onlyNode {
-        backend.setGenesisValidator(_auth, validatorID, pubkey, status, createdEpoch, createdTime, deactivatedEpoch, deactivatedTime);
+    function setGenesisValidator(
+        address _auth,
+        uint256 validatorID,
+        bytes calldata pubkey,
+        uint256 status,
+        uint256 createdEpoch,
+        uint256 createdTime,
+        uint256 deactivatedEpoch,
+        uint256 deactivatedTime
+    ) external onlyNode {
+        backend.setGenesisValidator(
+            _auth,
+            validatorID,
+            pubkey,
+            status,
+            createdEpoch,
+            createdTime,
+            deactivatedEpoch,
+            deactivatedTime
+        );
     }
 
-    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake, uint256 lockedStake, uint256 lockupFromEpoch, uint256 lockupEndTime, uint256 lockupDuration, uint256 earlyUnlockPenalty, uint256 rewards) external onlyNode {
-        backend.setGenesisDelegation(delegator, toValidatorID, stake, lockedStake, lockupFromEpoch, lockupEndTime, lockupDuration, earlyUnlockPenalty, rewards);
+    function setGenesisDelegation(
+        address delegator,
+        uint256 toValidatorID,
+        uint256 stake,
+        uint256 lockedStake,
+        uint256 lockupFromEpoch,
+        uint256 lockupEndTime,
+        uint256 lockupDuration,
+        uint256 earlyUnlockPenalty,
+        uint256 rewards
+    ) external onlyNode {
+        backend.setGenesisDelegation(
+            delegator,
+            toValidatorID,
+            stake,
+            lockedStake,
+            lockupFromEpoch,
+            lockupEndTime,
+            lockupDuration,
+            earlyUnlockPenalty,
+            rewards
+        );
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyNode {
@@ -267,11 +358,22 @@ contract NodeDriver is Initializable {
         backend.sealEpochValidators(nextValidatorIDs);
     }
 
-    function sealEpoch(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee) external onlyNode {
+    function sealEpoch(
+        uint256[] calldata offlineTimes,
+        uint256[] calldata offlineBlocks,
+        uint256[] calldata uptimes,
+        uint256[] calldata originatedTxsFee
+    ) external onlyNode {
         backend.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee, 841669690);
     }
 
-    function sealEpochV1(uint256[] calldata offlineTimes, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee, uint256 usedGas) external onlyNode {
+    function sealEpochV1(
+        uint256[] calldata offlineTimes,
+        uint256[] calldata offlineBlocks,
+        uint256[] calldata uptimes,
+        uint256[] calldata originatedTxsFee,
+        uint256 usedGas
+    ) external onlyNode {
         backend.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee, usedGas);
     }
 }
@@ -281,7 +383,7 @@ interface EVMWriter {
 
     function copyCode(address acc, address from) external;
 
-    function swapCode(address acc, address with) external;
+    function swapCode(address acc, address where) external;
 
     function setStorage(address acc, bytes32 key, bytes32 value) external;
 

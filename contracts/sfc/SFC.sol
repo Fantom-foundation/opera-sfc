@@ -1,4 +1,5 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
 import "./GasPriceConstants.sol";
 import "../version/Version.sol";
@@ -10,28 +11,36 @@ import "./SFCBase.sol";
 contract SFC is SFCBase, Version {
     function _delegate(address implementation) internal {
         assembly {
-        // Copy msg.data. We take full control of memory in this inline assembly
-        // block because it will not return to Solidity code. We overwrite the
-        // Solidity scratch pad at memory position 0.
-            calldatacopy(0, 0, calldatasize)
+            // Copy msg.data. We take full control of memory in this inline assembly
+            // block because it will not return to Solidity code. We overwrite the
+            // Solidity scratch pad at memory position 0.
+            calldatacopy(0, 0, calldatasize())
 
-        // Call the implementation.
-        // out and outsize are 0 because we don't know the size yet.
-            let result := delegatecall(gas, implementation, 0, calldatasize, 0, 0)
+            // Call the implementation.
+            // out and outsize are 0 because we don't know the size yet.
+            let result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
 
-        // Copy the returned data.
-            returndatacopy(0, 0, returndatasize)
+            // Copy the returned data.
+            returndatacopy(0, 0, returndatasize())
 
             switch result
             // delegatecall returns 0 on error.
-            case 0 {revert(0, returndatasize)}
-            default {return (0, returndatasize)}
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
         }
     }
 
-    function() payable external {
+    fallback() external payable {
         require(msg.data.length != 0, "transfers not allowed");
         _delegate(libAddress);
+    }
+
+    receive() external payable {
+        revert("transfers not allowed");
     }
 
     /*
@@ -68,14 +77,21 @@ contract SFC is SFCBase, Version {
 
     function rewardsStash(address delegator, uint256 validatorID) public view returns (uint256) {
         Rewards memory stash = _rewardsStash[delegator][validatorID];
-        return stash.lockupBaseReward.add(stash.lockupExtraReward).add(stash.unlockedReward);
+        return stash.lockupBaseReward + stash.lockupExtraReward + stash.unlockedReward;
     }
 
     /*
     Constructor
     */
 
-    function initialize(uint256 sealedEpoch, uint256 _totalSupply, address nodeDriver, address lib, address _c, address owner) external initializer {
+    function initialize(
+        uint256 sealedEpoch,
+        uint256 _totalSupply,
+        address nodeDriver,
+        address lib,
+        address _c,
+        address owner
+    ) external initializer {
         Ownable.initialize(owner);
         currentSealedEpoch = sealedEpoch;
         node = NodeDriverAuth(nodeDriver);
@@ -86,19 +102,19 @@ contract SFC is SFCBase, Version {
         getEpochSnapshot[sealedEpoch].endTime = _now();
     }
 
-    function updateStakeTokenizerAddress(address addr) onlyOwner external {
+    function updateStakeTokenizerAddress(address addr) external onlyOwner {
         stakeTokenizerAddress = addr;
     }
 
-    function updateLibAddress(address v) onlyOwner external {
+    function updateLibAddress(address v) external onlyOwner {
         libAddress = v;
     }
 
-    function updateTreasuryAddress(address v) onlyOwner external {
+    function updateTreasuryAddress(address v) external onlyOwner {
         treasuryAddress = v;
     }
 
-    function updateConstsAddress(address v) onlyOwner external {
+    function updateConstsAddress(address v) external onlyOwner {
         c = ConstantsManager(v);
     }
 
@@ -106,7 +122,7 @@ contract SFC is SFCBase, Version {
         return address(c);
     }
 
-    function updateVoteBookAddress(address v) onlyOwner external {
+    function updateVoteBookAddress(address v) external onlyOwner {
         voteBookAddress = v;
     }
 
@@ -132,7 +148,10 @@ contract SFC is SFCBase, Version {
         require(_validatorExists(validatorID), "validator doesn't exist");
         require(keccak256(pubkey) != keccak256(getValidatorPubkey[validatorID]), "same pubkey");
         require(pubkeyHashToValidatorID[keccak256(pubkey)] == 0, "already used");
-        require(validatorPubkeyChanges[validatorID] == 0 || validatorID == 64 || validatorID <= 12, "allowed only once");
+        require(
+            validatorPubkeyChanges[validatorID] == 0 || validatorID == 64 || validatorID <= 12,
+            "allowed only once"
+        );
 
         validatorPubkeyChanges[validatorID]++;
         pubkeyHashToValidatorID[keccak256(pubkey)] = validatorID;
@@ -140,7 +159,7 @@ contract SFC is SFCBase, Version {
         _syncValidator(validatorID, true);
     }
 
-    function setRedirectionAuthorizer(address v) onlyOwner external {
+    function setRedirectionAuthorizer(address v) external onlyOwner {
         require(redirectionAuthorizer != v, "same");
         redirectionAuthorizer = v;
     }
@@ -170,10 +189,18 @@ contract SFC is SFCBase, Version {
     Epoch callbacks
     */
 
-    function _sealEpoch_offline(EpochSnapshot storage snapshot, uint256[] memory validatorIDs, uint256[] memory offlineTime, uint256[] memory offlineBlocks) internal {
+    function _sealEpoch_offline(
+        EpochSnapshot storage snapshot,
+        uint256[] memory validatorIDs,
+        uint256[] memory offlineTime,
+        uint256[] memory offlineBlocks
+    ) internal {
         // mark offline nodes
         for (uint256 i = 0; i < validatorIDs.length; i++) {
-            if (offlineBlocks[i] > c.offlinePenaltyThresholdBlocksNum() && offlineTime[i] >= c.offlinePenaltyThresholdTime()) {
+            if (
+                offlineBlocks[i] > c.offlinePenaltyThresholdBlocksNum() &&
+                offlineTime[i] >= c.offlinePenaltyThresholdTime()
+            ) {
                 _setValidatorDeactivated(validatorIDs[i], OFFLINE_BIT);
                 _syncValidator(validatorIDs[i], false);
             }
@@ -191,8 +218,21 @@ contract SFC is SFCBase, Version {
         uint256 epochFee;
     }
 
-    function _sealEpoch_rewards(uint256 epochDuration, EpochSnapshot storage snapshot, EpochSnapshot storage prevSnapshot, uint256[] memory validatorIDs, uint256[] memory uptimes, uint256[] memory accumulatedOriginatedTxsFee) internal {
-        _SealEpochRewardsCtx memory ctx = _SealEpochRewardsCtx(new uint[](validatorIDs.length), 0, new uint[](validatorIDs.length), 0, 0);
+    function _sealEpoch_rewards(
+        uint256 epochDuration,
+        EpochSnapshot storage snapshot,
+        EpochSnapshot storage prevSnapshot,
+        uint256[] memory validatorIDs,
+        uint256[] memory uptimes,
+        uint256[] memory accumulatedOriginatedTxsFee
+    ) internal {
+        _SealEpochRewardsCtx memory ctx = _SealEpochRewardsCtx(
+            new uint[](validatorIDs.length),
+            0,
+            new uint[](validatorIDs.length),
+            0,
+            0
+        );
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             uint256 prevAccumulatedTxsFee = prevSnapshot.accumulatedOriginatedTxsFee[validatorIDs[i]];
@@ -203,20 +243,29 @@ contract SFC is SFCBase, Version {
             // txRewardWeight = {originatedTxsFee} * {uptime}
             // originatedTxsFee is roughly proportional to {uptime} * {stake}, so the whole formula is roughly
             // {stake} * {uptime} ^ 2
-            ctx.txRewardWeights[i] = originatedTxsFee * uptimes[i] / epochDuration;
-            ctx.totalTxRewardWeight = ctx.totalTxRewardWeight.add(ctx.txRewardWeights[i]);
-            ctx.epochFee = ctx.epochFee.add(originatedTxsFee);
+            ctx.txRewardWeights[i] = (originatedTxsFee * uptimes[i]) / epochDuration;
+            ctx.totalTxRewardWeight = ctx.totalTxRewardWeight + ctx.txRewardWeights[i];
+            ctx.epochFee = ctx.epochFee + originatedTxsFee;
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             // baseRewardWeight = {stake} * {uptime ^ 2}
-            ctx.baseRewardWeights[i] = (((snapshot.receivedStake[validatorIDs[i]] * uptimes[i]) / epochDuration) * uptimes[i]) / epochDuration;
-            ctx.totalBaseRewardWeight = ctx.totalBaseRewardWeight.add(ctx.baseRewardWeights[i]);
+            ctx.baseRewardWeights[i] =
+                (((snapshot.receivedStake[validatorIDs[i]] * uptimes[i]) / epochDuration) * uptimes[i]) /
+                epochDuration;
+            ctx.totalBaseRewardWeight = ctx.totalBaseRewardWeight + ctx.baseRewardWeights[i];
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
-            uint256 rawReward = _calcRawValidatorEpochBaseReward(epochDuration, c.baseRewardPerSecond(), ctx.baseRewardWeights[i], ctx.totalBaseRewardWeight);
-            rawReward = rawReward.add(_calcRawValidatorEpochTxReward(ctx.epochFee, ctx.txRewardWeights[i], ctx.totalTxRewardWeight));
+            uint256 rawReward = _calcRawValidatorEpochBaseReward(
+                epochDuration,
+                c.baseRewardPerSecond(),
+                ctx.baseRewardWeights[i],
+                ctx.totalBaseRewardWeight
+            );
+            rawReward =
+                rawReward +
+                _calcRawValidatorEpochTxReward(ctx.epochFee, ctx.txRewardWeights[i], ctx.totalTxRewardWeight);
 
             uint256 validatorID = validatorIDs[i];
             address validatorAddr = getValidator[validatorID].auth;
@@ -224,12 +273,24 @@ contract SFC is SFCBase, Version {
             uint256 commissionRewardFull = _calcValidatorCommission(rawReward, c.validatorCommission());
             uint256 selfStake = getStake[validatorAddr][validatorID];
             if (selfStake != 0) {
-                uint256 lCommissionRewardFull = (commissionRewardFull * getLockedStake(validatorAddr, validatorID)) / selfStake;
+                uint256 lCommissionRewardFull = (commissionRewardFull * getLockedStake(validatorAddr, validatorID)) /
+                    selfStake;
                 uint256 uCommissionRewardFull = commissionRewardFull - lCommissionRewardFull;
-                Rewards memory lCommissionReward = _scaleLockupReward(lCommissionRewardFull, getLockupInfo[validatorAddr][validatorID].duration);
+                Rewards memory lCommissionReward = _scaleLockupReward(
+                    lCommissionRewardFull,
+                    getLockupInfo[validatorAddr][validatorID].duration
+                );
                 Rewards memory uCommissionReward = _scaleLockupReward(uCommissionRewardFull, 0);
-                _rewardsStash[validatorAddr][validatorID] = sumRewards(_rewardsStash[validatorAddr][validatorID], lCommissionReward, uCommissionReward);
-                getStashedLockupRewards[validatorAddr][validatorID] = sumRewards(getStashedLockupRewards[validatorAddr][validatorID], lCommissionReward, uCommissionReward);
+                _rewardsStash[validatorAddr][validatorID] = sumRewards(
+                    _rewardsStash[validatorAddr][validatorID],
+                    lCommissionReward,
+                    uCommissionReward
+                );
+                getStashedLockupRewards[validatorAddr][validatorID] = sumRewards(
+                    getStashedLockupRewards[validatorAddr][validatorID],
+                    lCommissionReward,
+                    uCommissionReward
+                );
             }
             // accounting reward per token for delegators
             uint256 delegatorsReward = rawReward - commissionRewardFull;
@@ -239,7 +300,9 @@ contract SFC is SFCBase, Version {
             if (receivedStake != 0) {
                 rewardPerToken = (delegatorsReward * Decimal.unit()) / receivedStake;
             }
-            snapshot.accumulatedRewardPerToken[validatorID] = prevSnapshot.accumulatedRewardPerToken[validatorID] + rewardPerToken;
+            snapshot.accumulatedRewardPerToken[validatorID] =
+                prevSnapshot.accumulatedRewardPerToken[validatorID] +
+                rewardPerToken;
 
             snapshot.accumulatedOriginatedTxsFee[validatorID] = accumulatedOriginatedTxsFee[i];
             snapshot.accumulatedUptime[validatorID] = prevSnapshot.accumulatedUptime[validatorID] + uptimes[i];
@@ -256,32 +319,40 @@ contract SFC is SFCBase, Version {
 
         // transfer 10% of fees to treasury
         if (treasuryAddress != address(0)) {
-            uint256 feeShare = ctx.epochFee * c.treasuryFeeShare() / Decimal.unit();
+            uint256 feeShare = (ctx.epochFee * c.treasuryFeeShare()) / Decimal.unit();
             _mintNativeToken(feeShare);
-            treasuryAddress.call.value(feeShare).gas(1000000)("");
+            (bool success, ) = treasuryAddress.call{value: feeShare, gas: 1000000}("");
+            require(success, "treasury transfer failed");
         }
     }
-
 
     function _sealEpoch_minGasPrice(uint256 epochDuration, uint256 epochGas) internal {
         // change minGasPrice proportionally to the difference between target and received epochGas
         uint256 targetEpochGas = epochDuration * c.targetGasPowerPerSecond() + 1;
-        uint256 gasPriceDeltaRatio = epochGas * Decimal.unit() / targetEpochGas;
+        uint256 gasPriceDeltaRatio = (epochGas * Decimal.unit()) / targetEpochGas;
         uint256 counterweight = c.gasPriceBalancingCounterweight();
         // scale down the change speed (estimate gasPriceDeltaRatio ^ (epochDuration / counterweight))
-        gasPriceDeltaRatio = (epochDuration * gasPriceDeltaRatio + counterweight * Decimal.unit()) / (epochDuration + counterweight);
+        gasPriceDeltaRatio =
+            (epochDuration * gasPriceDeltaRatio + counterweight * Decimal.unit()) /
+            (epochDuration + counterweight);
         // limit the max/min possible delta in one epoch
         gasPriceDeltaRatio = GP.trimGasPriceChangeRatio(gasPriceDeltaRatio);
 
         // apply the ratio
-        uint256 newMinGasPrice = minGasPrice * gasPriceDeltaRatio / Decimal.unit();
+        uint256 newMinGasPrice = (minGasPrice * gasPriceDeltaRatio) / Decimal.unit();
         // limit the max/min possible minGasPrice
         newMinGasPrice = GP.trimMinGasPrice(newMinGasPrice);
         // apply new minGasPrice
         minGasPrice = newMinGasPrice;
     }
 
-    function sealEpoch(uint256[] calldata offlineTime, uint256[] calldata offlineBlocks, uint256[] calldata uptimes, uint256[] calldata originatedTxsFee, uint256 epochGas) external onlyDriver {
+    function sealEpoch(
+        uint256[] calldata offlineTime,
+        uint256[] calldata offlineBlocks,
+        uint256[] calldata uptimes,
+        uint256[] calldata originatedTxsFee,
+        uint256 epochGas
+    ) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         uint256[] memory validatorIDs = snapshot.validatorIDs;
 
@@ -309,7 +380,7 @@ contract SFC is SFCBase, Version {
             uint256 validatorID = nextValidatorIDs[i];
             uint256 receivedStake = getValidator[validatorID].receivedStake;
             snapshot.receivedStake[validatorID] = receivedStake;
-            snapshot.totalStake = snapshot.totalStake.add(receivedStake);
+            snapshot.totalStake = snapshot.totalStake + receivedStake;
         }
         snapshot.validatorIDs = nextValidatorIDs;
         node.updateMinGasPrice(minGasPrice);
