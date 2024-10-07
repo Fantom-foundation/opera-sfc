@@ -101,8 +101,6 @@ interface SFCI {
 
     function slashingRefundRatio(uint256) external view returns (uint256);
 
-    function stakeTokenizerAddress() external view returns (address);
-
     function stashedRewardsUntilEpoch(address, uint256) external view returns (uint256);
 
     function totalActiveStake() external view returns (uint256);
@@ -171,8 +169,6 @@ interface SFCI {
 
     function updateSlashingRefundRatio(uint256 validatorID, uint256 refundRatio) external;
 
-    function updateStakeTokenizerAddress(address addr) external;
-
     function updateTreasuryAddress(address v) external;
 
     function burnFTM(uint256 amount) external;
@@ -232,10 +228,6 @@ interface SFCI {
     function updateVoteBookAddress(address v) external;
 
     function voteBookAddress() external view returns (address);
-
-    function liquidateSFTM(address delegator, uint256 toValidatorID, uint256 amount) external;
-
-    function updateSFTMFinalizer(address v) external;
 
     function updateValidatorPubkey(bytes calldata pubkey) external;
 
