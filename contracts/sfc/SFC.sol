@@ -102,10 +102,6 @@ contract SFC is SFCBase, Version {
         getEpochSnapshot[sealedEpoch].endTime = _now();
     }
 
-    function updateStakeTokenizerAddress(address addr) external onlyOwner {
-        stakeTokenizerAddress = addr;
-    }
-
     function updateLibAddress(address v) external onlyOwner {
         libAddress = v;
     }
