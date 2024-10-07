@@ -228,7 +228,6 @@ contract NodeDriverAuth is Initializable, Ownable {
 }
 
 contract NodeDriver is Initializable {
-    uint256 private erased0;
     NodeDriverAuth internal backend;
     EVMWriter internal evmWriter;
 

@@ -32,18 +32,9 @@ contract ConstantsManager is Ownable {
     uint256 public targetGasPowerPerSecond;
     uint256 public gasPriceBalancingCounterweight;
 
-    address private secondaryOwner_erased;
-
-    //    event SecondaryOwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
     function initialize() external initializer {
         Ownable.initialize(msg.sender);
     }
-
-    //    function setSecondaryOwner(address v) onlyOwner external {
-    //        emit SecondaryOwnershipTransferred(secondaryOwner, v);
-    //        secondaryOwner = v;
-    //    }
 
     function updateMinSelfStake(uint256 v) external virtual onlyOwner {
         require(v >= 100000 * 1e18, "too small value");

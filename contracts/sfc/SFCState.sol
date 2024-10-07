@@ -79,17 +79,11 @@ contract SFCState is Initializable, Ownable {
         uint256 totalSupply;
     }
 
-    uint256 private erased0;
     uint256 public totalSupply;
     mapping(uint256 => EpochSnapshot) public getEpochSnapshot;
 
-    uint256 private erased1;
-    uint256 private erased2;
-
     mapping(uint256 => uint256) public slashingRefundRatio; // validator ID -> (slashing refund ratio)
 
-    uint256 private erased3;
-    uint256 private erased4;
     uint256 public minGasPrice;
 
     address public treasuryAddress;
