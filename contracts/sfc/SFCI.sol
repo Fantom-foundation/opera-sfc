@@ -229,10 +229,6 @@ interface SFCI {
 
     function voteBookAddress() external view returns (address);
 
-    function liquidateSFTM(address delegator, uint256 toValidatorID, uint256 amount) external;
-
-    function updateSFTMFinalizer(address v) external;
-
     function updateValidatorPubkey(bytes calldata pubkey) external;
 
     function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external;

@@ -122,10 +122,6 @@ contract SFC is SFCBase, Version {
         voteBookAddress = v;
     }
 
-    function updateSFTMFinalizer(address v) external onlyOwner {
-        sftmFinalizer = v;
-    }
-
     function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external {
         for (uint256 vid = start; vid < end; vid++) {
             bytes memory pubkey = getValidatorPubkey[vid];
