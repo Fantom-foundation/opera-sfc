@@ -413,6 +413,17 @@ describe('SFC', () => {
         expect(await this.sfc.currentEpoch.call()).to.equal(6);
         expect(await this.sfc.currentSealedEpoch()).to.equal(5);
       });
+
+      it('Should succeed and return endBlock', async function () {
+        const epochNumber = await this.sfc.currentEpoch();
+        await this.sfc.enableNonNodeCalls();
+        await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102], 0);
+        const lastBlock = await ethers.provider.getBlock('latest');
+        expect(lastBlock).to.not.equal(null);
+        // endBlock is on second position
+        expect((await this.sfc.getEpochSnapshot(epochNumber))[1]).to.equal(lastBlock!.number);
+        expect(await this.sfc.getEpochEndBlock(epochNumber)).to.equal(lastBlock!.number);
+      });
     });
   });
 
