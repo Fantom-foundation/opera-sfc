@@ -369,6 +369,7 @@ contract SFC is SFCBase, Version {
 
         currentSealedEpoch = currentEpoch();
         snapshot.endTime = _now();
+        snapshot.endBlock = block.number;
         snapshot.baseRewardPerSecond = c.baseRewardPerSecond();
         snapshot.totalSupply = totalSupply;
     }
