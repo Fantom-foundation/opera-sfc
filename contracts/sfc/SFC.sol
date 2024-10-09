@@ -75,6 +75,10 @@ contract SFC is SFCBase, Version {
         return getEpochSnapshot[epoch].offlineBlocks[validatorID];
     }
 
+    function getEpochEndBlock(uint256 epoch) public view returns (uint256) {
+        return getEpochSnapshot[epoch].endBlock;
+    }
+
     function rewardsStash(address delegator, uint256 validatorID) public view returns (uint256) {
         Rewards memory stash = _rewardsStash[delegator][validatorID];
         return stash.lockupBaseReward + stash.lockupExtraReward + stash.unlockedReward;

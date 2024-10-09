@@ -120,6 +120,7 @@ interface SFCUnitTestI {
         view
         returns (
             uint256 endTime,
+            uint256 endBlock,
             uint256 epochFee,
             uint256 totalBaseRewardWeight,
             uint256 totalTxRewardWeight,
@@ -216,6 +217,8 @@ interface SFCUnitTestI {
     function getEpochOfflineTime(uint256 epoch, uint256 validatorID) external view returns (uint256);
 
     function getEpochOfflineBlocks(uint256 epoch, uint256 validatorID) external view returns (uint256);
+
+    function getEpochEndBlock(uint256 epoch) external view returns (uint256);
 
     function rewardsStash(address delegator, uint256 validatorID) external view returns (uint256);
 
