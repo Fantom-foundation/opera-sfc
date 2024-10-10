@@ -19,6 +19,11 @@ contract ReentrancyGuard is Initializable {
     // counter to allow mutex lock with only one SSTORE operation
     uint256 private _guardCounter;
 
+    /**
+     * @dev Reentrant call.
+     */
+    error ReentrantCall();
+
     function initialize() internal initializer {
         // The counter starts at one to prevent changing it from zero to a non-zero
         // value, which is a more expensive operation.
@@ -36,7 +41,9 @@ contract ReentrancyGuard is Initializable {
         _guardCounter += 1;
         uint256 localCounter = _guardCounter;
         _;
-        require(localCounter == _guardCounter, "ReentrancyGuard: reentrant call");
+        if (localCounter != _guardCounter) {
+            revert ReentrantCall();
+        }
     }
 
     uint256[50] private ______gap;
