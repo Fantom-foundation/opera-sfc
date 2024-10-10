@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./Initializable.sol";
+import {Initializable} from "./Initializable.sol";
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
