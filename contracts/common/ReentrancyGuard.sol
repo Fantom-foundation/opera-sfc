@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./Initializable.sol";
+import {Initializable} from "./Initializable.sol";
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -18,6 +18,11 @@ import "./Initializable.sol";
 contract ReentrancyGuard is Initializable {
     // counter to allow mutex lock with only one SSTORE operation
     uint256 private _guardCounter;
+
+    /**
+     * @dev Reentrant call.
+     */
+    error ReentrantCall();
 
     function initialize() internal initializer {
         // The counter starts at one to prevent changing it from zero to a non-zero
@@ -36,7 +41,9 @@ contract ReentrancyGuard is Initializable {
         _guardCounter += 1;
         uint256 localCounter = _guardCounter;
         _;
-        require(localCounter == _guardCounter, "ReentrancyGuard: reentrant call");
+        if (localCounter != _guardCounter) {
+            revert ReentrantCall();
+        }
     }
 
     uint256[50] private ______gap;

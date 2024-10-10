@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "../common/Initializable.sol";
-
+import {Initializable} from "../common/Initializable.sol";
 /**
  * @dev Contract module which provides a basic access control mechanism, where
  * there is an account (an owner) that can be granted exclusive access to
@@ -14,6 +13,16 @@ import "../common/Initializable.sol";
  */
 contract Ownable is Initializable {
     address private _owner;
+
+    /**
+     * @dev The caller is not the owner.
+     */
+    error NotOwner();
+
+    /**
+     * @dev Given zero address.
+     */
+    error ZeroAddress();
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
@@ -36,7 +45,9 @@ contract Ownable is Initializable {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(isOwner(), "Ownable: caller is not the owner");
+        if (!isOwner()) {
+            revert NotOwner();
+        }
         _;
     }
 
@@ -71,7 +82,9 @@ contract Ownable is Initializable {
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
      */
     function _transferOwnership(address newOwner) internal {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        if (newOwner == address(0)) {
+            revert ZeroAddress();
+        }
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
     }

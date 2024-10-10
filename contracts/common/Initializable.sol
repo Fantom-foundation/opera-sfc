@@ -25,10 +25,17 @@ contract Initializable {
     bool private initializing;
 
     /**
+     * @dev The contract instance has already been initialized.
+     */
+    error ContractInitialized();
+
+    /**
      * @dev Modifier to use in the initializer function of a contract.
      */
     modifier initializer() {
-        require(initializing || !initialized, "Contract instance has already been initialized");
+        if (!initializing && initialized) {
+            revert ContractInitialized();
+        }
 
         bool isTopLevelCall = !initializing;
         if (isTopLevelCall) {
