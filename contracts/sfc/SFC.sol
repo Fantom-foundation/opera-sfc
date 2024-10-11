@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./GasPriceConstants.sol";
-import "../version/Version.sol";
-import "./SFCBase.sol";
+import {Ownable} from "../ownership/Ownable.sol";
+import {Decimal} from "../common/Decimal.sol";
+import {SFCBase} from "./SFCBase.sol";
+import {NodeDriverAuth} from "./NodeDriverAuth.sol";
+import {ConstantsManager} from "./ConstantsManager.sol";
+import {GP} from "./GasPriceConstants.sol";
+import {Version} from "../version/Version.sol";
 
 /**
  * @dev Stakers contract defines data structure and methods for validators / validators.
@@ -34,6 +38,7 @@ contract SFC is SFCBase, Version {
         }
     }
 
+    // solhint-disable-next-line no-complex-fallback
     fallback() external payable {
         require(msg.data.length != 0, "transfers not allowed");
         _delegate(libAddress);
@@ -181,7 +186,7 @@ contract SFC is SFCBase, Version {
     Epoch callbacks
     */
 
-    function _sealEpoch_offline(
+    function _sealEpochOffline(
         EpochSnapshot storage snapshot,
         uint256[] memory validatorIDs,
         uint256[] memory offlineTime,
@@ -202,7 +207,7 @@ contract SFC is SFCBase, Version {
         }
     }
 
-    struct _SealEpochRewardsCtx {
+    struct SealEpochRewardsCtx {
         uint256[] baseRewardWeights;
         uint256 totalBaseRewardWeight;
         uint256[] txRewardWeights;
@@ -210,7 +215,7 @@ contract SFC is SFCBase, Version {
         uint256 epochFee;
     }
 
-    function _sealEpoch_rewards(
+    function _sealEpochRewards(
         uint256 epochDuration,
         EpochSnapshot storage snapshot,
         EpochSnapshot storage prevSnapshot,
@@ -218,10 +223,10 @@ contract SFC is SFCBase, Version {
         uint256[] memory uptimes,
         uint256[] memory accumulatedOriginatedTxsFee
     ) internal {
-        _SealEpochRewardsCtx memory ctx = _SealEpochRewardsCtx(
-            new uint[](validatorIDs.length),
+        SealEpochRewardsCtx memory ctx = SealEpochRewardsCtx(
+            new uint256[](validatorIDs.length),
             0,
-            new uint[](validatorIDs.length),
+            new uint256[](validatorIDs.length),
             0,
             0
         );
@@ -318,7 +323,7 @@ contract SFC is SFCBase, Version {
         }
     }
 
-    function _sealEpoch_minGasPrice(uint256 epochDuration, uint256 epochGas) internal {
+    function _sealEpochMinGasPrice(uint256 epochDuration, uint256 epochGas) internal {
         // change minGasPrice proportionally to the difference between target and received epochGas
         uint256 targetEpochGas = epochDuration * c.targetGasPowerPerSecond() + 1;
         uint256 gasPriceDeltaRatio = (epochGas * Decimal.unit()) / targetEpochGas;
@@ -348,15 +353,15 @@ contract SFC is SFCBase, Version {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         uint256[] memory validatorIDs = snapshot.validatorIDs;
 
-        _sealEpoch_offline(snapshot, validatorIDs, offlineTime, offlineBlocks);
+        _sealEpochOffline(snapshot, validatorIDs, offlineTime, offlineBlocks);
         {
             EpochSnapshot storage prevSnapshot = getEpochSnapshot[currentSealedEpoch];
             uint256 epochDuration = 1;
             if (_now() > prevSnapshot.endTime) {
                 epochDuration = _now() - prevSnapshot.endTime;
             }
-            _sealEpoch_rewards(epochDuration, snapshot, prevSnapshot, validatorIDs, uptimes, originatedTxsFee);
-            _sealEpoch_minGasPrice(epochDuration, epochGas);
+            _sealEpochRewards(epochDuration, snapshot, prevSnapshot, validatorIDs, uptimes, originatedTxsFee);
+            _sealEpochMinGasPrice(epochDuration, epochGas);
         }
 
         currentSealedEpoch = currentEpoch();

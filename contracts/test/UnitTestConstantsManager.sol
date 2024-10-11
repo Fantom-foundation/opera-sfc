@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
-import "../sfc/ConstantsManager.sol";
+
+import {ConstantsManager} from "../sfc/ConstantsManager.sol";
 
 contract UnitTestConstantsManager is ConstantsManager {
     function updateMinSelfStake(uint256 v) external override onlyOwner {

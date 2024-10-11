@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "../common/Decimal.sol";
-import "./GasPriceConstants.sol";
-import "./SFCBase.sol";
-import "./NodeDriver.sol";
+import {Decimal} from "../common/Decimal.sol";
+import {SFCBase} from "./SFCBase.sol";
 
 contract SFCLib is SFCBase {
     event CreatedValidator(
@@ -180,6 +178,7 @@ contract SFCLib is SFCBase {
     }
 
     function recountVotes(address delegator, address validatorAuth, bool strict, uint256 gas) external {
+        // solhint-disable-next-line avoid-low-level-calls
         (bool success, ) = voteBookAddress.call{gas: gas}(
             abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth)
         );
@@ -319,21 +318,21 @@ contract SFCLib is SFCBase {
 
     // find highest epoch such that _isLockedUpAtEpoch returns true (using binary search)
     function _highestLockupEpoch(address delegator, uint256 validatorID) internal view returns (uint256) {
-        uint256 l = getLockupInfo[delegator][validatorID].fromEpoch;
+        uint256 fromEpoch = getLockupInfo[delegator][validatorID].fromEpoch;
         uint256 r = currentSealedEpoch;
         if (_isLockedUpAtEpoch(delegator, validatorID, r)) {
             return r;
         }
-        if (!_isLockedUpAtEpoch(delegator, validatorID, l)) {
+        if (!_isLockedUpAtEpoch(delegator, validatorID, fromEpoch)) {
             return 0;
         }
-        if (l > r) {
+        if (fromEpoch > r) {
             return 0;
         }
-        while (l < r) {
-            uint256 m = (l + r) / 2;
+        while (fromEpoch < r) {
+            uint256 m = (fromEpoch + r) / 2;
             if (_isLockedUpAtEpoch(delegator, validatorID, m)) {
-                l = m + 1;
+                fromEpoch = m + 1;
             } else {
                 r = m;
             }
@@ -824,15 +823,15 @@ contract SFCLib is SFCBase {
         if (step == 0) {
             return;
         }
-        uint256 RPS = (_getAvgUptime(toValidatorID, duration, step) * 2092846271) / duration; // corresponds to 6.6% APR
+        uint256 rps = (_getAvgUptime(toValidatorID, duration, step) * 2092846271) / duration; // corresponds to 6.6% APR
         uint256 selfStake = getStake[delegator][toValidatorID];
 
-        uint256 avgFullReward = (((selfStake * RPS * duration) / 1e18) * (Decimal.unit() - c.validatorCommission())) /
+        uint256 avgFullReward = (((selfStake * rps * duration) / 1e18) * (Decimal.unit() - c.validatorCommission())) /
             Decimal.unit(); // reward for self-stake
         if (getValidator[toValidatorID].auth == delegator) {
             // reward for received portion of stake
             uint256 receivedStakeAvg = (_getAvgReceivedStake(toValidatorID, duration, step) * 11) / 10;
-            avgFullReward += (((receivedStakeAvg * RPS * duration) / 1e18) * c.validatorCommission()) / Decimal.unit();
+            avgFullReward += (((receivedStakeAvg * rps * duration) / 1e18) * c.validatorCommission()) / Decimal.unit();
         }
         avgFullReward = (avgFullReward * lockedStake) / selfStake;
         Rewards memory avgReward = _scaleLockupReward(avgFullReward, duration);

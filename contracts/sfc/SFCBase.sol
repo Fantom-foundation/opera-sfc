@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./SFCState.sol";
+import {Decimal} from "../common/Decimal.sol";
+import {SFCState} from "./SFCState.sol";
 
 contract SFCBase is SFCState {
     uint256 internal constant OK_STATUS = 0;
@@ -92,6 +93,7 @@ contract SFCBase is SFCState {
     function _recountVotes(address delegator, address validatorAuth, bool strict) internal {
         if (voteBookAddress != address(0)) {
             // Don't allow recountVotes to use up all the gas
+            // solhint-disable-next-line avoid-low-level-calls
             (bool success, ) = voteBookAddress.call{gas: 8000000}(
                 abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth)
             );
