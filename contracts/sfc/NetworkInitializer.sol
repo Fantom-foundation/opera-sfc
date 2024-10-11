@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./SFCI.sol";
-import "./NodeDriver.sol";
-import "./SFCLib.sol";
-import "./ConstantsManager.sol";
+import {SFCI} from "./SFCI.sol";
+import {NodeDriver, NodeDriverAuth} from "./NodeDriver.sol";
+import {ConstantsManager} from "./ConstantsManager.sol";
+import {Decimal} from "../common/Decimal.sol";
 
 contract NetworkInitializer {
     // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
