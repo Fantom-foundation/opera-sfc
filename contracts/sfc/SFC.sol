@@ -142,19 +142,12 @@ contract SFC is SFCBase, Version {
     }
 
     function updateValidatorPubkey(bytes calldata pubkey) external {
-        // TODO: Valid requirements?
-        if (getValidator[1].auth != 0x541E408443A592C38e01Bed0cB31f9De8c1322d0) {
-            revert NotMainNet();
-        }
         if (pubkey.length != 66 || pubkey[0] != 0xc0) {
             revert MalformedPubkey();
         }
         uint256 validatorID = getValidatorID[msg.sender];
-        if (validatorID > 59 && validatorID != 64) {
-            revert NotLegacyValidator();
-        }
         if (!_validatorExists(validatorID)) {
-            revert ValidatorDoesNotExist();
+            revert ValidatorNotExists();
         }
         if (keccak256(pubkey) == keccak256(getValidatorPubkey[validatorID])) {
             revert SamePubkey();
@@ -162,7 +155,7 @@ contract SFC is SFCBase, Version {
         if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
             revert PubkeyExists();
         }
-        if (validatorPubkeyChanges[validatorID] != 0 && validatorID != 64 && validatorID > 12) {
+        if (validatorPubkeyChanges[validatorID] != 0) {
             revert PubkeyAllowedOnlyOnce();
         }
 
@@ -190,7 +183,7 @@ contract SFC is SFCBase, Version {
             revert NotAuthorized();
         }
         if (getRedirection[from] == to) {
-            revert AlreadyCompleted();
+            revert RequestedCompleted();
         }
         if (from == to) {
             revert SameAddress();
@@ -204,7 +197,7 @@ contract SFC is SFCBase, Version {
             revert ZeroAddress();
         }
         if (getRedirectionRequest[from] != to) {
-            revert NoRequest();
+            revert RequestNotExists();
         }
         getRedirection[from] = to;
         getRedirectionRequest[from] = address(0);
@@ -347,7 +340,9 @@ contract SFC is SFCBase, Version {
             uint256 feeShare = (ctx.epochFee * c.treasuryFeeShare()) / Decimal.unit();
             _mintNativeToken(feeShare);
             (bool success, ) = treasuryAddress.call{value: feeShare, gas: 1000000}("");
-            require(success, "treasury transfer failed");
+            if (!success) {
+                revert TransferFailed();
+            }
         }
     }
 

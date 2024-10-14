@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {Initializable} from "../common/Initializable.sol";
-import {ZeroAddress} from "../Errors.sol";
+import {IErrors} from "../IErrors.sol";
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -13,13 +13,8 @@ import {ZeroAddress} from "../Errors.sol";
  * `onlyOwner`, which can be aplied to your functions to restrict their use to
  * the owner.
  */
-contract Ownable is Initializable {
+contract Ownable is IErrors, Initializable {
     address private _owner;
-
-    /**
-     * @dev The caller is not the owner.
-     */
-    error NotOwner();
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 

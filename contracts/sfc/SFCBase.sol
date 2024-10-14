@@ -3,9 +3,9 @@ pragma solidity ^0.8.9;
 
 import {Decimal} from "../common/Decimal.sol";
 import {SFCState} from "./SFCState.sol";
-import "../Errors.sol";
+import {IErrors} from "../IErrors.sol";
 
-contract SFCBase is SFCState {
+contract SFCBase is IErrors, SFCState {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;
@@ -20,7 +20,9 @@ contract SFCBase is SFCState {
     }
 
     modifier onlyDriver() {
-        require(isNode(msg.sender), "caller is not the NodeDriverAuth contract");
+        if (!isNode(msg.sender)) {
+            revert NotDriverAuth();
+        }
         _;
     }
 
@@ -99,7 +101,9 @@ contract SFCBase is SFCState {
                 abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth)
             );
             // Don't revert if recountVotes failed unless strict mode enabled
-            require(success || !strict, "gov votes recounting failed");
+            if (!success && strict) {
+                revert GovVotesRecountFailed();
+            }
         }
     }
 
@@ -124,7 +128,9 @@ contract SFCBase is SFCState {
     }
 
     function _syncValidator(uint256 validatorID, bool syncPubkey) public {
-        require(_validatorExists(validatorID), "validator doesn't exist");
+        if (!_validatorExists(validatorID)) {
+            revert ValidatorNotExists();
+        }
         // emit special log for node
         uint256 weight = getValidator[validatorID].receivedStake;
         if (getValidator[validatorID].status != OK_STATUS) {

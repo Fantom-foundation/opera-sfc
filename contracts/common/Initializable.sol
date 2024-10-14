@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
+import {IErrors} from "../IErrors.sol";
+
 /**
  * @title Initializable
  *
@@ -13,7 +15,7 @@ pragma solidity ^0.8.9;
  * a parent initializer twice, or ensure that all initializers are idempotent,
  * because this is not dealt with automatically as with constructors.
  */
-contract Initializable {
+contract Initializable is IErrors {
     /**
      * @dev Indicates that the contract has been initialized.
      */
@@ -23,11 +25,6 @@ contract Initializable {
      * @dev Indicates that the contract is in the process of being initialized.
      */
     bool private initializing;
-
-    /**
-     * @dev The contract instance has already been initialized.
-     */
-    error ContractInitialized();
 
     /**
      * @dev Modifier to use in the initializer function of a contract.

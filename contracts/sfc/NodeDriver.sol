@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {Initializable} from "../common/Initializable.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
+import {IErrors} from "../IErrors.sol";
 
 interface EVMWriter {
     function setBalance(address acc, uint256 value) external;
@@ -16,7 +17,7 @@ interface EVMWriter {
     function incNonce(address acc, uint256 diff) external;
 }
 
-contract NodeDriver is Initializable {
+contract NodeDriver is IErrors, Initializable {
     NodeDriverAuth internal backend;
     EVMWriter internal evmWriter;
 
@@ -28,7 +29,9 @@ contract NodeDriver is Initializable {
     }
 
     modifier onlyBackend() {
-        require(msg.sender == address(backend), "caller is not the backend");
+        if (msg.sender != address(backend)) {
+            revert NotBackend();
+        }
         _;
     }
 
@@ -86,7 +89,9 @@ contract NodeDriver is Initializable {
     }
 
     modifier onlyNode() {
-        require(msg.sender == address(0), "not callable");
+        if (msg.sender != address(0)) {
+            revert NotNode();
+        }
         _;
     }
 
