@@ -40,12 +40,14 @@ contract SFC is SFCBase, Version {
 
     // solhint-disable-next-line no-complex-fallback
     fallback() external payable {
-        require(msg.data.length != 0, "transfers not allowed");
+        if (msg.data.length == 0) {
+            revert TransfersNotAllowed();
+        }
         _delegate(libAddress);
     }
 
     receive() external payable {
-        revert("transfers not allowed");
+        revert TransfersNotAllowed();
     }
 
     /*
@@ -131,24 +133,38 @@ contract SFC is SFCBase, Version {
         for (uint256 vid = start; vid < end; vid++) {
             bytes memory pubkey = getValidatorPubkey[vid];
             if (pubkey.length > 0 && pubkeyHashToValidatorID[keccak256(pubkey)] != vid) {
-                require(pubkeyHashToValidatorID[keccak256(pubkey)] == 0, "already exists");
+                if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
+                    revert PubkeyExists();
+                }
                 pubkeyHashToValidatorID[keccak256(pubkey)] = vid;
             }
         }
     }
 
     function updateValidatorPubkey(bytes calldata pubkey) external {
-        require(getValidator[1].auth == 0x541E408443A592C38e01Bed0cB31f9De8c1322d0, "not mainnet");
-        require(pubkey.length == 66 && pubkey[0] == 0xc0, "malformed pubkey");
+        // TODO: Valid requirements?
+        if (getValidator[1].auth != 0x541E408443A592C38e01Bed0cB31f9De8c1322d0) {
+            revert NotMainNet();
+        }
+        if (pubkey.length != 66 || pubkey[0] != 0xc0) {
+            revert MalformedPubkey();
+        }
         uint256 validatorID = getValidatorID[msg.sender];
-        require(validatorID <= 59 || validatorID == 64, "not legacy validator");
-        require(_validatorExists(validatorID), "validator doesn't exist");
-        require(keccak256(pubkey) != keccak256(getValidatorPubkey[validatorID]), "same pubkey");
-        require(pubkeyHashToValidatorID[keccak256(pubkey)] == 0, "already used");
-        require(
-            validatorPubkeyChanges[validatorID] == 0 || validatorID == 64 || validatorID <= 12,
-            "allowed only once"
-        );
+        if (validatorID > 59 && validatorID != 64) {
+            revert NotLegacyValidator();
+        }
+        if (!_validatorExists(validatorID)) {
+            revert ValidatorDoesNotExist();
+        }
+        if (keccak256(pubkey) == keccak256(getValidatorPubkey[validatorID])) {
+            revert SamePubkey();
+        }
+        if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
+            revert PubkeyExists();
+        }
+        if (validatorPubkeyChanges[validatorID] != 0 && validatorID != 64 && validatorID > 12) {
+            revert PubkeyAllowedOnlyOnce();
+        }
 
         validatorPubkeyChanges[validatorID]++;
         pubkeyHashToValidatorID[keccak256(pubkey)] = validatorID;
@@ -157,7 +173,9 @@ contract SFC is SFCBase, Version {
     }
 
     function setRedirectionAuthorizer(address v) external onlyOwner {
-        require(redirectionAuthorizer != v, "same");
+        if (redirectionAuthorizer == v) {
+            revert SameRedirectionAuthorizer();
+        }
         redirectionAuthorizer = v;
     }
 
@@ -168,16 +186,26 @@ contract SFC is SFCBase, Version {
     }
 
     function initiateRedirection(address from, address to) external {
-        require(msg.sender == redirectionAuthorizer, "not authorized");
-        require(getRedirection[from] != to, "already complete");
-        require(from != to, "same address");
+        if (msg.sender != redirectionAuthorizer) {
+            revert NotAuthorized();
+        }
+        if (getRedirection[from] == to) {
+            revert AlreadyCompleted();
+        }
+        if (from == to) {
+            revert SameAddress();
+        }
         getRedirectionRequest[from] = to;
     }
 
     function redirect(address to) external {
         address from = msg.sender;
-        require(to != address(0), "zero address");
-        require(getRedirectionRequest[from] == to, "no request");
+        if (to == address(0)) {
+            revert ZeroAddress();
+        }
+        if (getRedirectionRequest[from] != to) {
+            revert NoRequest();
+        }
         getRedirection[from] = to;
         getRedirectionRequest[from] = address(0);
     }

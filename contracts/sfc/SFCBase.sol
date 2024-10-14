@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {Decimal} from "../common/Decimal.sol";
 import {SFCState} from "./SFCState.sol";
+import "../Errors.sol";
 
 contract SFCBase is SFCState {
     uint256 internal constant OK_STATUS = 0;

@@ -52,7 +52,7 @@ describe('SFC', () => {
         to: this.sfc,
         value: 1,
       }),
-    ).to.revertedWith('transfers not allowed');
+    ).to.revertedWithCustomError(this.sfc, 'TransfersNotAllowed');
   });
 
   describe('Genesis validator', () => {

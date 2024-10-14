@@ -2,6 +2,8 @@
 pragma solidity ^0.8.9;
 
 import {Initializable} from "../common/Initializable.sol";
+import {ZeroAddress} from "../Errors.sol";
+
 /**
  * @dev Contract module which provides a basic access control mechanism, where
  * there is an account (an owner) that can be granted exclusive access to
@@ -18,11 +20,6 @@ contract Ownable is Initializable {
      * @dev The caller is not the owner.
      */
     error NotOwner();
-
-    /**
-     * @dev Given zero address.
-     */
-    error ZeroAddress();
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
