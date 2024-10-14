@@ -92,14 +92,17 @@ describe('NodeDriver', () => {
       const account = ethers.Wallet.createRandom();
       const key = ethers.encodeBytes32String('testKey');
       const value = ethers.encodeBytes32String('testValue');
-      await expect(this.nodeDriver.setStorage(account, key, value)).to.be.revertedWith('caller is not the backend');
+      await expect(this.nodeDriver.setStorage(account, key, value)).to.be.revertedWithCustomError(
+        this.nodeDriver,
+        'NotBackend',
+      );
     });
   });
 
   describe('Set backend', () => {
     it('Should revert when not backend', async function () {
       const account = ethers.Wallet.createRandom();
-      await expect(this.nodeDriver.setBackend(account)).to.be.revertedWith('caller is not the backend');
+      await expect(this.nodeDriver.setBackend(account)).to.be.revertedWithCustomError(this.nodeDriver, 'NotBackend');
     });
   });
 
@@ -107,7 +110,10 @@ describe('NodeDriver', () => {
     it('Should revert when not backend', async function () {
       const account = ethers.Wallet.createRandom();
       const account2 = ethers.Wallet.createRandom();
-      await expect(this.nodeDriver.swapCode(account, account2)).to.be.revertedWith('caller is not the backend');
+      await expect(this.nodeDriver.swapCode(account, account2)).to.be.revertedWithCustomError(
+        this.nodeDriver,
+        'NotBackend',
+      );
     });
   });
 
@@ -125,35 +131,44 @@ describe('NodeDriver', () => {
           0,
           0,
         ),
-      ).to.be.revertedWith('not callable');
+      ).to.be.revertedWithCustomError(this.nodeDriver, 'NotNode');
     });
   });
 
   describe('Deactivate validator', () => {
     it('Should revert when not node', async function () {
-      await expect(this.nodeDriver.deactivateValidator(0, 1)).to.be.revertedWith('not callable');
+      await expect(this.nodeDriver.deactivateValidator(0, 1)).to.be.revertedWithCustomError(this.nodeDriver, 'NotNode');
     });
   });
 
   describe('Set genesis delegation', () => {
     it('Should revert when not node', async function () {
       const account = ethers.Wallet.createRandom();
-      await expect(this.nodeDriver.setGenesisDelegation(account, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.revertedWith(
-        'not callable',
-      );
+      await expect(
+        this.nodeDriver.setGenesisDelegation(account, 1, 100, 0, 0, 0, 0, 0, 1000),
+      ).to.be.revertedWithCustomError(this.nodeDriver, 'NotNode');
     });
   });
 
   describe('Seal epoch validators', () => {
     it('Should revert when not node', async function () {
-      await expect(this.nodeDriver.sealEpochValidators([0, 1])).to.be.revertedWith('not callable');
+      await expect(this.nodeDriver.sealEpochValidators([0, 1])).to.be.revertedWithCustomError(
+        this.nodeDriver,
+        'NotNode',
+      );
     });
   });
 
   describe('Seal epoch', () => {
     it('Should revert when not node', async function () {
-      await expect(this.nodeDriver.sealEpoch([0, 1], [0, 1], [0, 1], [0, 1])).to.be.revertedWith('not callable');
-      await expect(this.nodeDriver.sealEpochV1([0, 1], [0, 1], [0, 1], [0, 1], 0)).to.be.revertedWith('not callable');
+      await expect(this.nodeDriver.sealEpoch([0, 1], [0, 1], [0, 1], [0, 1])).to.be.revertedWithCustomError(
+        this.nodeDriver,
+        'NotNode',
+      );
+      await expect(this.nodeDriver.sealEpochV1([0, 1], [0, 1], [0, 1], [0, 1], 0)).to.be.revertedWithCustomError(
+        this.nodeDriver,
+        'NotNode',
+      );
     });
   });
 });

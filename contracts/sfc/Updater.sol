@@ -8,6 +8,7 @@ import {ConstantsManager} from "./ConstantsManager.sol";
 import {SFC} from "./SFC.sol";
 import {SFCI} from "./SFCI.sol";
 import {Version} from "../version/Version.sol";
+import {IErrors} from "../IErrors.sol";
 
 interface GovI {
     function upgrade(address v) external;
@@ -21,7 +22,7 @@ interface GovVersion {
     function version() external pure returns (bytes4);
 }
 
-contract Updater {
+contract Updater is IErrors {
     address public sfcFrom;
     address public sfcLib;
     address public sfcConsts;
@@ -47,20 +48,29 @@ contract Updater {
         voteBook = _voteBook;
         owner = _owner;
         address sfcTo = address(0xFC00FACE00000000000000000000000000000000);
-        require(
-            sfcFrom != address(0) &&
-                sfcLib != address(0) &&
-                sfcConsts != address(0) &&
-                govTo != address(0) &&
-                govFrom != address(0) &&
-                voteBook != address(0) &&
-                owner != address(0),
-            "0 address"
-        );
-        require(Version(sfcTo).version() == "303", "SFC already updated");
-        require(Version(sfcFrom).version() == "304", "wrong SFC version");
-        require(GovVersion(govTo).version() == "0001", "gov already updated");
-        require(GovVersion(govFrom).version() == "0002", "wrong gov version");
+        if (
+            sfcFrom == address(0) ||
+            sfcLib == address(0) ||
+            sfcConsts == address(0) ||
+            govTo == address(0) ||
+            govFrom == address(0) ||
+            voteBook == address(0) ||
+            owner == address(0)
+        ) {
+            revert ZeroAddress();
+        }
+        if (Version(sfcTo).version() != "303") {
+            revert SFCAlreadyUpdated();
+        }
+        if (Version(sfcFrom).version() != "304") {
+            revert SFCWrongVersion();
+        }
+        if (GovVersion(govTo).version() != "0001") {
+            revert SFCGovAlreadyUpdated();
+        }
+        if (GovVersion(govFrom).version() != "0002") {
+            revert SFCWrongGovVersion();
+        }
     }
 
     function execute() external {

@@ -5,12 +5,13 @@ import {Initializable} from "../common/Initializable.sol";
 import {Ownable} from "../ownership/Ownable.sol";
 import {SFCI} from "./SFCI.sol";
 import {NodeDriver} from "./NodeDriver.sol";
+import {IErrors} from "../IErrors.sol";
 
 interface NodeDriverExecutable {
     function execute() external;
 }
 
-contract NodeDriverAuth is Initializable, Ownable {
+contract NodeDriverAuth is IErrors, Initializable, Ownable {
     SFCI internal sfc;
     NodeDriver internal driver;
 
@@ -22,12 +23,16 @@ contract NodeDriverAuth is Initializable, Ownable {
     }
 
     modifier onlySFC() {
-        require(msg.sender == address(sfc), "caller is not the SFC contract");
+        if (msg.sender != address(sfc)) {
+            revert NotSFC();
+        }
         _;
     }
 
     modifier onlyDriver() {
-        require(msg.sender == address(driver), "caller is not the NodeDriver contract");
+        if (msg.sender != address(driver)) {
+            revert NotDriver();
+        }
         _;
     }
 
@@ -40,8 +45,12 @@ contract NodeDriverAuth is Initializable, Ownable {
         NodeDriverExecutable(executable).execute();
         _transferOwnership(newOwner);
         //require(driver.backend() == address(this), "ownership of driver is lost");
-        require(_getCodeHash(address(this)) == selfCodeHash, "self code hash doesn't match");
-        require(_getCodeHash(address(driver)) == driverCodeHash, "driver code hash doesn't match");
+        if (_getCodeHash(address(this)) != selfCodeHash) {
+            revert SelfCodeHashMismatch();
+        }
+        if (_getCodeHash(address(driver)) != driverCodeHash) {
+            revert DriverCodeHashMismatch();
+        }
     }
 
     function execute(address executable) external onlyOwner {
@@ -58,12 +67,16 @@ contract NodeDriverAuth is Initializable, Ownable {
     }
 
     function incBalance(address acc, uint256 diff) external onlySFC {
-        require(acc == address(sfc), "recipient is not the SFC contract");
+        if (acc != address(sfc)) {
+            revert RecipientNotSFC();
+        }
         driver.setBalance(acc, address(acc).balance + diff);
     }
 
     function upgradeCode(address acc, address from) external onlyOwner {
-        require(isContract(acc) && isContract(from), "not a contract");
+        if (!isContract(acc) || !isContract(from)) {
+            revert NotContract();
+        }
         driver.copyCode(acc, from);
     }
 
