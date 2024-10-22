@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "../common/Decimal.sol";
 import "./GasPriceConstants.sol";
 import "./SFCBase.sol";
-import "./StakeTokenizer.sol";
 import "./NodeDriver.sol";
 
 contract SFCLib is SFCBase {
@@ -229,7 +228,6 @@ contract SFCLib is SFCBase {
 
         require(amount > 0, "zero amount");
         require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough unlocked stake");
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
 
         require(getWithdrawalRequest[delegator][toValidatorID][wrID].amount == 0, "wrID already exists");
 
@@ -242,37 +240,6 @@ contract SFCLib is SFCBase {
         _syncValidator(toValidatorID, false);
 
         emit Undelegated(delegator, toValidatorID, wrID, amount);
-    }
-
-    // liquidateSFTM is used for finalization of last fMint positions with outstanding sFTM balances
-    // it allows to undelegate without the unboding period, and also to unlock stake without a penalty.
-    // Such a simplification, which might be dangerous generally, is okay here because there's only a small amount
-    // of leftover sFTM
-    function liquidateSFTM(address delegator, uint256 toValidatorID, uint256 amount) external {
-        require(msg.sender == sftmFinalizer, "not sFTM finalizer");
-        _stashRewards(delegator, toValidatorID);
-
-        require(amount > 0, "zero amount");
-        StakeTokenizer(stakeTokenizerAddress).redeemSFTMFor(msg.sender, delegator, toValidatorID, amount);
-        require(amount <= getStake[delegator][toValidatorID], "not enough stake");
-        uint256 unlockedStake = getUnlockedStake(delegator, toValidatorID);
-        if (amount > unlockedStake) {
-            LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
-            ld.lockedStake = ld.lockedStake - amount - unlockedStake;
-            emit UnlockedStake(delegator, toValidatorID, amount - unlockedStake, 0);
-        }
-
-        _rawUndelegate(delegator, toValidatorID, amount, false, true, false);
-
-        _syncValidator(toValidatorID, false);
-
-        emit Undelegated(delegator, toValidatorID, 0xffffffffff, amount);
-
-        // It's important that we transfer after erasing (protection against Re-Entrancy)
-        (bool sent, ) = msg.sender.call{value: amount}("");
-        require(sent, "Failed to send FTM");
-
-        emit Withdrawn(delegator, toValidatorID, 0xffffffffff, amount);
     }
 
     function isSlashed(uint256 validatorID) public view returns (bool) {
@@ -298,7 +265,6 @@ contract SFCLib is SFCBase {
     function _withdraw(address delegator, uint256 toValidatorID, uint256 wrID, address payable receiver) private {
         WithdrawalRequest memory request = getWithdrawalRequest[delegator][toValidatorID][wrID];
         require(request.epoch != 0, "request doesn't exist");
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
 
         uint256 requestTime = request.time;
         uint256 requestEpoch = request.epoch;
@@ -455,7 +421,6 @@ contract SFCLib is SFCBase {
     }
 
     function _claimRewards(address delegator, uint256 toValidatorID) internal returns (Rewards memory rewards) {
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
         _stashRewards(delegator, toValidatorID);
         rewards = _rewardsStash[delegator][toValidatorID];
         uint256 totalReward = rewards.unlockedReward + rewards.lockupBaseReward + rewards.lockupExtraReward;
@@ -520,13 +485,6 @@ contract SFCLib is SFCBase {
         return
             getLockupInfo[delegator][toValidatorID].fromEpoch <= epoch &&
             epochEndTime(epoch) <= getLockupInfo[delegator][toValidatorID].endTime;
-    }
-
-    function _checkAllowedToWithdraw(address delegator, uint256 toValidatorID) internal view returns (bool) {
-        if (stakeTokenizerAddress == address(0)) {
-            return true;
-        }
-        return StakeTokenizer(stakeTokenizerAddress).allowedToWithdrawStake(delegator, toValidatorID);
     }
 
     function getUnlockedStake(address delegator, uint256 toValidatorID) public view returns (uint256) {
@@ -653,7 +611,6 @@ contract SFCLib is SFCBase {
         require(amount > 0, "zero amount");
         require(isLockedUp(delegator, toValidatorID), "not locked up");
         require(amount <= ld.lockedStake, "not enough locked stake");
-        require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
         require(!_redirected(delegator), "redirected");
 
         _stashRewards(delegator, toValidatorID);

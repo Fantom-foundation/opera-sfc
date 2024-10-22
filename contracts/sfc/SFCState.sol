@@ -88,8 +88,6 @@ contract SFCState is Initializable, Ownable {
 
     mapping(uint256 => uint256) public slashingRefundRatio; // validator ID -> (slashing refund ratio)
 
-    address public stakeTokenizerAddress;
-
     uint256 private erased3;
     uint256 private erased4;
     uint256 public minGasPrice;
@@ -101,8 +99,6 @@ contract SFCState is Initializable, Ownable {
     ConstantsManager internal c;
 
     address public voteBookAddress;
-
-    address internal sftmFinalizer;
 
     struct Penalty {
         uint256 amount;
