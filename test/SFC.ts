@@ -418,11 +418,10 @@ describe('SFC', () => {
         const epochNumber = await this.sfc.currentEpoch();
         await this.sfc.enableNonNodeCalls();
         await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102], 0);
-        const lastBlock = await ethers.provider.getBlock('latest');
-        expect(lastBlock).to.not.equal(null);
+        const lastBlock = await ethers.provider.getBlockNumber()
         // endBlock is on second position
-        expect((await this.sfc.getEpochSnapshot(epochNumber))[1]).to.equal(lastBlock!.number);
-        expect(await this.sfc.getEpochEndBlock(epochNumber)).to.equal(lastBlock!.number);
+        expect((await this.sfc.getEpochSnapshot(epochNumber))[1]).to.equal(lastBlock);
+        expect(await this.sfc.getEpochEndBlock(epochNumber)).to.equal(lastBlock);
       });
     });
   });
