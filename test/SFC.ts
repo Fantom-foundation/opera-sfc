@@ -292,15 +292,14 @@ describe('SFC', () => {
     it('Should revert when transferring ownership if not owner', async function () {
       await expect(this.sfc.connect(this.user).transferOwnership(ethers.ZeroAddress)).to.be.revertedWithCustomError(
         this.nodeDriverAuth,
-        'NotOwner',
+        'OwnableUnauthorizedAccount',
       );
     });
 
     it('Should revert when transferring ownership to zero address', async function () {
-      await expect(this.sfc.transferOwnership(ethers.ZeroAddress)).to.be.revertedWithCustomError(
-        this.nodeDriverAuth,
-        'ZeroAddress',
-      );
+      await expect(this.sfc.transferOwnership(ethers.ZeroAddress))
+        .to.be.revertedWithCustomError(this.nodeDriverAuth, 'OwnableInvalidOwner')
+        .withArgs(ethers.ZeroAddress);
     });
   });
 

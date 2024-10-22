@@ -15,14 +15,14 @@ contract Ownable is Initializable {
     address private _owner;
 
     /**
-     * @dev The caller is not the owner.
+     * @dev The caller account is not authorized to perform an operation.
      */
-    error NotOwner();
+    error OwnableUnauthorizedAccount(address account);
 
     /**
-     * @dev Given zero address.
+     * @dev The owner is not a valid owner account. (eg. `address(0)`)
      */
-    error ZeroAddress();
+    error OwnableInvalidOwner(address owner);
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
@@ -46,7 +46,7 @@ contract Ownable is Initializable {
      */
     modifier onlyOwner() {
         if (!isOwner()) {
-            revert NotOwner();
+            revert OwnableUnauthorizedAccount(msg.sender);
         }
         _;
     }
@@ -83,7 +83,7 @@ contract Ownable is Initializable {
      */
     function _transferOwnership(address newOwner) internal {
         if (newOwner == address(0)) {
-            revert ZeroAddress();
+            revert OwnableInvalidOwner(address(0));
         }
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
