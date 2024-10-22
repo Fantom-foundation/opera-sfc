@@ -178,8 +178,6 @@ interface SFCUnitTestI {
 
     function slashingRefundRatio(uint256) external view returns (uint256);
 
-    function stakeTokenizerAddress() external view returns (address);
-
     function stashedRewardsUntilEpoch(address, uint256) external view returns (uint256);
 
     function targetGasPowerPerSecond() external view returns (uint256);
@@ -253,8 +251,6 @@ interface SFCUnitTestI {
     function updateOfflinePenaltyThreshold(uint256 blocksNum, uint256 time) external;
 
     function updateSlashingRefundRatio(uint256 validatorID, uint256 refundRatio) external;
-
-    function updateStakeTokenizerAddress(address addr) external;
 
     function updateTreasuryAddress(address v) external;
 

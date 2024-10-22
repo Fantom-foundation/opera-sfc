@@ -106,10 +106,6 @@ contract SFC is SFCBase, Version {
         getEpochSnapshot[sealedEpoch].endTime = _now();
     }
 
-    function updateStakeTokenizerAddress(address addr) external onlyOwner {
-        stakeTokenizerAddress = addr;
-    }
-
     function updateLibAddress(address v) external onlyOwner {
         libAddress = v;
     }
@@ -128,10 +124,6 @@ contract SFC is SFCBase, Version {
 
     function updateVoteBookAddress(address v) external onlyOwner {
         voteBookAddress = v;
-    }
-
-    function updateSFTMFinalizer(address v) external onlyOwner {
-        sftmFinalizer = v;
     }
 
     function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external {
