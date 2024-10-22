@@ -38,8 +38,9 @@ describe('NodeDriver', () => {
 
     it('Should revert when not owner', async function () {
       const account = ethers.Wallet.createRandom();
-      await expect(this.nodeDriverAuth.connect(this.nonOwner).migrateTo(account)).to.be.revertedWith(
-        'Ownable: caller is not the owner',
+      await expect(this.nodeDriverAuth.connect(this.nonOwner).migrateTo(account)).to.be.revertedWithCustomError(
+        this.nodeDriverAuth,
+        'OwnableUnauthorizedAccount',
       );
     });
   });
@@ -52,9 +53,9 @@ describe('NodeDriver', () => {
 
     it('Should revert when not owner', async function () {
       const address = ethers.Wallet.createRandom();
-      await expect(this.nodeDriverAuth.connect(this.nonOwner).copyCode(this.sfc, address)).to.be.revertedWith(
-        'Ownable: caller is not the owner',
-      );
+      await expect(
+        this.nodeDriverAuth.connect(this.nonOwner).copyCode(this.sfc, address),
+      ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'OwnableUnauthorizedAccount');
     });
   });
 
@@ -66,8 +67,9 @@ describe('NodeDriver', () => {
     });
 
     it('Should revert when not owner', async function () {
-      await expect(this.nodeDriverAuth.connect(this.nonOwner).updateNetworkVersion(1)).to.be.revertedWith(
-        'Ownable: caller is not the owner',
+      await expect(this.nodeDriverAuth.connect(this.nonOwner).updateNetworkVersion(1)).to.be.revertedWithCustomError(
+        this.nodeDriverAuth,
+        'OwnableUnauthorizedAccount',
       );
     });
   });
@@ -78,8 +80,9 @@ describe('NodeDriver', () => {
     });
 
     it('Should revert when not owner', async function () {
-      await expect(this.nodeDriverAuth.connect(this.nonOwner).advanceEpochs(10)).to.be.revertedWith(
-        'Ownable: caller is not the owner',
+      await expect(this.nodeDriverAuth.connect(this.nonOwner).advanceEpochs(10)).to.be.revertedWithCustomError(
+        this.nodeDriverAuth,
+        'OwnableUnauthorizedAccount',
       );
     });
   });
