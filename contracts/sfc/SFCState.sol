@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./NodeDriver.sol";
-import "../ownership/Ownable.sol";
-import "./ConstantsManager.sol";
+import {Ownable} from "../ownership/Ownable.sol";
+import {Initializable} from "../common/Initializable.sol";
+import {NodeDriverAuth} from "./NodeDriverAuth.sol";
+import {ConstantsManager} from "./ConstantsManager.sol";
 
 contract SFCState is Initializable, Ownable {
     /**

@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./NodeDriver.sol";
-import "./SFC.sol";
+import {Ownable} from "../ownership/Ownable.sol";
+import {Decimal} from "../common/Decimal.sol";
+import {NodeDriverAuth} from "./NodeDriverAuth.sol";
+import {ConstantsManager} from "./ConstantsManager.sol";
+import {SFC} from "./SFC.sol";
+import {SFCI} from "./SFCI.sol";
+import {Version} from "../version/Version.sol";
 
 interface GovI {
     function upgrade(address v) external;
