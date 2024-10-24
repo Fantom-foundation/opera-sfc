@@ -3,14 +3,89 @@ pragma solidity ^0.8.9;
 
 import {Decimal} from "../common/Decimal.sol";
 import {SFCState} from "./SFCState.sol";
-import {IErrors} from "../IErrors.sol";
 
-contract SFCBase is IErrors, SFCState {
+contract SFCBase is SFCState {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;
     uint256 internal constant DOUBLESIGN_BIT = 1 << 7;
     uint256 internal constant CHEATER_MASK = DOUBLESIGN_BIT;
+
+    // auth
+    error NotDriverAuth();
+    error NotAuthorized();
+
+    // addresses
+    error ZeroAddress();
+    error SameAddress();
+    error RecipientNotSFC();
+
+    // values
+    error ZeroAmount();
+    error ZeroRewards();
+
+    // pubkeys
+    error PubkeyExists();
+    error MalformedPubkey();
+    error SamePubkey();
+    error EmptyPubkey();
+    error PubkeyAllowedOnlyOnce();
+
+    // redirections
+    error SameRedirectionAuthorizer();
+    error Redirected();
+
+    // validators
+    error ValidatorNotExists();
+    error ValidatorExists();
+    error ValidatorNotActive();
+    error ValidatorDelegationLimitExceeded();
+    error WrongValidatorStatus();
+
+    // requests
+    error RequestedCompleted();
+    error RequestExists();
+    error RequestNotExists();
+
+    // transfers
+    error TransfersNotAllowed();
+    error TransferFailed();
+
+    // updater
+    error SFCAlreadyUpdated();
+    error SFCWrongVersion();
+    error SFCGovAlreadyUpdated();
+    error SFCWrongGovVersion();
+
+    // node driver
+    error SelfCodeHashMismatch();
+    error DriverCodeHashMismatch();
+
+    // governance
+    error GovVotesRecountFailed();
+
+    // staking
+    error LockedStakeGreaterThanTotalStake();
+    error InsufficientSelfStake();
+    error NotEnoughUnlockedStake();
+    error NotEnoughLockedStake();
+    error NotEnoughTimePassed();
+    error NotEnoughEpochsPassed();
+    error StakeIsFullySlashed();
+    error IncorrectDuration();
+    error ValidatorLockupTooShort();
+    error TooManyReLocks();
+    error TooFrequentReLocks();
+    error LockupDurationDecreased();
+    error AlreadyLockedUp();
+    error NotLockedUp();
+
+    // stashing
+    error NothingToStash();
+
+    // slashing
+    error ValidatorNotSlashed();
+    error RefundRatioTooHigh();
 
     event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);

@@ -8,7 +8,6 @@ import {ConstantsManager} from "./ConstantsManager.sol";
 import {SFC} from "./SFC.sol";
 import {SFCI} from "./SFCI.sol";
 import {Version} from "../version/Version.sol";
-import {IErrors} from "../IErrors.sol";
 
 interface GovI {
     function upgrade(address v) external;
@@ -22,7 +21,7 @@ interface GovVersion {
     function version() external pure returns (bytes4);
 }
 
-contract Updater is IErrors {
+contract Updater {
     address public sfcFrom;
     address public sfcLib;
     address public sfcConsts;
@@ -30,6 +29,12 @@ contract Updater is IErrors {
     address public govFrom;
     address public voteBook;
     address public owner;
+
+    error ZeroAddress();
+    error SFCAlreadyUpdated();
+    error SFCWrongVersion();
+    error SFCGovAlreadyUpdated();
+    error SFCWrongGovVersion();
 
     constructor(
         address _sfcFrom,

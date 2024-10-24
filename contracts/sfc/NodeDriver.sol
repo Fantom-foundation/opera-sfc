@@ -9,6 +9,9 @@ contract NodeDriver is Initializable {
     NodeDriverAuth internal backend;
     IEvmWriter internal evmWriter;
 
+    error NotNode();
+    error NotBackend();
+
     event UpdatedBackend(address indexed backend);
 
     function setBackend(address _backend) external onlyBackend {

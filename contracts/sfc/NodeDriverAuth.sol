@@ -5,15 +5,21 @@ import {Initializable} from "../common/Initializable.sol";
 import {Ownable} from "../ownership/Ownable.sol";
 import {SFCI} from "./SFCI.sol";
 import {NodeDriver} from "./NodeDriver.sol";
-import {IErrors} from "../IErrors.sol";
 
 interface NodeDriverExecutable {
     function execute() external;
 }
 
-contract NodeDriverAuth is IErrors, Initializable, Ownable {
+contract NodeDriverAuth is Initializable, Ownable {
     SFCI internal sfc;
     NodeDriver internal driver;
+
+    error NotSFC();
+    error NotDriver();
+    error NotContract();
+    error SelfCodeHashMismatch();
+    error DriverCodeHashMismatch();
+    error RecipientNotSFC();
 
     // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
     function initialize(address payable _sfc, address _driver, address _owner) external initializer {

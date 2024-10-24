@@ -5,7 +5,6 @@ import {Decimal} from "../common/Decimal.sol";
 import {SFC} from "../sfc/SFC.sol";
 import {SFCBase} from "../sfc/SFCBase.sol";
 import {SFCLib} from "../sfc/SFCLib.sol";
-import {IErrors} from "../IErrors.sol";
 import {NodeDriverAuth} from "../sfc/NodeDriverAuth.sol";
 import {NodeDriver} from "../sfc/NodeDriver.sol";
 import {UnitTestConstantsManager} from "./UnitTestConstantsManager.sol";
@@ -114,7 +113,7 @@ contract UnitTestNetworkInitializer {
     }
 }
 
-interface SFCUnitTestI is IErrors {
+interface SFCUnitTestI {
     function currentSealedEpoch() external view returns (uint256);
 
     function getEpochSnapshot(
