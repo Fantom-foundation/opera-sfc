@@ -33,13 +33,6 @@ interface NodeDriverI {
         uint256[] calldata offlineTimes,
         uint256[] calldata offlineBlocks,
         uint256[] calldata uptimes,
-        uint256[] calldata originatedTxsFee
-    ) external;
-
-    function sealEpochV1(
-        uint256[] calldata offlineTimes,
-        uint256[] calldata offlineBlocks,
-        uint256[] calldata uptimes,
         uint256[] calldata originatedTxsFee,
         uint256 usedGas
     ) external;

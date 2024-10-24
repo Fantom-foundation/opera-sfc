@@ -234,8 +234,6 @@ interface SFCI {
 
     function updateValidatorPubkey(bytes calldata pubkey) external;
 
-    function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external;
-
     function setRedirectionAuthorizer(address v) external;
 
     function announceRedirection(address to) external;
