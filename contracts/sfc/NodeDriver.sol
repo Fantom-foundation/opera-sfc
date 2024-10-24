@@ -146,15 +146,6 @@ contract NodeDriver is Initializable {
         uint256[] calldata offlineTimes,
         uint256[] calldata offlineBlocks,
         uint256[] calldata uptimes,
-        uint256[] calldata originatedTxsFee
-    ) external onlyNode {
-        backend.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee, 841669690);
-    }
-
-    function sealEpochV1(
-        uint256[] calldata offlineTimes,
-        uint256[] calldata offlineBlocks,
-        uint256[] calldata uptimes,
         uint256[] calldata originatedTxsFee,
         uint256 usedGas
     ) external onlyNode {

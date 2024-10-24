@@ -161,11 +161,7 @@ describe('NodeDriver', () => {
 
   describe('Seal epoch', () => {
     it('Should revert when not node', async function () {
-      await expect(this.nodeDriver.sealEpoch([0, 1], [0, 1], [0, 1], [0, 1])).to.be.revertedWithCustomError(
-        this.nodeDriver,
-        'NotNode',
-      );
-      await expect(this.nodeDriver.sealEpochV1([0, 1], [0, 1], [0, 1], [0, 1], 0)).to.be.revertedWithCustomError(
+      await expect(this.nodeDriver.sealEpoch([0, 1], [0, 1], [0, 1], [0, 1], 0)).to.be.revertedWithCustomError(
         this.nodeDriver,
         'NotNode',
       );
