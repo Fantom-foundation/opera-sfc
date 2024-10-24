@@ -5,7 +5,6 @@ import {Decimal} from "../common/Decimal.sol";
 import {SFC} from "../sfc/SFC.sol";
 import {SFCBase} from "../sfc/SFCBase.sol";
 import {SFCLib} from "../sfc/SFCLib.sol";
-import {IErrors} from "../IErrors.sol";
 import {NodeDriverAuth} from "../sfc/NodeDriverAuth.sol";
 import {NodeDriver} from "../sfc/NodeDriver.sol";
 import {UnitTestConstantsManager} from "./UnitTestConstantsManager.sol";
@@ -114,7 +113,7 @@ contract UnitTestNetworkInitializer {
     }
 }
 
-interface SFCUnitTestI is IErrors {
+interface SFCUnitTestI {
     function currentSealedEpoch() external view returns (uint256);
 
     function getEpochSnapshot(
@@ -124,6 +123,7 @@ interface SFCUnitTestI is IErrors {
         view
         returns (
             uint256 endTime,
+            uint256 endBlock,
             uint256 epochFee,
             uint256 totalBaseRewardWeight,
             uint256 totalTxRewardWeight,
@@ -218,6 +218,8 @@ interface SFCUnitTestI is IErrors {
     function getEpochOfflineTime(uint256 epoch, uint256 validatorID) external view returns (uint256);
 
     function getEpochOfflineBlocks(uint256 epoch, uint256 validatorID) external view returns (uint256);
+
+    function getEpochEndBlock(uint256 epoch) external view returns (uint256);
 
     function rewardsStash(address delegator, uint256 validatorID) external view returns (uint256);
 

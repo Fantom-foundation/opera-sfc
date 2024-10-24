@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {Initializable} from "../common/Initializable.sol";
-import {IErrors} from "../IErrors.sol";
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -13,8 +12,18 @@ import {IErrors} from "../IErrors.sol";
  * `onlyOwner`, which can be aplied to your functions to restrict their use to
  * the owner.
  */
-contract Ownable is IErrors, Initializable {
+contract Ownable is Initializable {
     address private _owner;
+
+    /**
+     * @dev The caller account is not authorized to perform an operation.
+     */
+    error OwnableUnauthorizedAccount(address account);
+
+    /**
+     * @dev The owner is not a valid owner account. (eg. `address(0)`)
+     */
+    error OwnableInvalidOwner(address owner);
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
@@ -38,7 +47,7 @@ contract Ownable is IErrors, Initializable {
      */
     modifier onlyOwner() {
         if (!isOwner()) {
-            revert NotOwner();
+            revert OwnableUnauthorizedAccount(msg.sender);
         }
         _;
     }
@@ -75,7 +84,7 @@ contract Ownable is IErrors, Initializable {
      */
     function _transferOwnership(address newOwner) internal {
         if (newOwner == address(0)) {
-            revert ZeroAddress();
+            revert OwnableInvalidOwner(address(0));
         }
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;

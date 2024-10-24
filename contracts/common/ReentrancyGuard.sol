@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {Initializable} from "./Initializable.sol";
-import {IErrors} from "../IErrors.sol";
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -16,9 +15,14 @@ import {IErrors} from "../IErrors.sol";
  * those functions `private`, and then adding `external` `nonReentrant` entry
  * points to them.
  */
-contract ReentrancyGuard is IErrors, Initializable {
+contract ReentrancyGuard is Initializable {
     // counter to allow mutex lock with only one SSTORE operation
     uint256 private _guardCounter;
+
+    /**
+     * @dev Reentrant call.
+     */
+    error ReentrancyGuardReentrantCall();
 
     function initialize() internal initializer {
         // The counter starts at one to prevent changing it from zero to a non-zero
@@ -38,7 +42,7 @@ contract ReentrancyGuard is IErrors, Initializable {
         uint256 localCounter = _guardCounter;
         _;
         if (localCounter != _guardCounter) {
-            revert ReentrantCall();
+            revert ReentrancyGuardReentrantCall();
         }
     }
 

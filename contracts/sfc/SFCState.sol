@@ -72,6 +72,7 @@ contract SFCState is Initializable, Ownable {
         mapping(uint256 => uint256) offlineBlocks;
         uint256[] validatorIDs;
         uint256 endTime;
+        uint256 endBlock;
         uint256 epochFee;
         uint256 totalBaseRewardWeight;
         uint256 totalTxRewardWeight;
