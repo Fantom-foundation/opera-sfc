@@ -18,7 +18,6 @@ contract SFCBase is SFCState {
     // addresses
     error ZeroAddress();
     error SameAddress();
-    error RecipientNotSFC();
 
     // values
     error ZeroAmount();
@@ -56,10 +55,6 @@ contract SFCBase is SFCState {
     error SFCWrongVersion();
     error SFCGovAlreadyUpdated();
     error SFCWrongGovVersion();
-
-    // node driver
-    error SelfCodeHashMismatch();
-    error DriverCodeHashMismatch();
 
     // governance
     error GovVotesRecountFailed();
