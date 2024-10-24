@@ -24,11 +24,11 @@ contract SFCBase is SFCState {
     error ZeroRewards();
 
     // pubkeys
-    error PubkeyExists();
+    error PubkeyUsedByOtherValidator();
     error MalformedPubkey();
-    error SamePubkey();
+    error PubkeyNotChanged();
     error EmptyPubkey();
-    error PubkeyAllowedOnlyOnce();
+    error TooManyPubkeyUpdates();
 
     // redirections
     error SameRedirectionAuthorizer();
@@ -42,7 +42,7 @@ contract SFCBase is SFCState {
     error WrongValidatorStatus();
 
     // requests
-    error RequestedCompleted();
+    error AlreadyRedirected();
     error RequestExists();
     error RequestNotExists();
 

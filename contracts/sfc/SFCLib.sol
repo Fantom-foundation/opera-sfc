@@ -103,7 +103,7 @@ contract SFCLib is SFCBase {
             revert EmptyPubkey();
         }
         if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
-            revert PubkeyExists();
+            revert PubkeyUsedByOtherValidator();
         }
         _createValidator(msg.sender, pubkey);
         _delegate(msg.sender, lastValidatorID, msg.value);

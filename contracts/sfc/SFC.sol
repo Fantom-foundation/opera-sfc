@@ -138,7 +138,7 @@ contract SFC is SFCBase, Version {
             bytes memory pubkey = getValidatorPubkey[vid];
             if (pubkey.length > 0 && pubkeyHashToValidatorID[keccak256(pubkey)] != vid) {
                 if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
-                    revert PubkeyExists();
+                    revert PubkeyUsedByOtherValidator();
                 }
                 pubkeyHashToValidatorID[keccak256(pubkey)] = vid;
             }
@@ -154,13 +154,13 @@ contract SFC is SFCBase, Version {
             revert ValidatorNotExists();
         }
         if (keccak256(pubkey) == keccak256(getValidatorPubkey[validatorID])) {
-            revert SamePubkey();
+            revert PubkeyNotChanged();
         }
         if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
-            revert PubkeyExists();
+            revert PubkeyUsedByOtherValidator();
         }
         if (validatorPubkeyChanges[validatorID] != 0) {
-            revert PubkeyAllowedOnlyOnce();
+            revert TooManyPubkeyUpdates();
         }
 
         validatorPubkeyChanges[validatorID]++;
@@ -187,7 +187,7 @@ contract SFC is SFCBase, Version {
             revert NotAuthorized();
         }
         if (getRedirection[from] == to) {
-            revert RequestedCompleted();
+            revert AlreadyRedirected();
         }
         if (from == to) {
             revert SameAddress();
