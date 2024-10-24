@@ -331,8 +331,6 @@ contract SFC is SFCBase, Version {
         }
 
         snapshot.epochFee = ctx.epochFee;
-        snapshot.totalBaseRewardWeight = ctx.totalBaseRewardWeight;
-        snapshot.totalTxRewardWeight = ctx.totalTxRewardWeight;
         if (totalSupply > snapshot.epochFee) {
             totalSupply -= snapshot.epochFee;
         } else {

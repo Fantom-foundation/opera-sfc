@@ -316,7 +316,6 @@ contract SFCLib is SFCBase {
         uint256 penalty = getSlashingPenalty(amount, isCheater, slashingRefundRatio[toValidatorID]);
         delete getWithdrawalRequest[delegator][toValidatorID][wrID];
 
-        totalSlashedStake += penalty;
         if (amount <= penalty) {
             revert StakeIsFullySlashed();
         }

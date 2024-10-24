@@ -40,8 +40,6 @@ contract SFCState is Initializable, Ownable {
     uint256 public totalStake;
     // total stake of active (OK_STATUS) validators (total weight)
     uint256 public totalActiveStake;
-    // sum of penalties subtracted from successful withdrawals - TODO misleading - remove?
-    uint256 public totalSlashedStake;
 
     // delegator => validator ID => stashed rewards (to be claimed/restaked)
     mapping(address => mapping(uint256 => Rewards)) internal _rewardsStash;
@@ -88,8 +86,6 @@ contract SFCState is Initializable, Ownable {
         uint256 endTime;
         uint256 endBlock;
         uint256 epochFee; // gas fees from txs in the epoch
-        uint256 totalBaseRewardWeight; // sum( stake * uptimeRatio ^ 2 ) TODO write only - remove?
-        uint256 totalTxRewardWeight; // sum( originatedTxsFee * uptimeRatio ) TODO write only - remove?
         uint256 baseRewardPerSecond; // the base reward to divide among validators for each second of the epoch
         uint256 totalStake; // total weight of all validators
         uint256 totalSupply; // total supply of native tokens
