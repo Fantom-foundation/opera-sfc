@@ -52,7 +52,7 @@ describe('SFC', () => {
         to: this.sfc,
         value: 1,
       }),
-    ).to.revertedWith('transfers not allowed');
+    ).to.revertedWithCustomError(this.sfcLib, 'TransfersNotAllowed');
   });
 
   describe('Genesis validator', () => {
@@ -77,13 +77,14 @@ describe('SFC', () => {
     });
 
     it('Should revert when sealEpoch not called by node', async function () {
-      await expect(this.sfc.sealEpoch([1], [1], [1], [1], 0)).to.be.revertedWith(
-        'caller is not the NodeDriverAuth contract',
+      await expect(this.sfc.sealEpoch([1], [1], [1], [1], 0)).to.be.revertedWithCustomError(
+        this.sfcLib,
+        'NotDriverAuth',
       );
     });
 
     it('Should revert when SealEpochValidators not called by node', async function () {
-      await expect(this.sfc.sealEpochValidators([1])).to.be.revertedWith('caller is not the NodeDriverAuth contract');
+      await expect(this.sfc.sealEpochValidators([1])).to.be.revertedWithCustomError(this.sfcLib, 'NotDriverAuth');
     });
   });
 
@@ -178,13 +179,13 @@ describe('SFC', () => {
         this.sfc
           .connect(this.validator)
           .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.1') }),
-      ).to.be.revertedWith('insufficient self-stake');
+      ).to.be.revertedWithCustomError(this.sfcLib, 'InsufficientSelfStake');
     });
 
     it('Should revert when public key is empty while creating a validator', async function () {
       await expect(
         this.sfc.connect(this.validator).createValidator('0x', { value: ethers.parseEther('0.4') }),
-      ).to.be.revertedWith('empty pubkey');
+      ).to.be.revertedWithCustomError(this.sfcLib, 'EmptyPubkey');
     });
 
     it('Should succeed and create two validators and return id of last validator', async function () {
@@ -215,7 +216,7 @@ describe('SFC', () => {
     it('Should revert when staking to non-existing validator', async function () {
       await expect(
         this.sfc.connect(this.secondValidator).delegate(1, { value: ethers.parseEther('0.1') }),
-      ).to.be.revertedWith("validator doesn't exist");
+      ).to.be.revertedWithCustomError(this.sfcLib, 'ValidatorNotExists');
     });
 
     it('Should succeed and stake with different delegators', async function () {
@@ -330,13 +331,14 @@ describe('SFC', () => {
           0,
           0,
         ),
-      ).to.be.revertedWith('caller is not the NodeDriverAuth contract');
+      ).to.be.revertedWithCustomError(this.sfcLib, 'NotDriverAuth');
     });
 
     it('Should revert when setGenesisDelegation is not called not node', async function () {
       const delegator = ethers.Wallet.createRandom();
-      await expect(this.sfc.setGenesisDelegation(delegator, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.revertedWith(
-        'caller is not the NodeDriverAuth contract',
+      await expect(this.sfc.setGenesisDelegation(delegator, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.revertedWithCustomError(
+        this.sfcLib,
+        'NotDriverAuth',
       );
     });
   });
@@ -441,7 +443,7 @@ describe('SFC', () => {
         this.sfc
           .connect(validator)
           .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.1') }),
-      ).to.be.revertedWith('insufficient self-stake');
+      ).to.be.revertedWithCustomError(this.sfcLib, 'InsufficientSelfStake');
 
       await node.handleTx(
         await this.sfc.connect(validator).createValidator(pubkey, { value: ethers.parseEther('0.3175') }),
@@ -451,7 +453,7 @@ describe('SFC', () => {
         this.sfc
           .connect(validator)
           .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.5') }),
-      ).to.be.revertedWith('validator already exists');
+      ).to.be.revertedWithCustomError(this.sfcLib, 'ValidatorExists');
 
       await node.handleTx(
         await this.sfc.connect(secondValidator).createValidator(secondPubkey, { value: ethers.parseEther('0.5') }),
@@ -768,8 +770,9 @@ describe('SFC', () => {
 
     it('Should revert when deactivating validator if not Node', async function () {
       await this.sfc.disableNonNodeCalls();
-      await expect(this.sfc.deactivateValidator(this.validatorId, 0)).to.be.revertedWith(
-        'caller is not the NodeDriverAuth contract',
+      await expect(this.sfc.deactivateValidator(this.validatorId, 0)).to.be.revertedWithCustomError(
+        this.sfcLib,
+        'NotDriverAuth',
       );
     });
 
@@ -990,23 +993,27 @@ describe('SFC', () => {
             0,
             0,
           ),
-        ).to.be.revertedWith('caller is not the NodeDriver contract');
+        ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
       });
 
       it('Should revert when calling setGenesisDelegation if not NodeDriver', async function () {
         await expect(
           this.nodeDriverAuth.setGenesisDelegation(this.delegator, 1, 100, 0, 0, 0, 0, 0, 1000),
-        ).to.be.revertedWith('caller is not the NodeDriver contract');
+        ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
       });
 
       it('Should revert when calling deactivateValidator if not NodeDriver', async function () {
-        await expect(this.nodeDriverAuth.deactivateValidator(1, 0)).to.be.revertedWith(
-          'caller is not the NodeDriver contract',
+        await expect(this.nodeDriverAuth.deactivateValidator(1, 0)).to.be.revertedWithCustomError(
+          this.nodeDriverAuth,
+          'NotDriver',
         );
       });
 
       it('Should revert when calling deactivateValidator with wrong status', async function () {
-        await expect(this.sfc.deactivateValidator(1, 0)).to.be.revertedWith('wrong status');
+        await expect(this.sfc.deactivateValidator(1, 0)).to.be.revertedWithCustomError(
+          this.sfcLib,
+          'WrongValidatorStatus',
+        );
       });
 
       it('Should succeed and deactivate validator', async function () {
@@ -1014,8 +1021,9 @@ describe('SFC', () => {
       });
 
       it('Should revert when calling sealEpoch if not NodeDriver', async function () {
-        await expect(this.nodeDriverAuth.sealEpochValidators([1])).to.be.revertedWith(
-          'caller is not the NodeDriver contract',
+        await expect(this.nodeDriverAuth.sealEpochValidators([1])).to.be.revertedWithCustomError(
+          this.nodeDriverAuth,
+          'NotDriver',
         );
       });
 
@@ -1048,7 +1056,7 @@ describe('SFC', () => {
         await this.sfc.advanceTime(24 * 60 * 60);
         await expect(
           this.nodeDriverAuth.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0),
-        ).to.be.revertedWith('caller is not the NodeDriver contract');
+        ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
       });
     });
 
@@ -1091,11 +1099,11 @@ describe('SFC', () => {
 
     describe('Epoch getters', () => {
       it('Should revert when trying to unlock stake if not lockedup', async function () {
-        await expect(this.sfc.unlockStake(1, 10)).to.be.revertedWith('not locked up');
+        await expect(this.sfc.unlockStake(1, 10)).to.be.revertedWithCustomError(this.sfcLib, 'NotLockedUp');
       });
 
       it('Should revert when trying to unlock stake if amount is 0', async function () {
-        await expect(this.sfc.unlockStake(1, 0)).to.be.revertedWith('zero amount');
+        await expect(this.sfc.unlockStake(1, 0)).to.be.revertedWithCustomError(this.sfcLib, 'ZeroAmount');
       });
 
       it('Should succeed and return slashed status', async function () {
@@ -1103,12 +1111,13 @@ describe('SFC', () => {
       });
 
       it('Should revert when delegating to an unexisting validator', async function () {
-        await expect(this.sfc.delegate(4)).to.be.revertedWith("validator doesn't exist");
+        await expect(this.sfc.delegate(4)).to.be.revertedWithCustomError(this.sfcLib, 'ValidatorNotExists');
       });
 
       it('Should revert when delegating to an unexisting validator (2)', async function () {
-        await expect(this.sfc.delegate(4, { value: ethers.parseEther('1') })).to.be.revertedWith(
-          "validator doesn't exist",
+        await expect(this.sfc.delegate(4, { value: ethers.parseEther('1') })).to.be.revertedWithCustomError(
+          this.sfcLib,
+          'ValidatorNotExists',
         );
       });
     });
@@ -1207,25 +1216,34 @@ describe('SFC', () => {
       });
 
       it('Should revert when withdrawing nonexistent request', async function () {
-        await expect(this.sfc.withdraw(this.validatorId, 0)).to.be.revertedWith("request doesn't exist");
+        await expect(this.sfc.withdraw(this.validatorId, 0)).to.be.revertedWithCustomError(
+          this.sfcLib,
+          'RequestNotExists',
+        );
       });
 
       it('Should revert when undelegating 0 amount', async function () {
         await this.blockchainNode.sealEpoch(1_000);
-        await expect(this.sfc.undelegate(this.validatorId, 0, 0)).to.be.revertedWith('zero amount');
+        await expect(this.sfc.undelegate(this.validatorId, 0, 0)).to.be.revertedWithCustomError(
+          this.sfcLib,
+          'ZeroAmount',
+        );
       });
 
       it('Should revert when undelegating if not enough unlocked stake', async function () {
         await this.blockchainNode.sealEpoch(1_000);
-        await expect(this.sfc.undelegate(this.validatorId, 0, 10)).to.be.revertedWith('not enough unlocked stake');
+        await expect(this.sfc.undelegate(this.validatorId, 0, 10)).to.be.revertedWithCustomError(
+          this.sfcLib,
+          'NotEnoughUnlockedStake',
+        );
       });
 
       it('Should revert when unlocking if not enough unlocked stake', async function () {
         await this.blockchainNode.sealEpoch(1_000);
         await this.sfc.connect(this.thirdDelegator).delegate(this.validatorId, { value: ethers.parseEther('1') });
-        await expect(this.sfc.connect(this.thirdDelegator).unlockStake(this.validatorId, 10)).to.be.revertedWith(
-          'not locked up',
-        );
+        await expect(
+          this.sfc.connect(this.thirdDelegator).unlockStake(this.validatorId, 10),
+        ).to.be.revertedWithCustomError(this.sfcLib, 'NotLockedUp');
       });
 
       it('Should succeed and return the unlocked stake', async function () {
@@ -1239,9 +1257,9 @@ describe('SFC', () => {
         await this.blockchainNode.sealEpoch(1_000);
         await this.sfc.connect(this.thirdDelegator).delegate(this.thirdValidatorId, { value: ethers.parseEther('10') });
         await this.blockchainNode.sealEpoch(1_000);
-        await expect(this.sfc.connect(this.thirdDelegator).claimRewards(this.validatorId)).to.be.revertedWith(
-          'zero rewards',
-        );
+        await expect(
+          this.sfc.connect(this.thirdDelegator).claimRewards(this.validatorId),
+        ).to.be.revertedWithCustomError(this.sfcLib, 'ZeroRewards');
       });
     });
 
@@ -1259,7 +1277,7 @@ describe('SFC', () => {
           this.sfc
             .connect(this.thirdDelegator)
             .lockStake(this.validatorId, 2 * 60 * 60 * 24 * 365, ethers.parseEther('0')),
-        ).to.be.revertedWith('zero amount');
+        ).to.be.revertedWithCustomError(this.sfcLib, 'ZeroAmount');
       });
 
       it('Should revert when locking for more than a year', async function () {
@@ -1269,7 +1287,7 @@ describe('SFC', () => {
           this.sfc
             .connect(this.thirdDelegator)
             .lockStake(this.thirdValidatorId, 2 * 60 * 60 * 24 * 365, ethers.parseEther('1')),
-        ).to.be.revertedWith('incorrect duration');
+        ).to.be.revertedWithCustomError(this.sfcLib, 'IncorrectDuration');
       });
 
       it('Should revert when locking for more than a validator lockup period', async function () {
@@ -1279,7 +1297,7 @@ describe('SFC', () => {
           this.sfc
             .connect(this.thirdDelegator)
             .lockStake(this.thirdValidatorId, 60 * 60 * 24 * 364, ethers.parseEther('1')),
-        ).to.be.revertedWith("validator's lockup will end too early");
+        ).to.be.revertedWithCustomError(this.sfcLib, 'ValidatorLockupTooShort');
         await this.sfc
           .connect(this.thirdDelegator)
           .lockStake(this.thirdValidatorId, 60 * 60 * 24 * 363, ethers.parseEther('1'));
@@ -1301,9 +1319,9 @@ describe('SFC', () => {
           .connect(this.thirdDelegator)
           .lockStake(this.thirdValidatorId, 60 * 60 * 24 * 14, ethers.parseEther('1'));
         await this.blockchainNode.sealEpoch(60 * 60 * 24 * 14);
-        await expect(this.sfc.unlockStake(this.thirdValidatorId, ethers.parseEther('10'))).to.be.revertedWith(
-          'not locked up',
-        );
+        await expect(
+          this.sfc.unlockStake(this.thirdValidatorId, ethers.parseEther('10')),
+        ).to.be.revertedWithCustomError(this.sfcLib, 'NotLockedUp');
       });
 
       it('Should revert when unlocking more than locked stake', async function () {
@@ -1315,7 +1333,7 @@ describe('SFC', () => {
         await this.blockchainNode.sealEpoch(60 * 60 * 24 * 14);
         await expect(
           this.sfc.connect(this.thirdDelegator).unlockStake(this.thirdValidatorId, ethers.parseEther('10')),
-        ).to.be.revertedWith('not enough locked stake');
+        ).to.be.revertedWithCustomError(this.sfcLib, 'NotEnoughLockedStake');
       });
 
       it('Should succeed and scale unlocking penalty', async function () {
@@ -1346,7 +1364,7 @@ describe('SFC', () => {
 
         await expect(
           this.sfc.connect(this.thirdDelegator).unlockStake(this.thirdValidatorId, ethers.parseEther('0.51')),
-        ).to.be.revertedWith('not enough locked stake');
+        ).to.be.revertedWithCustomError(this.sfcLib, 'NotEnoughLockedStake');
         expect(
           await this.sfc
             .connect(this.thirdDelegator)
@@ -1387,7 +1405,7 @@ describe('SFC', () => {
 
         await expect(
           this.sfc.connect(this.thirdDelegator).unlockStake(this.thirdValidatorId, ethers.parseEther('0.51')),
-        ).to.be.revertedWith('not enough locked stake');
+        ).to.be.revertedWithCustomError(this.sfcLib, 'NotEnoughLockedStake');
         expect(
           await this.sfc
             .connect(this.thirdDelegator)
@@ -1405,7 +1423,7 @@ describe('SFC', () => {
 
         await expect(
           this.sfc.connect(this.thirdDelegator).unlockStake(this.thirdValidatorId, ethers.parseEther('1.51')),
-        ).to.be.revertedWith('not enough locked stake');
+        ).to.be.revertedWithCustomError(this.sfcLib, 'NotEnoughLockedStake');
         expect(
           await this.sfc
             .connect(this.thirdDelegator)
@@ -1467,13 +1485,16 @@ describe('SFC', () => {
 
         await expect(
           this.sfc.connect(this.validator).updateSlashingRefundRatio(this.thirdValidatorId, 1),
-        ).to.be.revertedWith("validator isn't slashed");
+        ).to.be.revertedWithCustomError(this.sfcLib, 'ValidatorNotSlashed');
 
         await this.blockchainNode.sealEpoch(60 * 60 * 24 * 14);
       });
 
       it('Should revert when syncing if validator does not exist', async function () {
-        await expect(this.sfc._syncValidator(33, false)).to.be.revertedWith("validator doesn't exist");
+        await expect(this.sfc._syncValidator(33, false)).to.be.revertedWithCustomError(
+          this.sfcLib,
+          'ValidatorNotExists',
+        );
       });
     });
   });
@@ -1676,7 +1697,7 @@ describe('SFC', () => {
       await this.blockchainNode.sealEpoch(60 * 60 * 24);
       await expect(
         this.sfc.connect(this.firstDelegator).relockStake(this.validatorId, 60 * 60 * 24 * 20, ethers.parseEther('0')),
-      ).to.be.revertedWith('too frequent relocks');
+      ).to.be.revertedWithCustomError(this.sfcLib, 'TooFrequentReLocks');
 
       // 4
       await this.sfc.advanceTime(60 * 60 * 24 * 14);
@@ -1686,7 +1707,7 @@ describe('SFC', () => {
       await this.blockchainNode.sealEpoch(60 * 60 * 24);
       await expect(
         this.sfc.connect(this.firstDelegator).relockStake(this.validatorId, 60 * 60 * 24 * 20, ethers.parseEther('0')),
-      ).to.be.revertedWith('too frequent relocks');
+      ).to.be.revertedWithCustomError(this.sfcLib, 'TooFrequentReLocks');
 
       for (let i = 5; i <= 40; i++) {
         // 5-40

@@ -9,6 +9,9 @@ contract NodeDriver is Initializable {
     NodeDriverAuth internal backend;
     IEvmWriter internal evmWriter;
 
+    error NotNode();
+    error NotBackend();
+
     event UpdatedBackend(address indexed backend);
 
     function setBackend(address _backend) external onlyBackend {
@@ -17,7 +20,9 @@ contract NodeDriver is Initializable {
     }
 
     modifier onlyBackend() {
-        require(msg.sender == address(backend), "caller is not the backend");
+        if (msg.sender != address(backend)) {
+            revert NotBackend();
+        }
         _;
     }
 
@@ -75,7 +80,9 @@ contract NodeDriver is Initializable {
     }
 
     modifier onlyNode() {
-        require(msg.sender == address(0), "not callable");
+        if (msg.sender != address(0)) {
+            revert NotNode();
+        }
         _;
     }
 

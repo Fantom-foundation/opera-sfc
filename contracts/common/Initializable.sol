@@ -27,14 +27,14 @@ contract Initializable {
     /**
      * @dev The contract instance has already been initialized.
      */
-    error ContractInitialized();
+    error InvalidInitialization();
 
     /**
      * @dev Modifier to use in the initializer function of a contract.
      */
     modifier initializer() {
         if (!initializing && initialized) {
-            revert ContractInitialized();
+            revert InvalidInitialization();
         }
 
         bool isTopLevelCall = !initializing;

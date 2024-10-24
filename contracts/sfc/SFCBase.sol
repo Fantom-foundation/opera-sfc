@@ -11,6 +11,77 @@ contract SFCBase is SFCState {
     uint256 internal constant DOUBLESIGN_BIT = 1 << 7;
     uint256 internal constant CHEATER_MASK = DOUBLESIGN_BIT;
 
+    // auth
+    error NotDriverAuth();
+    error NotAuthorized();
+
+    // addresses
+    error ZeroAddress();
+    error SameAddress();
+
+    // values
+    error ZeroAmount();
+    error ZeroRewards();
+
+    // pubkeys
+    error PubkeyExists();
+    error MalformedPubkey();
+    error SamePubkey();
+    error EmptyPubkey();
+    error PubkeyAllowedOnlyOnce();
+
+    // redirections
+    error SameRedirectionAuthorizer();
+    error Redirected();
+
+    // validators
+    error ValidatorNotExists();
+    error ValidatorExists();
+    error ValidatorNotActive();
+    error ValidatorDelegationLimitExceeded();
+    error WrongValidatorStatus();
+
+    // requests
+    error RequestedCompleted();
+    error RequestExists();
+    error RequestNotExists();
+
+    // transfers
+    error TransfersNotAllowed();
+    error TransferFailed();
+
+    // updater
+    error SFCAlreadyUpdated();
+    error SFCWrongVersion();
+    error SFCGovAlreadyUpdated();
+    error SFCWrongGovVersion();
+
+    // governance
+    error GovVotesRecountFailed();
+
+    // staking
+    error LockedStakeGreaterThanTotalStake();
+    error InsufficientSelfStake();
+    error NotEnoughUnlockedStake();
+    error NotEnoughLockedStake();
+    error NotEnoughTimePassed();
+    error NotEnoughEpochsPassed();
+    error StakeIsFullySlashed();
+    error IncorrectDuration();
+    error ValidatorLockupTooShort();
+    error TooManyReLocks();
+    error TooFrequentReLocks();
+    error LockupDurationDecreased();
+    error AlreadyLockedUp();
+    error NotLockedUp();
+
+    // stashing
+    error NothingToStash();
+
+    // slashing
+    error ValidatorNotSlashed();
+    error RefundRatioTooHigh();
+
     event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
 
@@ -19,7 +90,9 @@ contract SFCBase is SFCState {
     }
 
     modifier onlyDriver() {
-        require(isNode(msg.sender), "caller is not the NodeDriverAuth contract");
+        if (!isNode(msg.sender)) {
+            revert NotDriverAuth();
+        }
         _;
     }
 
@@ -98,7 +171,9 @@ contract SFCBase is SFCState {
                 abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth)
             );
             // Don't revert if recountVotes failed unless strict mode enabled
-            require(success || !strict, "gov votes recounting failed");
+            if (!success && strict) {
+                revert GovVotesRecountFailed();
+            }
         }
     }
 
@@ -123,7 +198,9 @@ contract SFCBase is SFCState {
     }
 
     function _syncValidator(uint256 validatorID, bool syncPubkey) public {
-        require(_validatorExists(validatorID), "validator doesn't exist");
+        if (!_validatorExists(validatorID)) {
+            revert ValidatorNotExists();
+        }
         // emit special log for node
         uint256 weight = getValidator[validatorID].receivedStake;
         if (getValidator[validatorID].status != OK_STATUS) {

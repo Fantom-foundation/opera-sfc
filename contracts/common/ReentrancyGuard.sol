@@ -22,7 +22,7 @@ contract ReentrancyGuard is Initializable {
     /**
      * @dev Reentrant call.
      */
-    error ReentrantCall();
+    error ReentrancyGuardReentrantCall();
 
     function initialize() internal initializer {
         // The counter starts at one to prevent changing it from zero to a non-zero
@@ -42,7 +42,7 @@ contract ReentrancyGuard is Initializable {
         uint256 localCounter = _guardCounter;
         _;
         if (localCounter != _guardCounter) {
-            revert ReentrantCall();
+            revert ReentrancyGuardReentrantCall();
         }
     }
 
