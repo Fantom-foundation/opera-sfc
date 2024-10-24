@@ -3,22 +3,11 @@ pragma solidity ^0.8.9;
 
 import {Initializable} from "../common/Initializable.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
-
-interface EVMWriter {
-    function setBalance(address acc, uint256 value) external;
-
-    function copyCode(address acc, address from) external;
-
-    function swapCode(address acc, address where) external;
-
-    function setStorage(address acc, bytes32 key, bytes32 value) external;
-
-    function incNonce(address acc, uint256 diff) external;
-}
+import {IEvmWriter} from "../interfaces/IEVMWriter.sol";
 
 contract NodeDriver is Initializable {
     NodeDriverAuth internal backend;
-    EVMWriter internal evmWriter;
+    IEvmWriter internal evmWriter;
 
     event UpdatedBackend(address indexed backend);
 
@@ -42,7 +31,7 @@ contract NodeDriver is Initializable {
     function initialize(address _backend, address _evmWriterAddress) external initializer {
         backend = NodeDriverAuth(_backend);
         emit UpdatedBackend(_backend);
-        evmWriter = EVMWriter(_evmWriterAddress);
+        evmWriter = IEvmWriter(_evmWriterAddress);
     }
 
     function setBalance(address acc, uint256 value) external onlyBackend {
