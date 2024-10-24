@@ -125,8 +125,6 @@ interface SFCUnitTestI {
             uint256 endTime,
             uint256 endBlock,
             uint256 epochFee,
-            uint256 totalBaseRewardWeight,
-            uint256 totalTxRewardWeight,
             uint256 _baseRewardPerSecond,
             uint256 totalStake,
             uint256 totalSupply
