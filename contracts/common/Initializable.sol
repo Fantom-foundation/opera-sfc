@@ -27,6 +27,11 @@ contract Initializable is IErrors {
     bool private initializing;
 
     /**
+     * @dev The contract instance has already been initialized.
+     */
+    error ContractInitialized();
+
+    /**
      * @dev Modifier to use in the initializer function of a contract.
      */
     modifier initializer() {
