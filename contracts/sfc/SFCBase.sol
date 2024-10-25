@@ -31,6 +31,7 @@ contract SFCBase is SFCState {
     error TooManyPubkeyUpdates();
 
     // redirections
+    error AlreadyRedirected();
     error SameRedirectionAuthorizer();
     error Redirected();
 
@@ -42,7 +43,6 @@ contract SFCBase is SFCState {
     error WrongValidatorStatus();
 
     // requests
-    error AlreadyRedirected();
     error RequestExists();
     error RequestNotExists();
 
