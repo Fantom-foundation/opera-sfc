@@ -103,7 +103,7 @@ contract SFCLib is SFCBase {
             revert EmptyPubkey();
         }
         if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
-            revert PubkeyExists();
+            revert PubkeyUsedByOtherValidator();
         }
         _createValidator(msg.sender, pubkey);
         _delegate(msg.sender, lastValidatorID, msg.value);
@@ -316,7 +316,6 @@ contract SFCLib is SFCBase {
         uint256 penalty = getSlashingPenalty(amount, isCheater, slashingRefundRatio[toValidatorID]);
         delete getWithdrawalRequest[delegator][toValidatorID][wrID];
 
-        totalSlashedStake += penalty;
         if (amount <= penalty) {
             revert StakeIsFullySlashed();
         }
