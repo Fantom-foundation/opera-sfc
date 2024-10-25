@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import {Initializable} from "../common/Initializable.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
-import {IEvmWriter} from "../interfaces/IEVMWriter.sol";
+import {IEvmWriter} from "../interfaces/IEvmWriter.sol";
 
 contract NodeDriver is Initializable {
     NodeDriverAuth internal backend;
