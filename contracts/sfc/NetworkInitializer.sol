@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import {ISfc} from "../interfaces/ISfc.sol";
+import {ISFC} from "../interfaces/ISFC.sol";
 import {NodeDriver, NodeDriverAuth} from "./NodeDriver.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {Decimal} from "../common/Decimal.sol";
@@ -40,6 +40,6 @@ contract NetworkInitializer {
         consts.updateGasPriceBalancingCounterweight(3600);
         consts.transferOwnership(_owner);
 
-        ISfc(_sfc).initialize(sealedEpoch, totalSupply, _auth, _lib, address(consts), _owner);
+        ISFC(_sfc).initialize(sealedEpoch, totalSupply, _auth, _lib, address(consts), _owner);
     }
 }

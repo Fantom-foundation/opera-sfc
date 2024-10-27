@@ -3,12 +3,12 @@ pragma solidity ^0.8.9;
 
 import {Initializable} from "../common/Initializable.sol";
 import {Ownable} from "../ownership/Ownable.sol";
-import {ISfc} from "../interfaces/ISfc.sol";
+import {ISFC} from "../interfaces/ISFC.sol";
 import {NodeDriver} from "./NodeDriver.sol";
 import {INodeDriverExecutable} from "../interfaces/INodeDriverExecutable.sol";
 
 contract NodeDriverAuth is Initializable, Ownable {
-    ISfc internal sfc;
+    ISFC internal sfc;
     NodeDriver internal driver;
 
     error NotSFC();
@@ -22,7 +22,7 @@ contract NodeDriverAuth is Initializable, Ownable {
     function initialize(address payable _sfc, address _driver, address _owner) external initializer {
         Ownable.initialize(_owner);
         driver = NodeDriver(_driver);
-        sfc = ISfc(_sfc);
+        sfc = ISFC(_sfc);
     }
 
     modifier onlySFC() {
