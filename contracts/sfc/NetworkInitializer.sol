@@ -12,7 +12,6 @@ contract NetworkInitializer {
         uint256 sealedEpoch,
         uint256 totalSupply,
         address payable _sfc,
-        address _lib,
         address _auth,
         address _driver,
         address _evmWriter,
@@ -40,6 +39,6 @@ contract NetworkInitializer {
         consts.updateGasPriceBalancingCounterweight(3600);
         consts.transferOwnership(_owner);
 
-        ISFC(_sfc).initialize(sealedEpoch, totalSupply, _auth, _lib, address(consts), _owner);
+        ISFC(_sfc).initialize(sealedEpoch, totalSupply, _auth, address(consts), _owner);
     }
 }

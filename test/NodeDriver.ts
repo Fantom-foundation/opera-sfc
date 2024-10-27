@@ -1,19 +1,18 @@
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { EVMWriter, NetworkInitializer, NodeDriver, NodeDriverAuth, SFCLib, UnitTestSFC } from '../typechain-types';
+import { IEVMWriter, NetworkInitializer, NodeDriver, NodeDriverAuth, UnitTestSFC } from '../typechain-types';
 
 describe('NodeDriver', () => {
   const fixture = async () => {
     const [owner, nonOwner] = await ethers.getSigners();
     const sfc: UnitTestSFC = await ethers.deployContract('UnitTestSFC');
     const nodeDriver: NodeDriver = await ethers.deployContract('NodeDriver');
-    const evmWriter: EVMWriter = await ethers.deployContract('StubEvmWriter');
+    const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
     const nodeDriverAuth: NodeDriverAuth = await ethers.deployContract('NodeDriverAuth');
-    const sfcLib: SFCLib = await ethers.deployContract('UnitTestSFCLib');
     const initializer: NetworkInitializer = await ethers.deployContract('NetworkInitializer');
 
-    await initializer.initializeAll(12, 0, sfc, sfcLib, nodeDriverAuth, nodeDriver, evmWriter, owner);
+    await initializer.initializeAll(12, 0, sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
 
     return {
       owner,
@@ -22,7 +21,6 @@ describe('NodeDriver', () => {
       nodeDriver,
       evmWriter,
       nodeDriverAuth,
-      sfcLib,
     };
   };
 

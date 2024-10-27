@@ -200,7 +200,6 @@ interface ISFC {
         uint256 sealedEpoch,
         uint256 _totalSupply,
         address nodeDriver,
-        address lib,
         address consts,
         address _owner
     ) external;
