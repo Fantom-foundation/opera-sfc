@@ -5,7 +5,6 @@ import {Ownable} from "../ownership/Ownable.sol";
 import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
-import {SFC} from "./SFC.sol";
 import {ISFC} from "../interfaces/ISFC.sol";
 import {Version} from "../version/Version.sol";
 
