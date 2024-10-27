@@ -5,7 +5,7 @@ import '@nomicfoundation/hardhat-ethers';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
-import "@typechain/hardhat";
+import '@typechain/hardhat';
 
 dotenv.config();
 

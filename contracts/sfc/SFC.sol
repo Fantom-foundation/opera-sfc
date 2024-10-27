@@ -1467,7 +1467,11 @@ contract SFC is Initializable, Ownable, Version {
             );
     }
 
-    function sumRewards(Rewards memory _a, Rewards memory _b, Rewards memory _c) internal pure returns (Rewards memory) {
+    function sumRewards(
+        Rewards memory _a,
+        Rewards memory _b,
+        Rewards memory _c
+    ) internal pure returns (Rewards memory) {
         return sumRewards(sumRewards(_a, _b), _c);
     }
 
