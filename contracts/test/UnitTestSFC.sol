@@ -271,8 +271,6 @@ interface SFCUnitTestI {
 
     function advanceTime(uint256) external;
 
-    function highestLockupEpoch(address, uint256) external view returns (uint256);
-
     function enableNonNodeCalls() external;
 
     function disableNonNodeCalls() external;
