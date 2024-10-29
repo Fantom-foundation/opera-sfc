@@ -122,7 +122,7 @@ contract SFCBase is SFCState {
         totalSupply = totalSupply + amount;
     }
 
-    function _scaleLockupReward(uint256 fullReward) internal view returns (uint256) {
+    function _scaleReward(uint256 fullReward) internal view returns (uint256) {
         return (fullReward * c.rewardRatio()) / Decimal.unit();
     }
 
