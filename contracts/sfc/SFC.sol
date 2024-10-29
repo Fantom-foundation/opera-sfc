@@ -381,12 +381,14 @@ contract SFC is SFCBase, Version {
     ) internal {
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             uint256 validatorID = validatorIDs[i];
+            // compute normalised uptime as a percentage in the Q1.30 fixed-point format
             uint256 normalisedUptime = uptimes[i] * (1 << 30)/ epochDuration;
             if (normalisedUptime < 0) {
                 normalisedUptime = 0;
             } else if (normalisedUptime > 1 << 30) {
                 normalisedUptime = 1 << 30;
             }
+            // update average uptime data structure 
             // Assumes that if in the previous snapshot the validator
             // does not exist, the map returns zero.
             int32 n = prevSnapshot.averageData[validatorID].numEpochsAlive;
@@ -409,6 +411,12 @@ contract SFC is SFCBase, Version {
             snapshot.averageData[validatorID].averageUptime = int32(tmp);
             if (n < c.numEpochsAliveThreshold()) {
                 snapshot.averageData[validatorID].numEpochsAlive = n + 1;
+            }
+            // remove validator if average uptime drops below min average uptime
+            // (by setting minAverageUptime to zero, this check is ignored)
+            if (int32(tmp) < c.minAverageUptime() && n >= c.numEpochsAliveThreshold() ) { 
+                _setValidatorDeactivated(validatorIDs[i], OFFLINE_BIT);
+                _syncValidator(validatorIDs[i], false);
             }
         }
     }
