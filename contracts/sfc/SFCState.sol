@@ -48,8 +48,8 @@ contract SFCState is Initializable, Ownable {
     mapping(address => mapping(uint256 => uint256)) public stashedRewardsUntilEpoch;
 
     struct WithdrawalRequest {
-        uint256 epoch; // epoch where undelegated
-        uint256 time; // when undelegated
+        uint256 epoch;  // epoch where undelegated
+        uint256 time;   // when undelegated
         uint256 amount;
     }
 
@@ -71,6 +71,16 @@ contract SFCState is Initializable, Ownable {
 
     mapping(address => mapping(uint256 => Rewards)) public getStashedLockupRewards;
 
+    // data structure to compute average uptime for each active validator
+    struct AverageData {
+        // average uptime 
+        int32 averageUptime;
+        // average uptime error term
+        int32 averageUptimeError;
+        // number of alive epochs (counts only up to numEpochsAliveThreshold)
+        int32 numEpochsAlive; 
+    }
+
     struct EpochSnapshot {
         // validator ID => validator weight in the epoch
         mapping(uint256 => uint256) receivedStake;
@@ -79,11 +89,7 @@ contract SFCState is Initializable, Ownable {
         // validator ID => accumulated online time
         mapping(uint256 => uint256) accumulatedUptime;
         // validator ID => average uptime as a percentage 
-        mapping(uint256 => int32) averageUptime;
-        // validator ID => error term of average uptime
-        mapping(uint256 => int32) averageUptimeError;
-        // validator ID => number of epochs alive for average uptime calculation
-        mapping(uint256 => int32) numEpochsAlive;
+        mapping(uint256 => AverageData) averageData;
         // validator ID => gas fees from txs originated by the validator
         mapping(uint256 => uint256) accumulatedOriginatedTxsFee;
         mapping(uint256 => uint256) offlineTime;

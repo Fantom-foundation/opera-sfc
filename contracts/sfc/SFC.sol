@@ -71,7 +71,7 @@ contract SFC is SFCBase, Version {
     }
 
     function getEpochAverageUptime(uint256 epoch, uint256 validatorID) public view returns (int32) {
-        return getEpochSnapshot[epoch].averageUptime[validatorID];
+        return getEpochSnapshot[epoch].averageData[validatorID].averageUptime;
     }
 
     function getEpochAccumulatedOriginatedTxsFee(uint256 epoch, uint256 validatorID) public view returns (uint256) {
@@ -389,14 +389,14 @@ contract SFC is SFCBase, Version {
             }
             // Assumes that if in the previous snapshot the validator
             // does not exist, the map returns zero.
-            int32 n = prevSnapshot.numEpochsAlive[validatorID];
+            int32 n = prevSnapshot.averageData[validatorID].numEpochsAlive;
             int64 tmp;
             if (n > 0) { 
-                tmp = int64(n-1) * int64(snapshot.averageUptime[validatorID]) + int64(uint64(normalisedUptime));
+                tmp = int64(n-1) * int64(snapshot.averageData[validatorID].averageUptime) + int64(uint64(normalisedUptime));
                 if (n > 1)  {
-                    tmp += (int64(n) * int64(prevSnapshot.averageUptimeError[validatorID])) / int64(n-1);
+                    tmp += (int64(n) * int64(prevSnapshot.averageData[validatorID].averageUptimeError)) / int64(n-1);
                 }
-                snapshot.averageUptimeError[validatorID] = int32(tmp % int64(n));
+                snapshot.averageData[validatorID].averageUptimeError = int32(tmp % int64(n));
                 tmp /= int64(n);
             } else {
                 tmp = int64(uint64(normalisedUptime));
@@ -406,9 +406,9 @@ contract SFC is SFCBase, Version {
             } else if (tmp > 1 << 30){
                tmp = 1 << 30;
             }
-            snapshot.averageUptime[validatorID] = int32(tmp);
+            snapshot.averageData[validatorID].averageUptime = int32(tmp);
             if (n < c.numEpochsAliveThreshold()) {
-                snapshot.numEpochsAlive[validatorID] = n + 1;
+                snapshot.averageData[validatorID].numEpochsAlive = n + 1;
             }
         }
     }
