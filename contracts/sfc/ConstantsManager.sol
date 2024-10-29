@@ -32,6 +32,9 @@ contract ConstantsManager is Ownable {
     uint256 public targetGasPowerPerSecond;
     uint256 public gasPriceBalancingCounterweight;
 
+    // number of epochs for counting the average uptime of validators
+    int32 public numEpochsAliveThreshold;
+
     /**
      * @dev Given value is too small
      */
@@ -185,5 +188,15 @@ contract ConstantsManager is Ownable {
             revert ValueTooLarge();
         }
         gasPriceBalancingCounterweight = v;
+    }
+
+    function updateNumEpochsAliveThreshold(int32 v) external virtual onlyOwner {
+        if (v < 10) {
+            revert ValueTooSmall();
+        }
+        if (v > 87600) {
+            revert ValueTooLarge();
+        }
+        numEpochsAliveThreshold = v;
     }
 }

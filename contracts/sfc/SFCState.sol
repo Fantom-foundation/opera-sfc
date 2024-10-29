@@ -78,6 +78,12 @@ contract SFCState is Initializable, Ownable {
         mapping(uint256 => uint256) accumulatedRewardPerToken;
         // validator ID => accumulated online time
         mapping(uint256 => uint256) accumulatedUptime;
+        // validator ID => average uptime as a percentage 
+        mapping(uint256 => int32) averageUptime;
+        // validator ID => error term of average uptime
+        mapping(uint256 => int32) averageUptimeError;
+        // validator ID => number of epochs alive for average uptime calculation
+        mapping(uint256 => int32) numEpochsAlive;
         // validator ID => gas fees from txs originated by the validator
         mapping(uint256 => uint256) accumulatedOriginatedTxsFee;
         mapping(uint256 => uint256) offlineTime;

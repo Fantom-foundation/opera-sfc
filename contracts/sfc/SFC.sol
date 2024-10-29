@@ -368,6 +368,47 @@ contract SFC is SFCBase, Version {
         minGasPrice = newMinGasPrice;
     }
 
+    function _sealEpochAverageUptime(
+        uint256 epochDuration,
+        EpochSnapshot storage snapshot,
+        EpochSnapshot storage prevSnapshot,
+        uint256[] memory validatorIDs,
+        uint256[] memory uptimes
+    ) internal {
+        for (uint256 i = 0; i < validatorIDs.length; i++) {
+            uint256 validatorID = validatorIDs[i];
+            uint256 normalisedUptime = uptimes[i] * (1 << 30)/ epochDuration;
+            if (normalisedUptime < 0) {
+                normalisedUptime = 0;
+            } else if (normalisedUptime > 1 << 30) {
+                normalisedUptime = 1 << 30;
+            }
+            // Assumes that if in the previous snapshot the validator
+            // does not exist, the map returns zero.
+            int32 n = prevSnapshot.numEpochsAlive[validatorID];
+            int64 tmp;
+            if (n > 0) { 
+                tmp = int64(n-1) * int64(snapshot.averageUptime[validatorID]) + int64(uint64(normalisedUptime));
+                if (n > 1)  {
+                    tmp += (int64(n) * int64(prevSnapshot.averageUptimeError[validatorID])) / int64(n-1);
+                }
+                snapshot.averageUptimeError[validatorID] = int32(tmp % int64(n));
+                tmp /= int64(n);
+            } else {
+                tmp = int64(uint64(normalisedUptime));
+            }
+            if (tmp < 0) {
+               tmp = 0;
+            } else if (tmp > 1 << 30){
+               tmp = 1 << 30;
+            }
+            snapshot.averageUptime[validatorID] = int32(tmp);
+            if (n < c.numEpochsAliveThreshold()) {
+                snapshot.numEpochsAlive[validatorID] = n + 1;
+            }
+        }
+    }
+
     function sealEpoch(
         uint256[] calldata offlineTime,
         uint256[] calldata offlineBlocks,
@@ -387,6 +428,7 @@ contract SFC is SFCBase, Version {
             }
             _sealEpochRewards(epochDuration, snapshot, prevSnapshot, validatorIDs, uptimes, originatedTxsFee);
             _sealEpochMinGasPrice(epochDuration, epochGas);
+            _sealEpochAverageUptime(epochDuration, snapshot, prevSnapshot, validatorIDs, uptimes);
         }
 
         currentSealedEpoch = currentEpoch();
