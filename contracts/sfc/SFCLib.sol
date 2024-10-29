@@ -348,9 +348,12 @@ contract SFCLib is SFCBase {
 
     function _stashRewards(address delegator, uint256 toValidatorID) internal returns (bool) {
         uint256 nonStashedReward = _newRewards(delegator, toValidatorID);
+        if (nonStashedReward == 0) {
+            return false;
+        }
         stashedRewardsUntilEpoch[delegator][toValidatorID] = _highestPayableEpoch(toValidatorID);
         _rewardsStash[delegator][toValidatorID] = _rewardsStash[delegator][toValidatorID] + nonStashedReward;
-        return nonStashedReward != 0;
+        return true;
     }
 
     function _claimRewards(address delegator, uint256 toValidatorID) internal returns (uint256) {
