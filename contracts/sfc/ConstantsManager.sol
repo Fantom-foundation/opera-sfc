@@ -35,6 +35,9 @@ contract ConstantsManager is Ownable {
     // number of epochs for counting the average uptime of validators
     int32 public numEpochsAliveThreshold;
 
+    // minimum average uptime
+    int32 public minAverageUptime;
+
     /**
      * @dev Given value is too small
      */
@@ -198,5 +201,15 @@ contract ConstantsManager is Ownable {
             revert ValueTooLarge();
         }
         numEpochsAliveThreshold = v;
+    }
+
+    function updateMinAverageUptime(int32 v) external virtual onlyOwner {
+        if (v < 0) {
+            revert ValueTooSmall();
+        }
+        if (v > 966367641) { // 0.9 in Q1.30
+            revert ValueTooLarge();
+        }
+        minAverageUptime = v;
     }
 }

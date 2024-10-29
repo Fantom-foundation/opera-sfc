@@ -70,6 +70,10 @@ contract SFC is SFCBase, Version {
         return getEpochSnapshot[epoch].accumulatedUptime[validatorID];
     }
 
+    function getEpochAverageUptime(uint256 epoch, uint256 validatorID) public view returns (int32) {
+        return getEpochSnapshot[epoch].averageUptime[validatorID];
+    }
+
     function getEpochAccumulatedOriginatedTxsFee(uint256 epoch, uint256 validatorID) public view returns (uint256) {
         return getEpochSnapshot[epoch].accumulatedOriginatedTxsFee[validatorID];
     }
