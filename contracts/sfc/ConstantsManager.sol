@@ -29,6 +29,12 @@ contract ConstantsManager is Ownable {
     uint256 public targetGasPowerPerSecond;
     uint256 public gasPriceBalancingCounterweight;
 
+    // the number of epochs for counting the average uptime of validators
+    int32 public averageUptimeEpochsWindow;
+
+    // minimum average uptime
+    int32 public minAverageUptime;
+
     /**
      * @dev Given value is too small
      */
@@ -152,5 +158,26 @@ contract ConstantsManager is Ownable {
             revert ValueTooLarge();
         }
         gasPriceBalancingCounterweight = v;
+    }
+
+    function updateAverageUptimeEpochsWindow(int32 v) external virtual onlyOwner {
+        if (v < 10) {
+            revert ValueTooSmall();
+        }
+        if (v > 87600) {
+            revert ValueTooLarge();
+        }
+        averageUptimeEpochsWindow = v;
+    }
+
+    function updateMinAverageUptime(int32 v) external virtual onlyOwner {
+        if (v < 0) {
+            revert ValueTooSmall();
+        }
+        if (v > 966367641) {
+            // 0.9 in Q1.30
+            revert ValueTooLarge();
+        }
+        minAverageUptime = v;
     }
 }
