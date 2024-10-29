@@ -16,13 +16,7 @@ interface NodeDriverI {
     function setGenesisDelegation(
         address delegator,
         uint256 toValidatorID,
-        uint256 stake,
-        uint256 lockedStake,
-        uint256 lockupFromEpoch,
-        uint256 lockupEndTime,
-        uint256 lockupDuration,
-        uint256 earlyUnlockPenalty,
-        uint256 rewards
+        uint256 stake
     ) external;
 
     function deactivateValidator(uint256 validatorID, uint256 status) external;
