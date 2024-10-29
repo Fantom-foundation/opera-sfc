@@ -110,16 +110,8 @@ contract NodeDriver is Initializable {
         );
     }
 
-    function setGenesisDelegation(
-        address delegator,
-        uint256 toValidatorID,
-        uint256 stake
-    ) external onlyNode {
-        backend.setGenesisDelegation(
-            delegator,
-            toValidatorID,
-            stake
-        );
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external onlyNode {
+        backend.setGenesisDelegation(delegator, toValidatorID, stake);
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyNode {

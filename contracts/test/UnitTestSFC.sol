@@ -259,11 +259,7 @@ interface SFCUnitTestI {
         uint256 deactivatedTime
     ) external;
 
-    function setGenesisDelegation(
-        address delegator,
-        uint256 toValidatorID,
-        uint256 stake
-    ) external;
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external;
 
     function _syncValidator(uint256 validatorID, bool syncPubkey) external;
 
