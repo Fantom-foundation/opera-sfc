@@ -85,7 +85,6 @@ contract UnitTestNetworkInitializer {
         consts.updateValidatorCommission((15 * Decimal.unit()) / 100);
         consts.updateBurntFeeShare((20 * Decimal.unit()) / 100);
         consts.updateTreasuryFeeShare((10 * Decimal.unit()) / 100);
-        consts.updateRewardRatio((30 * Decimal.unit()) / 100);
         consts.updateWithdrawalPeriodEpochs(3);
         consts.updateWithdrawalPeriodTime(60 * 60 * 24 * 7);
         consts.updateBaseRewardPerSecond(6183414351851851852);

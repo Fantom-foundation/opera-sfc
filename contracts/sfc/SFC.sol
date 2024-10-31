@@ -294,7 +294,7 @@ contract SFC is SFCBase, Version {
             uint256 commissionRewardFull = _calcValidatorCommission(rawReward, c.validatorCommission());
             uint256 selfStake = getStake[validatorAddr][validatorID];
             if (selfStake != 0) {
-                _rewardsStash[validatorAddr][validatorID] += _scaleReward(commissionRewardFull);
+                _rewardsStash[validatorAddr][validatorID] += commissionRewardFull;
             }
 
             // accounting reward per token for delegators

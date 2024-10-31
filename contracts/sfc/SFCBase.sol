@@ -122,10 +122,6 @@ contract SFCBase is SFCState {
         totalSupply = totalSupply + amount;
     }
 
-    function _scaleReward(uint256 fullReward) internal view returns (uint256) {
-        return (fullReward * c.rewardRatio()) / Decimal.unit();
-    }
-
     function _recountVotes(address delegator, address validatorAuth, bool strict) internal {
         if (voteBookAddress != address(0)) {
             // Don't allow recountVotes to use up all the gas

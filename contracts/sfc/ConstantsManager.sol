@@ -15,8 +15,6 @@ contract ConstantsManager is Ownable {
     uint256 public burntFeeShare;
     // The percentage of fees to transfer to treasury address, e.g., 10%
     uint256 public treasuryFeeShare;
-    // The ratio of the reward rate, e.g., 30%
-    uint256 public rewardRatio;
     // the number of epochs that undelegated stake is locked for
     uint256 public withdrawalPeriodEpochs;
     // the number of seconds that undelegated stake is locked for
@@ -81,16 +79,6 @@ contract ConstantsManager is Ownable {
             revert ValueTooLarge();
         }
         treasuryFeeShare = v;
-    }
-
-    function updateRewardRatio(uint256 v) external virtual onlyOwner {
-        if (v < (5 * Decimal.unit()) / 100) {
-            revert ValueTooSmall();
-        }
-        if (v > Decimal.unit() / 2) {
-            revert ValueTooLarge();
-        }
-        rewardRatio = v;
     }
 
     function updateWithdrawalPeriodEpochs(uint256 v) external virtual onlyOwner {

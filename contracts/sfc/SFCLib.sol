@@ -318,7 +318,7 @@ contract SFCLib is SFCBase {
         uint256 payableUntil = _highestPayableEpoch(toValidatorID);
         uint256 wholeStake = getStake[delegator][toValidatorID];
         uint256 fullReward = _newRewardsOf(wholeStake, toValidatorID, stashedUntil, payableUntil);
-        return _scaleReward(fullReward);
+        return fullReward;
     }
 
     function _newRewardsOf(
