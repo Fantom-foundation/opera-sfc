@@ -88,9 +88,6 @@ contract Updater {
         consts.updateValidatorCommission((15 * Decimal.unit()) / 100);
         consts.updateBurntFeeShare((20 * Decimal.unit()) / 100);
         consts.updateTreasuryFeeShare((10 * Decimal.unit()) / 100);
-        consts.updateUnlockedRewardRatio((30 * Decimal.unit()) / 100);
-        consts.updateMinLockupDuration(86400 * 14);
-        consts.updateMaxLockupDuration(86400 * 365);
         consts.updateWithdrawalPeriodEpochs(3);
         consts.updateWithdrawalPeriodTime(60 * 60 * 24 * 7);
         consts.updateBaseRewardPerSecond(2668658453701531600);
