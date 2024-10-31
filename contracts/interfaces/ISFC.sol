@@ -49,9 +49,9 @@ interface ISFC {
         returns (
             uint256 status,
             uint256 receivedStake,
+            address auth,
             uint256 createdEpoch,
             uint256 createdTime,
-            address auth,
             uint256 deactivatedTime,
             uint256 deactivatedEpoch
         );
