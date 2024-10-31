@@ -33,7 +33,7 @@ contract ConstantsManager is Ownable {
     uint256 public gasPriceBalancingCounterweight;
 
     // epoch threshold for stop counting alive epochs (avoid diminishing impact of new uptimes) and
-    // is also the minimum number of epochs necessary for enabling the deactivation. 
+    // is also the minimum number of epochs necessary for enabling the deactivation.
     int32 public numEpochsAliveThreshold;
 
     // minimum average uptime in Q1.30 format; acceptable bounds [0,0.9]
@@ -208,7 +208,8 @@ contract ConstantsManager is Ownable {
         if (v < 0) {
             revert ValueTooSmall();
         }
-        if (v > 966367641) { // 0.9 in Q1.30
+        if (v > 966367641) {
+            // 0.9 in Q1.30
             revert ValueTooLarge();
         }
         minAverageUptime = v;

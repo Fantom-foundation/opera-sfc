@@ -382,21 +382,24 @@ contract SFC is SFCBase, Version {
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             uint256 validatorID = validatorIDs[i];
             // compute normalised uptime as a percentage in the Q1.30 fixed-point format
-            uint256 normalisedUptime = uptimes[i] * (1 << 30)/ epochDuration;
+            uint256 normalisedUptime = (uptimes[i] * (1 << 30)) / epochDuration;
             if (normalisedUptime < 0) {
                 normalisedUptime = 0;
             } else if (normalisedUptime > 1 << 30) {
                 normalisedUptime = 1 << 30;
             }
-            // update average uptime data structure 
+            // update average uptime data structure
             // Assumes that if in the previous snapshot the validator
             // does not exist, the map returns zero.
             int32 n = prevSnapshot.averageData[validatorID].numEpochsAlive;
             int64 tmp;
-            if (n > 0) { 
-                tmp = int64(n-1) * int64(snapshot.averageData[validatorID].averageUptime) + int64(uint64(normalisedUptime));
-                if (n > 1)  {
-                    tmp += (int64(n) * int64(prevSnapshot.averageData[validatorID].averageUptimeError)) / int64(n-1);
+            if (n > 0) {
+                tmp =
+                    int64(n - 1) *
+                    int64(snapshot.averageData[validatorID].averageUptime) +
+                    int64(uint64(normalisedUptime));
+                if (n > 1) {
+                    tmp += (int64(n) * int64(prevSnapshot.averageData[validatorID].averageUptimeError)) / int64(n - 1);
                 }
                 snapshot.averageData[validatorID].averageUptimeError = int32(tmp % int64(n));
                 tmp /= int64(n);
@@ -404,9 +407,9 @@ contract SFC is SFCBase, Version {
                 tmp = int64(uint64(normalisedUptime));
             }
             if (tmp < 0) {
-               tmp = 0;
-            } else if (tmp > 1 << 30){
-               tmp = 1 << 30;
+                tmp = 0;
+            } else if (tmp > 1 << 30) {
+                tmp = 1 << 30;
             }
             snapshot.averageData[validatorID].averageUptime = int32(tmp);
             if (n < c.numEpochsAliveThreshold()) {
@@ -414,7 +417,7 @@ contract SFC is SFCBase, Version {
             }
             // remove validator if average uptime drops below min average uptime
             // (by setting minAverageUptime to zero, this check is ignored)
-            if (int32(tmp) < c.minAverageUptime() && n >= c.numEpochsAliveThreshold() ) { 
+            if (int32(tmp) < c.minAverageUptime() && n >= c.numEpochsAliveThreshold()) {
                 _setValidatorDeactivated(validatorIDs[i], OFFLINE_BIT);
                 _syncValidator(validatorIDs[i], false);
             }
