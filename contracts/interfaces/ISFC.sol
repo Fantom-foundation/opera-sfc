@@ -48,12 +48,12 @@ interface ISFC {
         view
         returns (
             uint256 status,
-            uint256 deactivatedTime,
-            uint256 deactivatedEpoch,
             uint256 receivedStake,
             uint256 createdEpoch,
             uint256 createdTime,
-            address auth
+            address auth,
+            uint256 deactivatedTime,
+            uint256 deactivatedEpoch
         );
 
     function getValidatorID(address) external view returns (uint256);

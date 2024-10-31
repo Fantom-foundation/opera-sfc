@@ -24,12 +24,12 @@ contract SFC is Initializable, Ownable, Version {
      */
     struct Validator {
         uint256 status;
-        uint256 deactivatedTime;
-        uint256 deactivatedEpoch;
         uint256 receivedStake; // from all delegators (weight of the validator)
         uint256 createdEpoch;
         uint256 createdTime;
         address auth; // self-stake delegator
+        uint256 deactivatedTime;
+        uint256 deactivatedEpoch;
     }
 
     NodeDriverAuth internal node;
