@@ -15,12 +15,6 @@ contract ConstantsManager is Ownable {
     uint256 public burntFeeShare;
     // The percentage of fees to transfer to treasury address, e.g., 10%
     uint256 public treasuryFeeShare;
-    // The ratio of the reward rate at base rate (no lock), e.g., 30%
-    uint256 public unlockedRewardRatio;
-    // The minimum duration of a stake/delegation lockup, e.g. 2 weeks
-    uint256 public minLockupDuration;
-    // The maximum duration of a stake/delegation lockup, e.g. 1 year
-    uint256 public maxLockupDuration;
     // the number of epochs that undelegated stake is locked for
     uint256 public withdrawalPeriodEpochs;
     // the number of seconds that undelegated stake is locked for
@@ -92,36 +86,6 @@ contract ConstantsManager is Ownable {
             revert ValueTooLarge();
         }
         treasuryFeeShare = v;
-    }
-
-    function updateUnlockedRewardRatio(uint256 v) external virtual onlyOwner {
-        if (v < (5 * Decimal.unit()) / 100) {
-            revert ValueTooSmall();
-        }
-        if (v > Decimal.unit() / 2) {
-            revert ValueTooLarge();
-        }
-        unlockedRewardRatio = v;
-    }
-
-    function updateMinLockupDuration(uint256 v) external virtual onlyOwner {
-        if (v < 86400) {
-            revert ValueTooSmall();
-        }
-        if (v > 86400 * 30) {
-            revert ValueTooLarge();
-        }
-        minLockupDuration = v;
-    }
-
-    function updateMaxLockupDuration(uint256 v) external virtual onlyOwner {
-        if (v < 86400 * 30) {
-            revert ValueTooSmall();
-        }
-        if (v > 86400 * 1460) {
-            revert ValueTooLarge();
-        }
-        maxLockupDuration = v;
     }
 
     function updateWithdrawalPeriodEpochs(uint256 v) external virtual onlyOwner {

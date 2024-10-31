@@ -91,8 +91,7 @@ contract SFC is SFCBase, Version {
     }
 
     function rewardsStash(address delegator, uint256 validatorID) public view returns (uint256) {
-        Rewards memory stash = _rewardsStash[delegator][validatorID];
-        return stash.lockupBaseReward + stash.lockupExtraReward + stash.unlockedReward;
+        return _rewardsStash[delegator][validatorID];
     }
 
     /*
@@ -299,25 +298,9 @@ contract SFC is SFCBase, Version {
             uint256 commissionRewardFull = _calcValidatorCommission(rawReward, c.validatorCommission());
             uint256 selfStake = getStake[validatorAddr][validatorID];
             if (selfStake != 0) {
-                uint256 lCommissionRewardFull = (commissionRewardFull * getLockedStake(validatorAddr, validatorID)) /
-                    selfStake;
-                uint256 uCommissionRewardFull = commissionRewardFull - lCommissionRewardFull;
-                Rewards memory lCommissionReward = _scaleLockupReward(
-                    lCommissionRewardFull,
-                    getLockupInfo[validatorAddr][validatorID].duration
-                );
-                Rewards memory uCommissionReward = _scaleLockupReward(uCommissionRewardFull, 0);
-                _rewardsStash[validatorAddr][validatorID] = sumRewards(
-                    _rewardsStash[validatorAddr][validatorID],
-                    lCommissionReward,
-                    uCommissionReward
-                );
-                getStashedLockupRewards[validatorAddr][validatorID] = sumRewards(
-                    getStashedLockupRewards[validatorAddr][validatorID],
-                    lCommissionReward,
-                    uCommissionReward
-                );
+                _rewardsStash[validatorAddr][validatorID] += commissionRewardFull;
             }
+
             // accounting reward per token for delegators
             uint256 delegatorsReward = rawReward - commissionRewardFull;
             // note: use latest stake for the sake of rewards distribution accuracy, not snapshot.receivedStake

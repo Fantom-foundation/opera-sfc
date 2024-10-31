@@ -141,28 +141,8 @@ contract NodeDriverAuth is Initializable, Ownable {
         );
     }
 
-    function setGenesisDelegation(
-        address delegator,
-        uint256 toValidatorID,
-        uint256 stake,
-        uint256 lockedStake,
-        uint256 lockupFromEpoch,
-        uint256 lockupEndTime,
-        uint256 lockupDuration,
-        uint256 earlyUnlockPenalty,
-        uint256 rewards
-    ) external onlyDriver {
-        sfc.setGenesisDelegation(
-            delegator,
-            toValidatorID,
-            stake,
-            lockedStake,
-            lockupFromEpoch,
-            lockupEndTime,
-            lockupDuration,
-            earlyUnlockPenalty,
-            rewards
-        );
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external onlyDriver {
+        sfc.setGenesisDelegation(delegator, toValidatorID, stake);
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {

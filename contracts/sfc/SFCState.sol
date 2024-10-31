@@ -22,12 +22,6 @@ contract SFCState is Initializable, Ownable {
 
     NodeDriverAuth internal node;
 
-    struct Rewards {
-        uint256 lockupExtraReward;
-        uint256 lockupBaseReward;
-        uint256 unlockedReward;
-    }
-
     // last sealed epoch (currentEpoch - 1)
     uint256 public currentSealedEpoch;
     mapping(uint256 => Validator) public getValidator;
@@ -38,11 +32,12 @@ contract SFCState is Initializable, Ownable {
 
     // total stake of all validators - includes slashed/offline validators
     uint256 public totalStake;
+
     // total stake of active (OK_STATUS) validators (total weight)
     uint256 public totalActiveStake;
 
     // delegator => validator ID => stashed rewards (to be claimed/restaked)
-    mapping(address => mapping(uint256 => Rewards)) internal _rewardsStash;
+    mapping(address => mapping(uint256 => uint256)) internal _rewardsStash;
 
     // delegator => validator ID => last epoch number for which were rewards stashed
     mapping(address => mapping(uint256 => uint256)) public stashedRewardsUntilEpoch;
@@ -56,20 +51,8 @@ contract SFCState is Initializable, Ownable {
     // delegator => validator ID => withdrawal ID => withdrawal request
     mapping(address => mapping(uint256 => mapping(uint256 => WithdrawalRequest))) public getWithdrawalRequest;
 
-    struct LockedDelegation {
-        uint256 lockedStake;
-        uint256 fromEpoch;
-        uint256 endTime;
-        uint256 duration;
-    }
-
     // delegator => validator ID => current stake (locked+unlocked)
     mapping(address => mapping(uint256 => uint256)) public getStake;
-
-    // delegator => validator ID => locked stake info
-    mapping(address => mapping(uint256 => LockedDelegation)) public getLockupInfo;
-
-    mapping(address => mapping(uint256 => Rewards)) public getStashedLockupRewards;
 
     // data structure to compute average uptime for each active validator
     struct AverageData {
@@ -124,13 +107,6 @@ contract SFCState is Initializable, Ownable {
 
     // the governance contract (to recalculate votes when the stake changes)
     address public voteBookAddress;
-
-    struct Penalty {
-        uint256 amount;
-        uint256 end;
-    }
-    // delegator => validatorID => penalties info
-    mapping(address => mapping(uint256 => Penalty[])) public getStashedPenalties;
 
     // validator ID => amount of pubkey updates
     mapping(uint256 => uint256) internal validatorPubkeyChanges;
