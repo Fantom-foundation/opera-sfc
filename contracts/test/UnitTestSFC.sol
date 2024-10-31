@@ -46,18 +46,6 @@ contract UnitTestSFC is SFC {
         }
         return SFC.isNode(addr);
     }
-
-    function highestLockupEpoch(address delegator, uint256 validatorID) external view returns (uint256) {
-        return _highestLockupEpoch(delegator, validatorID);
-    }
-
-    function _getAvgEpochStep(uint256) internal pure override returns (uint256) {
-        return 1;
-    }
-
-    function _getAvgUptime(uint256, uint256 duration, uint256) internal pure override returns (uint256) {
-        return duration;
-    }
 }
 
 contract UnitTestNetworkInitializer {
@@ -80,9 +68,6 @@ contract UnitTestNetworkInitializer {
         consts.updateValidatorCommission((15 * Decimal.unit()) / 100);
         consts.updateBurntFeeShare((20 * Decimal.unit()) / 100);
         consts.updateTreasuryFeeShare((10 * Decimal.unit()) / 100);
-        consts.updateUnlockedRewardRatio((30 * Decimal.unit()) / 100);
-        consts.updateMinLockupDuration(86400 * 14);
-        consts.updateMaxLockupDuration(86400 * 365);
         consts.updateWithdrawalPeriodEpochs(3);
         consts.updateWithdrawalPeriodTime(60 * 60 * 24 * 7);
         consts.updateBaseRewardPerSecond(6183414351851851852);
