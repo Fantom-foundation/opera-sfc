@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-interface IEvmWriter {
+interface IEVMWriter {
     function setBalance(address acc, uint256 value) external;
 
     function copyCode(address acc, address from) external;

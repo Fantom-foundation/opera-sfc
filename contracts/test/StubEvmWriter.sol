@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import {IEvmWriter} from "../interfaces/IEVMWriter.sol";
+import {IEVMWriter} from "../interfaces/IEVMWriter.sol";
 
-contract StubEvmWriter is IEvmWriter {
+contract StubEvmWriter is IEVMWriter {
     function setBalance(address acc, uint256 value) external {}
 
     function copyCode(address acc, address from) external {}

@@ -6,7 +6,7 @@ import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {SFC} from "./SFC.sol";
-import {SFCI} from "./SFCI.sol";
+import {ISFC} from "../interfaces/ISFC.sol";
 import {Version} from "../version/Version.sol";
 
 interface GovI {
@@ -101,8 +101,8 @@ contract Updater {
 
         NodeDriverAuth nodeAuth = NodeDriverAuth(0xD100ae0000000000000000000000000000000000);
         nodeAuth.upgradeCode(sfcTo, sfcFrom);
-        SFCI(sfcTo).updateConstsAddress(sfcConsts);
-        SFCI(sfcTo).updateVoteBookAddress(voteBook);
+        ISFC(sfcTo).updateConstsAddress(sfcConsts);
+        ISFC(sfcTo).updateVoteBookAddress(voteBook);
         SFC(sfcTo).updateLibAddress(sfcLib);
 
         nodeAuth.upgradeCode(govTo, govFrom);

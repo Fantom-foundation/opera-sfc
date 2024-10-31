@@ -3,15 +3,12 @@ pragma solidity ^0.8.9;
 
 import {Initializable} from "../common/Initializable.sol";
 import {Ownable} from "../ownership/Ownable.sol";
-import {SFCI} from "./SFCI.sol";
+import {ISFC} from "../interfaces/ISFC.sol";
 import {NodeDriver} from "./NodeDriver.sol";
-
-interface NodeDriverExecutable {
-    function execute() external;
-}
+import {INodeDriverExecutable} from "../interfaces/INodeDriverExecutable.sol";
 
 contract NodeDriverAuth is Initializable, Ownable {
-    SFCI internal sfc;
+    ISFC internal sfc;
     NodeDriver internal driver;
 
     error NotSFC();
@@ -25,7 +22,7 @@ contract NodeDriverAuth is Initializable, Ownable {
     function initialize(address payable _sfc, address _driver, address _owner) external initializer {
         Ownable.initialize(_owner);
         driver = NodeDriver(_driver);
-        sfc = SFCI(_sfc);
+        sfc = ISFC(_sfc);
     }
 
     modifier onlySFC() {
@@ -48,7 +45,7 @@ contract NodeDriverAuth is Initializable, Ownable {
 
     function _execute(address executable, address newOwner, bytes32 selfCodeHash, bytes32 driverCodeHash) internal {
         _transferOwnership(executable);
-        NodeDriverExecutable(executable).execute();
+        INodeDriverExecutable(executable).execute();
         _transferOwnership(newOwner);
         //require(driver.backend() == address(this), "ownership of driver is lost");
         if (_getCodeHash(address(this)) != selfCodeHash) {
