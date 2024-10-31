@@ -11,23 +11,9 @@ interface ISFC {
     event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
     event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
     event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
-    event ClaimedRewards(
-        address indexed delegator,
-        uint256 indexed toValidatorID,
-        uint256 lockupExtraReward,
-        uint256 lockupBaseReward,
-        uint256 unlockedReward
-    );
-    event RestakedRewards(
-        address indexed delegator,
-        uint256 indexed toValidatorID,
-        uint256 lockupExtraReward,
-        uint256 lockupBaseReward,
-        uint256 unlockedReward
-    );
+    event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
+    event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event BurntFTM(uint256 amount);
-    event LockedUpStake(address indexed delegator, uint256 indexed validatorID, uint256 duration, uint256 amount);
-    event UnlockedStake(address indexed delegator, uint256 indexed validatorID, uint256 amount, uint256 penalty);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
 
@@ -53,17 +39,7 @@ interface ISFC {
             uint256 totalSupply
         );
 
-    function getLockupInfo(
-        address,
-        uint256
-    ) external view returns (uint256 lockedStake, uint256 fromEpoch, uint256 endTime, uint256 duration);
-
     function getStake(address, uint256) external view returns (uint256);
-
-    function getStashedLockupRewards(
-        address,
-        uint256
-    ) external view returns (uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
 
     function getValidator(
         uint256
@@ -106,8 +82,6 @@ interface ISFC {
 
     function totalActiveStake() external view returns (uint256);
 
-    function totalSlashedStake() external view returns (uint256);
-
     function totalStake() external view returns (uint256);
 
     function totalSupply() external view returns (uint256);
@@ -141,8 +115,6 @@ interface ISFC {
     function getEpochEndBlock(uint256 epoch) external view returns (uint256);
 
     function rewardsStash(address delegator, uint256 validatorID) external view returns (uint256);
-
-    function getLockedStake(address delegator, uint256 toValidatorID) external view returns (uint256);
 
     function createValidator(bytes calldata pubkey) external payable;
 
@@ -186,16 +158,6 @@ interface ISFC {
 
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external;
 
-    function isLockedUp(address delegator, uint256 toValidatorID) external view returns (bool);
-
-    function getUnlockedStake(address delegator, uint256 toValidatorID) external view returns (uint256);
-
-    function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) external;
-
-    function relockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) external;
-
-    function unlockStake(uint256 toValidatorID, uint256 amount) external returns (uint256);
-
     function initialize(
         uint256 sealedEpoch,
         uint256 _totalSupply,
@@ -216,17 +178,7 @@ interface ISFC {
         uint256 deactivatedTime
     ) external;
 
-    function setGenesisDelegation(
-        address delegator,
-        uint256 toValidatorID,
-        uint256 stake,
-        uint256 lockedStake,
-        uint256 lockupFromEpoch,
-        uint256 lockupEndTime,
-        uint256 lockupDuration,
-        uint256 earlyUnlockPenalty,
-        uint256 rewards
-    ) external;
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external;
 
     function updateVoteBookAddress(address v) external;
 

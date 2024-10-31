@@ -60,20 +60,10 @@ contract SFCBase is SFCState {
     error GovVotesRecountFailed();
 
     // staking
-    error LockedStakeGreaterThanTotalStake();
     error InsufficientSelfStake();
-    error NotEnoughUnlockedStake();
-    error NotEnoughLockedStake();
     error NotEnoughTimePassed();
     error NotEnoughEpochsPassed();
     error StakeIsFullySlashed();
-    error IncorrectDuration();
-    error ValidatorLockupTooShort();
-    error TooManyReLocks();
-    error TooFrequentReLocks();
-    error LockupDurationDecreased();
-    error AlreadyLockedUp();
-    error NotLockedUp();
 
     // stashing
     error NothingToStash();
@@ -132,37 +122,6 @@ contract SFCBase is SFCState {
         totalSupply = totalSupply + amount;
     }
 
-    function sumRewards(Rewards memory a, Rewards memory b) internal pure returns (Rewards memory) {
-        return
-            Rewards(
-                a.lockupExtraReward + b.lockupExtraReward,
-                a.lockupBaseReward + b.lockupBaseReward,
-                a.unlockedReward + b.unlockedReward
-            );
-    }
-
-    function sumRewards(Rewards memory a, Rewards memory b, Rewards memory c) internal pure returns (Rewards memory) {
-        return sumRewards(sumRewards(a, b), c);
-    }
-
-    function _scaleLockupReward(
-        uint256 fullReward,
-        uint256 lockupDuration
-    ) internal view returns (Rewards memory reward) {
-        reward = Rewards(0, 0, 0);
-        uint256 unlockedRewardRatio = c.unlockedRewardRatio();
-        if (lockupDuration != 0) {
-            uint256 maxLockupExtraRatio = Decimal.unit() - unlockedRewardRatio;
-            uint256 lockupExtraRatio = (maxLockupExtraRatio * lockupDuration) / c.maxLockupDuration();
-            uint256 totalScaledReward = (fullReward * (unlockedRewardRatio + lockupExtraRatio)) / Decimal.unit();
-            reward.lockupBaseReward = (fullReward * unlockedRewardRatio) / Decimal.unit();
-            reward.lockupExtraReward = totalScaledReward - reward.lockupBaseReward;
-        } else {
-            reward.unlockedReward = (fullReward * unlockedRewardRatio) / Decimal.unit();
-        }
-        return reward;
-    }
-
     function _recountVotes(address delegator, address validatorAuth, bool strict) internal {
         if (voteBookAddress != address(0)) {
             // Don't allow recountVotes to use up all the gas
@@ -218,20 +177,6 @@ contract SFCBase is SFCState {
 
     function _calcValidatorCommission(uint256 rawReward, uint256 commission) internal pure returns (uint256) {
         return (rawReward * commission) / Decimal.unit();
-    }
-
-    function getLockedStake(address delegator, uint256 toValidatorID) public view returns (uint256) {
-        if (!isLockedUp(delegator, toValidatorID)) {
-            return 0;
-        }
-        return getLockupInfo[delegator][toValidatorID].lockedStake;
-    }
-
-    function isLockedUp(address delegator, uint256 toValidatorID) public view returns (bool) {
-        return
-            getLockupInfo[delegator][toValidatorID].endTime != 0 &&
-            getLockupInfo[delegator][toValidatorID].lockedStake != 0 &&
-            _now() <= getLockupInfo[delegator][toValidatorID].endTime;
     }
 
     function _now() internal view virtual returns (uint256) {

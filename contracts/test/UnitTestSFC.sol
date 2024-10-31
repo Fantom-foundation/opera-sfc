@@ -52,10 +52,6 @@ contract UnitTestSFC is SFC, UnitTestSFCBase {
 }
 
 contract UnitTestSFCLib is SFCLib, UnitTestSFCBase {
-    function highestLockupEpoch(address delegator, uint256 validatorID) external view returns (uint256) {
-        return _highestLockupEpoch(delegator, validatorID);
-    }
-
     function _now() internal view override returns (uint256) {
         return time;
     }
@@ -65,14 +61,6 @@ contract UnitTestSFCLib is SFCLib, UnitTestSFCBase {
             return true;
         }
         return SFCBase.isNode(addr);
-    }
-
-    function _getAvgEpochStep(uint256) internal pure override returns (uint256) {
-        return 1;
-    }
-
-    function _getAvgUptime(uint256, uint256 duration, uint256) internal pure override returns (uint256) {
-        return duration;
     }
 }
 
@@ -97,9 +85,6 @@ contract UnitTestNetworkInitializer {
         consts.updateValidatorCommission((15 * Decimal.unit()) / 100);
         consts.updateBurntFeeShare((20 * Decimal.unit()) / 100);
         consts.updateTreasuryFeeShare((10 * Decimal.unit()) / 100);
-        consts.updateUnlockedRewardRatio((30 * Decimal.unit()) / 100);
-        consts.updateMinLockupDuration(86400 * 14);
-        consts.updateMaxLockupDuration(86400 * 365);
         consts.updateWithdrawalPeriodEpochs(3);
         consts.updateWithdrawalPeriodTime(60 * 60 * 24 * 7);
         consts.updateBaseRewardPerSecond(6183414351851851852);
@@ -130,17 +115,7 @@ interface SFCUnitTestI {
             uint256 totalSupply
         );
 
-    function getLockupInfo(
-        address,
-        uint256
-    ) external view returns (uint256 lockedStake, uint256 fromEpoch, uint256 endTime, uint256 duration);
-
     function getStake(address, uint256) external view returns (uint256);
-
-    function getStashedLockupRewards(
-        address,
-        uint256
-    ) external view returns (uint256 lockupExtraReward, uint256 lockupBaseReward, uint256 unlockedReward);
 
     function getValidator(
         uint256
@@ -185,8 +160,6 @@ interface SFCUnitTestI {
 
     function totalActiveStake() external view returns (uint256);
 
-    function totalSlashedStake() external view returns (uint256);
-
     function totalStake() external view returns (uint256);
 
     function totalSupply() external view returns (uint256);
@@ -220,8 +193,6 @@ interface SFCUnitTestI {
     function getEpochEndBlock(uint256 epoch) external view returns (uint256);
 
     function rewardsStash(address delegator, uint256 validatorID) external view returns (uint256);
-
-    function getLockedStake(address delegator, uint256 toValidatorID) external view returns (uint256);
 
     function createValidator(bytes calldata pubkey) external payable;
 
@@ -267,16 +238,6 @@ interface SFCUnitTestI {
 
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external;
 
-    function isLockedUp(address delegator, uint256 toValidatorID) external view returns (bool);
-
-    function getUnlockedStake(address delegator, uint256 toValidatorID) external view returns (uint256);
-
-    function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) external;
-
-    function relockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) external;
-
-    function unlockStake(uint256 toValidatorID, uint256 amount) external returns (uint256);
-
     function initialize(
         uint256 sealedEpoch,
         uint256 _totalSupply,
@@ -297,17 +258,7 @@ interface SFCUnitTestI {
         uint256 deactivatedTime
     ) external;
 
-    function setGenesisDelegation(
-        address delegator,
-        uint256 toValidatorID,
-        uint256 stake,
-        uint256 lockedStake,
-        uint256 lockupFromEpoch,
-        uint256 lockupEndTime,
-        uint256 lockupDuration,
-        uint256 earlyUnlockPenalty,
-        uint256 rewards
-    ) external;
+    function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external;
 
     function _syncValidator(uint256 validatorID, bool syncPubkey) external;
 
@@ -318,8 +269,6 @@ interface SFCUnitTestI {
     function rebaseTime() external;
 
     function advanceTime(uint256) external;
-
-    function highestLockupEpoch(address, uint256) external view returns (uint256);
 
     function enableNonNodeCalls() external;
 
