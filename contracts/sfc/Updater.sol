@@ -5,7 +5,6 @@ import {Ownable} from "../ownership/Ownable.sol";
 import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
-import {SFC} from "./SFC.sol";
 import {ISFC} from "../interfaces/ISFC.sol";
 import {Version} from "../version/Version.sol";
 
@@ -23,7 +22,6 @@ interface GovVersion {
 
 contract Updater {
     address public sfcFrom;
-    address public sfcLib;
     address public sfcConsts;
     address public govTo;
     address public govFrom;
@@ -38,7 +36,6 @@ contract Updater {
 
     constructor(
         address _sfcFrom,
-        address _sfcLib,
         address _sfcConsts,
         address _govTo,
         address _govFrom,
@@ -46,7 +43,6 @@ contract Updater {
         address _owner
     ) {
         sfcFrom = _sfcFrom;
-        sfcLib = _sfcLib;
         sfcConsts = _sfcConsts;
         govTo = _govTo;
         govFrom = _govFrom;
@@ -55,7 +51,6 @@ contract Updater {
         address sfcTo = address(0xFC00FACE00000000000000000000000000000000);
         if (
             sfcFrom == address(0) ||
-            sfcLib == address(0) ||
             sfcConsts == address(0) ||
             govTo == address(0) ||
             govFrom == address(0) ||
@@ -103,7 +98,6 @@ contract Updater {
         nodeAuth.upgradeCode(sfcTo, sfcFrom);
         ISFC(sfcTo).updateConstsAddress(sfcConsts);
         ISFC(sfcTo).updateVoteBookAddress(voteBook);
-        SFC(sfcTo).updateLibAddress(sfcLib);
 
         nodeAuth.upgradeCode(govTo, govFrom);
         GovI(govTo).upgrade(voteBook);

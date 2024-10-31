@@ -5,6 +5,7 @@ import '@nomicfoundation/hardhat-ethers';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
+import '@typechain/hardhat';
 
 dotenv.config();
 
@@ -17,6 +18,11 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 200,
       },
+    },
+  },
+  networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true,
     },
   },
   gasReporter: {
