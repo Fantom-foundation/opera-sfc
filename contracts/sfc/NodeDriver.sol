@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {Initializable} from "../common/Initializable.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {IEVMWriter} from "../interfaces/IEVMWriter.sol";
 
+/**
+ * @custom:security-contact security@fantom.foundation
+ */
 contract NodeDriver is Initializable {
     NodeDriverAuth internal backend;
     IEVMWriter internal evmWriter;

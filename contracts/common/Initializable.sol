@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 /**
  * @title Initializable
@@ -12,6 +12,8 @@ pragma solidity ^0.8.9;
  * WARNING: When used with inheritance, manual care must be taken to not invoke
  * a parent initializer twice, or ensure that all initializers are idempotent,
  * because this is not dealt with automatically as with constructors.
+ *
+ * @custom:security-contact security@fantom.foundation
  */
 contract Initializable {
     /**

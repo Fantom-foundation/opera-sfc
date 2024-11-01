@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {ISFC} from "../interfaces/ISFC.sol";
 import {NodeDriver, NodeDriverAuth} from "./NodeDriver.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {Decimal} from "../common/Decimal.sol";
 
+/**
+ * @custom:security-contact security@fantom.foundation
+ */
 contract NetworkInitializer {
     // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
     function initializeAll(

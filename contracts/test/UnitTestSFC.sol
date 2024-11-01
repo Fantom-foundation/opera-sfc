@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {Decimal} from "../common/Decimal.sol";
 import {SFC} from "../sfc/SFC.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {Initializable} from "../common/Initializable.sol";
 
@@ -11,6 +11,8 @@ import {Initializable} from "../common/Initializable.sol";
  * This module is used through inheritance. It will make available the modifier
  * `onlyOwner`, which can be aplied to your functions to restrict their use to
  * the owner.
+ *
+ * @custom:security-contact security@fantom.foundation
  */
 contract Ownable is Initializable {
     address private _owner;

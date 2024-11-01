@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {Ownable} from "../ownership/Ownable.sol";
 import {Initializable} from "../common/Initializable.sol";
@@ -11,6 +11,7 @@ import {Version} from "../version/Version.sol";
 
 /**
  * @dev SFC contract for Sonic network.
+ * @custom:security-contact security@fantom.foundation
  */
 contract SFC is Initializable, Ownable, Version {
     uint256 internal constant OK_STATUS = 0;

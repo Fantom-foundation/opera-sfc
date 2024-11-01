@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {Initializable} from "../common/Initializable.sol";
 import {Ownable} from "../ownership/Ownable.sol";
@@ -7,6 +7,9 @@ import {ISFC} from "../interfaces/ISFC.sol";
 import {NodeDriver} from "./NodeDriver.sol";
 import {INodeDriverExecutable} from "../interfaces/INodeDriverExecutable.sol";
 
+/**
+ * @custom:security-contact security@fantom.foundation
+ */
 contract NodeDriverAuth is Initializable, Ownable {
     ISFC internal sfc;
     NodeDriver internal driver;
