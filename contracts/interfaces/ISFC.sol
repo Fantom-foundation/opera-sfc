@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
+/**
+ * @custom:security-contact security@fantom.foundation
+ */
 interface ISFC {
     event CreatedValidator(
         uint256 indexed validatorID,
@@ -32,9 +35,7 @@ interface ISFC {
             uint256 endTime,
             uint256 endBlock,
             uint256 epochFee,
-            uint256 totalBaseRewardWeight,
-            uint256 totalTxRewardWeight,
-            uint256 _baseRewardPerSecond,
+            uint256 baseRewardPerSecond,
             uint256 totalStake,
             uint256 totalSupply
         );
@@ -138,10 +139,6 @@ interface ISFC {
 
     function restakeRewards(uint256 toValidatorID) external;
 
-    function updateBaseRewardPerSecond(uint256 value) external;
-
-    function updateOfflinePenaltyThreshold(uint256 blocksNum, uint256 time) external;
-
     function updateSlashingRefundRatio(uint256 validatorID, uint256 refundRatio) external;
 
     function updateTreasuryAddress(address v) external;
@@ -170,11 +167,7 @@ interface ISFC {
         address auth,
         uint256 validatorID,
         bytes calldata pubkey,
-        uint256 status,
-        uint256 createdEpoch,
-        uint256 createdTime,
-        uint256 deactivatedEpoch,
-        uint256 deactivatedTime
+        uint256 createdTime
     ) external;
 
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external;
@@ -184,8 +177,6 @@ interface ISFC {
     function voteBookAddress() external view returns (address);
 
     function updateValidatorPubkey(bytes calldata pubkey) external;
-
-    function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external;
 
     function setRedirectionAuthorizer(address v) external;
 

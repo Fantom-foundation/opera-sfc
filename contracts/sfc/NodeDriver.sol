@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {Initializable} from "../common/Initializable.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {IEVMWriter} from "../interfaces/IEVMWriter.sol";
 
+/**
+ * @custom:security-contact security@fantom.foundation
+ */
 contract NodeDriver is Initializable {
     NodeDriverAuth internal backend;
     IEVMWriter internal evmWriter;
@@ -89,25 +92,12 @@ contract NodeDriver is Initializable {
     // Methods which are called only by the node
 
     function setGenesisValidator(
-        address _auth,
+        address auth,
         uint256 validatorID,
         bytes calldata pubkey,
-        uint256 status,
-        uint256 createdEpoch,
-        uint256 createdTime,
-        uint256 deactivatedEpoch,
-        uint256 deactivatedTime
+        uint256 createdTime
     ) external onlyNode {
-        backend.setGenesisValidator(
-            _auth,
-            validatorID,
-            pubkey,
-            status,
-            createdEpoch,
-            createdTime,
-            deactivatedEpoch,
-            deactivatedTime
-        );
+        backend.setGenesisValidator(auth, validatorID, pubkey, createdTime);
     }
 
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external onlyNode {

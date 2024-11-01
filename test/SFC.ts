@@ -56,16 +56,8 @@ describe('SFC', () => {
     beforeEach(async function () {
       const validator = ethers.Wallet.createRandom();
       await this.sfc.enableNonNodeCalls();
-      await this.sfc.setGenesisValidator(
-        validator.address,
-        1,
-        validator.publicKey,
-        1 << 3,
-        await this.sfc.currentEpoch(),
-        Date.now(),
-        0,
-        0,
-      );
+      await this.sfc.setGenesisValidator(validator.address, 1, validator.publicKey, Date.now());
+      await this.sfc.deactivateValidator(1, 1 << 3);
       await this.sfc.disableNonNodeCalls();
     });
 
@@ -315,22 +307,13 @@ describe('SFC', () => {
     it('Should revert when setGenesisValidator is not called not node', async function () {
       const validator = ethers.Wallet.createRandom();
       await expect(
-        this.sfc.setGenesisValidator(
-          validator,
-          1,
-          validator.publicKey,
-          0,
-          await this.sfc.currentEpoch(),
-          Date.now(),
-          0,
-          0,
-        ),
+        this.sfc.setGenesisValidator(validator, 1, validator.publicKey, Date.now()),
       ).to.be.revertedWithCustomError(this.sfc, 'NotDriverAuth');
     });
 
     it('Should revert when setGenesisDelegation is not called not node', async function () {
       const delegator = ethers.Wallet.createRandom();
-      await expect(this.sfc.setGenesisDelegation(delegator, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.revertedWithCustomError(
+      await expect(this.sfc.setGenesisDelegation(delegator, 1, 100)).to.be.revertedWithCustomError(
         this.sfc,
         'NotDriverAuth',
       );
@@ -977,23 +960,15 @@ describe('SFC', () => {
       it('Should revert when calling setGenesisValidator if not NodeDriver', async function () {
         const key = ethers.Wallet.createRandom().publicKey;
         await expect(
-          this.nodeDriverAuth.setGenesisValidator(
-            this.delegator,
-            1,
-            key,
-            1 << 3,
-            await this.sfc.currentEpoch(),
-            Date.now(),
-            0,
-            0,
-          ),
+          this.nodeDriverAuth.setGenesisValidator(this.delegator, 1, key, Date.now()),
         ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
       });
 
       it('Should revert when calling setGenesisDelegation if not NodeDriver', async function () {
-        await expect(
-          this.nodeDriverAuth.setGenesisDelegation(this.delegator, 1, 100, 0, 0, 0, 0, 0, 1000),
-        ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
+        await expect(this.nodeDriverAuth.setGenesisDelegation(this.delegator, 1, 100)).to.be.revertedWithCustomError(
+          this.nodeDriverAuth,
+          'NotDriver',
+        );
       });
 
       it('Should revert when calling deactivateValidator if not NodeDriver', async function () {
@@ -1131,7 +1106,7 @@ describe('SFC', () => {
     });
 
     it('Should succeed and setGenesisDelegation Validator', async function () {
-      await this.sfc.setGenesisDelegation(this.delegator, this.validatorId, ethers.parseEther('1'), 0, 0, 0, 0, 0, 100);
+      await this.sfc.setGenesisDelegation(this.delegator, this.validatorId, ethers.parseEther('1'));
       // delegator has already delegated 0.4 in fixture
       expect(await this.sfc.getStake(this.delegator, this.validatorId)).to.equal(ethers.parseEther('1.4'));
     });

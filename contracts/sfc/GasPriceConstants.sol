@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {Decimal} from "../common/Decimal.sol";
 
+/**
+ * @custom:security-contact security@fantom.foundation
+ */
 library GP {
     function trimGasPriceChangeRatio(uint256 x) internal pure returns (uint256) {
         if (x > (Decimal.unit() * 105) / 100) {

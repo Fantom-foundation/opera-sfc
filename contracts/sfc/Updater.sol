@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {Ownable} from "../ownership/Ownable.sol";
 import {Decimal} from "../common/Decimal.sol";
@@ -20,6 +20,9 @@ interface GovVersion {
     function version() external pure returns (bytes4);
 }
 
+/**
+ * @custom:security-contact security@fantom.foundation
+ */
 contract Updater {
     address public sfcFrom;
     address public sfcConsts;

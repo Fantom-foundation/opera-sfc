@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity 0.8.27;
 
 import {Ownable} from "../ownership/Ownable.sol";
 import {Decimal} from "../common/Decimal.sol";
 
+/**
+ * @custom:security-contact security@fantom.foundation
+ */
 contract ConstantsManager is Ownable {
     // Minimum amount of stake for a validator, i.e., 500000 FTM
     uint256 public minSelfStake;
