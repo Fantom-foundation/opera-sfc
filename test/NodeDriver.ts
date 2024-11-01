@@ -119,12 +119,7 @@ describe('NodeDriver', () => {
     it('Should revert when not node', async function () {
       const account = ethers.Wallet.createRandom();
       await expect(
-        this.nodeDriver.setGenesisValidator(
-          account,
-          1,
-          account.publicKey,
-          Date.now(),
-        ),
+        this.nodeDriver.setGenesisValidator(account, 1, account.publicKey, Date.now()),
       ).to.be.revertedWithCustomError(this.nodeDriver, 'NotNode');
     });
   });
@@ -138,9 +133,10 @@ describe('NodeDriver', () => {
   describe('Set genesis delegation', () => {
     it('Should revert when not node', async function () {
       const account = ethers.Wallet.createRandom();
-      await expect(
-        this.nodeDriver.setGenesisDelegation(account, 1, 100),
-      ).to.be.revertedWithCustomError(this.nodeDriver, 'NotNode');
+      await expect(this.nodeDriver.setGenesisDelegation(account, 1, 100)).to.be.revertedWithCustomError(
+        this.nodeDriver,
+        'NotNode',
+      );
     });
   });
 

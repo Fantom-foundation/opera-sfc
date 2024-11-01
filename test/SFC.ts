@@ -56,12 +56,7 @@ describe('SFC', () => {
     beforeEach(async function () {
       const validator = ethers.Wallet.createRandom();
       await this.sfc.enableNonNodeCalls();
-      await this.sfc.setGenesisValidator(
-        validator.address,
-        1,
-        validator.publicKey,
-        Date.now(),
-      );
+      await this.sfc.setGenesisValidator(validator.address, 1, validator.publicKey, Date.now());
       await this.sfc.deactivateValidator(1, 1 << 3);
       await this.sfc.disableNonNodeCalls();
     });
@@ -312,12 +307,7 @@ describe('SFC', () => {
     it('Should revert when setGenesisValidator is not called not node', async function () {
       const validator = ethers.Wallet.createRandom();
       await expect(
-        this.sfc.setGenesisValidator(
-          validator,
-          1,
-          validator.publicKey,
-          Date.now(),
-        ),
+        this.sfc.setGenesisValidator(validator, 1, validator.publicKey, Date.now()),
       ).to.be.revertedWithCustomError(this.sfc, 'NotDriverAuth');
     });
 
@@ -970,19 +960,15 @@ describe('SFC', () => {
       it('Should revert when calling setGenesisValidator if not NodeDriver', async function () {
         const key = ethers.Wallet.createRandom().publicKey;
         await expect(
-          this.nodeDriverAuth.setGenesisValidator(
-            this.delegator,
-            1,
-            key,
-            Date.now(),
-          ),
+          this.nodeDriverAuth.setGenesisValidator(this.delegator, 1, key, Date.now()),
         ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
       });
 
       it('Should revert when calling setGenesisDelegation if not NodeDriver', async function () {
-        await expect(
-          this.nodeDriverAuth.setGenesisDelegation(this.delegator, 1, 100),
-        ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
+        await expect(this.nodeDriverAuth.setGenesisDelegation(this.delegator, 1, 100)).to.be.revertedWithCustomError(
+          this.nodeDriverAuth,
+          'NotDriver',
+        );
       });
 
       it('Should revert when calling deactivateValidator if not NodeDriver', async function () {

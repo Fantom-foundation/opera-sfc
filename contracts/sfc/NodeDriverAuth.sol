@@ -119,7 +119,12 @@ contract NodeDriverAuth is Initializable, Ownable {
         driver.updateValidatorPubkey(validatorID, pubkey);
     }
 
-    function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 createdTime) external onlyDriver {
+    function setGenesisValidator(
+        address auth,
+        uint256 validatorID,
+        bytes calldata pubkey,
+        uint256 createdTime
+    ) external onlyDriver {
         sfc.setGenesisValidator(auth, validatorID, pubkey, createdTime);
     }
 

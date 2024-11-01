@@ -62,7 +62,8 @@ contract SFC is Initializable, Ownable, Version {
     }
 
     // delegator => validator ID => withdrawal ID => withdrawal request
-    mapping(address delegator => mapping(uint256 validatorID => mapping(uint256 wrID => WithdrawalRequest))) public getWithdrawalRequest;
+    mapping(address delegator => mapping(uint256 validatorID => mapping(uint256 wrID => WithdrawalRequest)))
+        public getWithdrawalRequest;
 
     // delegator => validator ID => current stake
     mapping(address delegator => mapping(uint256 validatorID => uint256 stake)) public getStake;
@@ -340,7 +341,12 @@ contract SFC is Initializable, Ownable, Version {
         node.updateMinGasPrice(minGasPrice);
     }
 
-    function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 createdTime) external onlyDriver {
+    function setGenesisValidator(
+        address auth,
+        uint256 validatorID,
+        bytes calldata pubkey,
+        uint256 createdTime
+    ) external onlyDriver {
         _rawCreateValidator(
             auth,
             validatorID,

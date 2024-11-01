@@ -163,7 +163,12 @@ interface ISFC {
         address _owner
     ) external;
 
-    function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 createdTime) external;
+    function setGenesisValidator(
+        address auth,
+        uint256 validatorID,
+        bytes calldata pubkey,
+        uint256 createdTime
+    ) external;
 
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external;
 
