@@ -238,18 +238,6 @@ contract SFC is Initializable, Ownable, Version {
         revert TransfersNotAllowed();
     }
 
-    function migrateValidatorPubkeyUniquenessFlag(uint256 start, uint256 end) external {
-        for (uint256 vid = start; vid < end; vid++) {
-            bytes memory pubkey = getValidatorPubkey[vid];
-            if (pubkey.length > 0 && pubkeyHashToValidatorID[keccak256(pubkey)] != vid) {
-                if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
-                    revert PubkeyUsedByOtherValidator();
-                }
-                pubkeyHashToValidatorID[keccak256(pubkey)] = vid;
-            }
-        }
-    }
-
     function updateValidatorPubkey(bytes calldata pubkey) external {
         if (pubkey.length != 66 || pubkey[0] != 0xc0) {
             revert MalformedPubkey();
@@ -351,25 +339,16 @@ contract SFC is Initializable, Ownable, Version {
         node.updateMinGasPrice(minGasPrice);
     }
 
-    function setGenesisValidator(
-        address auth,
-        uint256 validatorID,
-        bytes calldata pubkey,
-        uint256 status,
-        uint256 createdEpoch,
-        uint256 createdTime,
-        uint256 deactivatedEpoch,
-        uint256 deactivatedTime
-    ) external onlyDriver {
+    function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 createdTime) external onlyDriver {
         _rawCreateValidator(
             auth,
             validatorID,
             pubkey,
-            status,
-            createdEpoch,
+            OK_STATUS,
+            0, // createdEpoch
             createdTime,
-            deactivatedEpoch,
-            deactivatedTime
+            0, // deactivatedEpoch - not deactivated
+            0 // deactivatedTime - not deactivated
         );
         if (validatorID > lastValidatorID) {
             lastValidatorID = validatorID;

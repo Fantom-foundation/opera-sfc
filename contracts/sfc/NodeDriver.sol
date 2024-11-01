@@ -88,26 +88,8 @@ contract NodeDriver is Initializable {
 
     // Methods which are called only by the node
 
-    function setGenesisValidator(
-        address _auth,
-        uint256 validatorID,
-        bytes calldata pubkey,
-        uint256 status,
-        uint256 createdEpoch,
-        uint256 createdTime,
-        uint256 deactivatedEpoch,
-        uint256 deactivatedTime
-    ) external onlyNode {
-        backend.setGenesisValidator(
-            _auth,
-            validatorID,
-            pubkey,
-            status,
-            createdEpoch,
-            createdTime,
-            deactivatedEpoch,
-            deactivatedTime
-        );
+    function setGenesisValidator(address auth, uint256 validatorID, bytes calldata pubkey, uint256 createdTime) external onlyNode {
+        backend.setGenesisValidator(auth, validatorID, pubkey, createdTime);
     }
 
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external onlyNode {

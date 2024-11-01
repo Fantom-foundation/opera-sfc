@@ -123,11 +123,7 @@ describe('NodeDriver', () => {
           account,
           1,
           account.publicKey,
-          0,
-          await this.sfc.currentEpoch(),
           Date.now(),
-          0,
-          0,
         ),
       ).to.be.revertedWithCustomError(this.nodeDriver, 'NotNode');
     });
@@ -143,7 +139,7 @@ describe('NodeDriver', () => {
     it('Should revert when not node', async function () {
       const account = ethers.Wallet.createRandom();
       await expect(
-        this.nodeDriver.setGenesisDelegation(account, 1, 100, 0, 0, 0, 0, 0, 1000),
+        this.nodeDriver.setGenesisDelegation(account, 1, 100),
       ).to.be.revertedWithCustomError(this.nodeDriver, 'NotNode');
     });
   });

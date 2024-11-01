@@ -60,12 +60,9 @@ describe('SFC', () => {
         validator.address,
         1,
         validator.publicKey,
-        1 << 3,
-        await this.sfc.currentEpoch(),
         Date.now(),
-        0,
-        0,
       );
+      await this.sfc.deactivateValidator(1, 1 << 3);
       await this.sfc.disableNonNodeCalls();
     });
 
@@ -319,18 +316,14 @@ describe('SFC', () => {
           validator,
           1,
           validator.publicKey,
-          0,
-          await this.sfc.currentEpoch(),
           Date.now(),
-          0,
-          0,
         ),
       ).to.be.revertedWithCustomError(this.sfc, 'NotDriverAuth');
     });
 
     it('Should revert when setGenesisDelegation is not called not node', async function () {
       const delegator = ethers.Wallet.createRandom();
-      await expect(this.sfc.setGenesisDelegation(delegator, 1, 100, 0, 0, 0, 0, 0, 1000)).to.be.revertedWithCustomError(
+      await expect(this.sfc.setGenesisDelegation(delegator, 1, 100)).to.be.revertedWithCustomError(
         this.sfc,
         'NotDriverAuth',
       );
@@ -981,18 +974,14 @@ describe('SFC', () => {
             this.delegator,
             1,
             key,
-            1 << 3,
-            await this.sfc.currentEpoch(),
             Date.now(),
-            0,
-            0,
           ),
         ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
       });
 
       it('Should revert when calling setGenesisDelegation if not NodeDriver', async function () {
         await expect(
-          this.nodeDriverAuth.setGenesisDelegation(this.delegator, 1, 100, 0, 0, 0, 0, 0, 1000),
+          this.nodeDriverAuth.setGenesisDelegation(this.delegator, 1, 100),
         ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
       });
 
@@ -1131,7 +1120,7 @@ describe('SFC', () => {
     });
 
     it('Should succeed and setGenesisDelegation Validator', async function () {
-      await this.sfc.setGenesisDelegation(this.delegator, this.validatorId, ethers.parseEther('1'), 0, 0, 0, 0, 0, 100);
+      await this.sfc.setGenesisDelegation(this.delegator, this.validatorId, ethers.parseEther('1'));
       // delegator has already delegated 0.4 in fixture
       expect(await this.sfc.getStake(this.delegator, this.validatorId)).to.equal(ethers.parseEther('1.4'));
     });
