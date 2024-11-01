@@ -36,9 +36,9 @@ contract SFC is Initializable, Ownable, Version {
 
     // last sealed epoch (currentEpoch - 1)
     uint256 public currentSealedEpoch;
-    mapping(uint256 => Validator) public getValidator;
-    mapping(address => uint256) public getValidatorID;
-    mapping(uint256 => bytes) public getValidatorPubkey;
+    mapping(uint256 validatorID => Validator) public getValidator;
+    mapping(address auth => uint256 validatorID) public getValidatorID;
+    mapping(uint256 validatorID => bytes pubkey) public getValidatorPubkey;
 
     uint256 public lastValidatorID;
 
@@ -49,10 +49,10 @@ contract SFC is Initializable, Ownable, Version {
     uint256 public totalActiveStake;
 
     // delegator => validator ID => stashed rewards (to be claimed/restaked)
-    mapping(address => mapping(uint256 => uint256)) internal _rewardsStash;
+    mapping(address delegator => mapping(uint256 validatorID => uint256 stashedRewards)) internal _rewardsStash;
 
     // delegator => validator ID => last epoch number for which were rewards stashed
-    mapping(address => mapping(uint256 => uint256)) public stashedRewardsUntilEpoch;
+    mapping(address delegator => mapping(uint256 validatorID => uint256 epoch)) public stashedRewardsUntilEpoch;
 
     struct WithdrawalRequest {
         uint256 epoch; // epoch where undelegated
@@ -61,10 +61,10 @@ contract SFC is Initializable, Ownable, Version {
     }
 
     // delegator => validator ID => withdrawal ID => withdrawal request
-    mapping(address => mapping(uint256 => mapping(uint256 => WithdrawalRequest))) public getWithdrawalRequest;
+    mapping(address delegator => mapping(uint256 validatorID => mapping(uint256 wrID => WithdrawalRequest))) public getWithdrawalRequest;
 
-    // delegator => validator ID => current stake (locked+unlocked)
-    mapping(address => mapping(uint256 => uint256)) public getStake;
+    // delegator => validator ID => current stake
+    mapping(address delegator => mapping(uint256 validatorID => uint256 stake)) public getStake;
 
     struct EpochSnapshot {
         // validator ID => validator weight in the epoch
@@ -90,10 +90,10 @@ contract SFC is Initializable, Ownable, Version {
     uint256 public totalSupply;
 
     // epoch id => epoch snapshot
-    mapping(uint256 => EpochSnapshot) public getEpochSnapshot;
+    mapping(uint256 epoch => EpochSnapshot) public getEpochSnapshot;
 
     // validator ID -> slashing refund ratio (allows to withdraw slashed stake)
-    mapping(uint256 => uint256) public slashingRefundRatio;
+    mapping(uint256 validatorID => uint256 refundRatio) public slashingRefundRatio;
 
     // the minimal gas price calculated for the current epoch
     uint256 public minGasPrice;
@@ -106,20 +106,20 @@ contract SFC is Initializable, Ownable, Version {
     // the governance contract (to recalculate votes when the stake changes)
     address public voteBookAddress;
 
-    // validator ID => amount of pubkey updates
-    mapping(uint256 => uint256) internal validatorPubkeyChanges;
+    // validator ID => amount of pubkey changes
+    mapping(uint256 validatorID => uint256 changes) internal validatorPubkeyChanges;
 
     // keccak256(pubkey bytes) => validator ID (prevents using the same key by multiple validators)
-    mapping(bytes32 => uint256) internal pubkeyHashToValidatorID;
+    mapping(bytes32 pubkeyHash => uint256 validatorID) internal pubkeyHashToValidatorID;
 
     // address authorized to initiate redirection
     address public redirectionAuthorizer;
 
     // delegator => withdrawals receiver
-    mapping(address => address) public getRedirectionRequest;
+    mapping(address delegator => address receiver) public getRedirectionRequest;
 
     // delegator => withdrawals receiver
-    mapping(address => address) public getRedirection;
+    mapping(address delegator => address receiver) public getRedirection;
 
     struct SealEpochRewardsCtx {
         uint256[] baseRewardWeights;
@@ -158,7 +158,7 @@ contract SFC is Initializable, Ownable, Version {
     error ValidatorExists();
     error ValidatorNotActive();
     error ValidatorDelegationLimitExceeded();
-    error WrongValidatorStatus();
+    error NotDeactivatedStatus();
 
     // requests
     error RequestExists();
@@ -405,7 +405,7 @@ contract SFC is Initializable, Ownable, Version {
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
         if (status == OK_STATUS) {
-            revert WrongValidatorStatus();
+            revert NotDeactivatedStatus();
         }
 
         _setValidatorDeactivated(validatorID, status);
