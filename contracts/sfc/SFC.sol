@@ -810,7 +810,7 @@ contract SFC is Initializable, Ownable, Version {
         return payable(address(uint160(to)));
     }
 
-   // Seal epoch - sync validators
+    // Seal epoch - sync validators
     function _sealEpochOffline(
         EpochSnapshot storage snapshot,
         uint256[] memory validatorIDs,
