@@ -2,6 +2,8 @@
 pragma solidity 0.8.27;
 
 /**
+ * @title Special Fee Contract for Sonic network
+ * @notice The SFC maintains a list of validators and delegators and distributes rewards to them.
  * @custom:security-contact security@fantom.foundation
  */
 interface ISFC {
