@@ -130,10 +130,16 @@ describe('SFC', () => {
 
   describe('Create validator', () => {
     const validatorsFixture = async () => {
+      const validatorPubKey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
+      const secondValidatorPubKey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5251';
       const [validator, secondValidator] = await ethers.getSigners();
       return {
         validator,
+        validatorPubKey,
         secondValidator,
+        secondValidatorPubKey,
       };
     };
 
@@ -142,24 +148,20 @@ describe('SFC', () => {
     });
 
     it('Should succeed and create a validator and return its id', async function () {
-      await this.sfc
-        .connect(this.validator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.4') });
+      await this.sfc.connect(this.validator).createValidator(this.validatorPubKey, { value: ethers.parseEther('0.4') });
       expect(await this.sfc.lastValidatorID()).to.equal(1);
     });
 
     it('Should revert when insufficient self-stake to create a validator', async function () {
       await expect(
-        this.sfc
-          .connect(this.validator)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.1') }),
+        this.sfc.connect(this.validator).createValidator(this.validatorPubKey, { value: ethers.parseEther('0.1') }),
       ).to.be.revertedWithCustomError(this.sfc, 'InsufficientSelfStake');
     });
 
     it('Should revert when public key is empty while creating a validator', async function () {
       await expect(
         this.sfc.connect(this.validator).createValidator('0x', { value: ethers.parseEther('0.4') }),
-      ).to.be.revertedWithCustomError(this.sfc, 'EmptyPubkey');
+      ).to.be.revertedWithCustomError(this.sfc, 'MalformedPubkey');
     });
 
     it('Should succeed and create two validators and return id of last validator', async function () {
@@ -167,15 +169,13 @@ describe('SFC', () => {
       expect(await this.sfc.getValidatorID(this.validator)).to.equal(0);
       expect(await this.sfc.getValidatorID(this.secondValidator)).to.equal(0);
 
-      await this.sfc
-        .connect(this.validator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.4') });
+      await this.sfc.connect(this.validator).createValidator(this.validatorPubKey, { value: ethers.parseEther('0.4') });
       expect(await this.sfc.getValidatorID(this.validator)).to.equal(1);
       expect(await this.sfc.lastValidatorID()).to.equal(1);
 
       await this.sfc
         .connect(this.secondValidator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.5') });
+        .createValidator(this.secondValidatorPubKey, { value: ethers.parseEther('0.5') });
       expect(await this.sfc.getValidatorID(this.secondValidator)).to.equal(2);
       expect(await this.sfc.lastValidatorID()).to.equal(2);
     });
@@ -183,7 +183,7 @@ describe('SFC', () => {
     it('Should succeed and return delegation', async function () {
       await this.sfc
         .connect(this.secondValidator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.5') });
+        .createValidator(this.secondValidatorPubKey, { value: ethers.parseEther('0.5') });
       await this.sfc.connect(this.secondValidator).delegate(1, { value: ethers.parseEther('0.1') });
     });
 
@@ -194,22 +194,18 @@ describe('SFC', () => {
     });
 
     it('Should succeed and stake with different delegators', async function () {
-      await this.sfc
-        .connect(this.validator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.5') });
+      await this.sfc.connect(this.validator).createValidator(this.validatorPubKey, { value: ethers.parseEther('0.5') });
       await this.sfc.connect(this.validator).delegate(1, { value: ethers.parseEther('0.1') });
 
       await this.sfc
         .connect(this.secondValidator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.5') });
+        .createValidator(this.secondValidatorPubKey, { value: ethers.parseEther('0.5') });
       await this.sfc.connect(this.secondValidator).delegate(2, { value: ethers.parseEther('0.3') });
       await this.sfc.connect(this.validator).delegate(1, { value: ethers.parseEther('0.2') });
     });
 
     it('Should succeed and return the amount of delegated for each Delegator', async function () {
-      await this.sfc
-        .connect(this.validator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.5') });
+      await this.sfc.connect(this.validator).createValidator(this.validatorPubKey, { value: ethers.parseEther('0.5') });
       await this.sfc.connect(this.validator).delegate(1, { value: ethers.parseEther('0.1') });
       expect(await this.sfc.getStake(this.validator, await this.sfc.getValidatorID(this.validator))).to.equal(
         ethers.parseEther('0.6'),
@@ -217,7 +213,7 @@ describe('SFC', () => {
 
       await this.sfc
         .connect(this.secondValidator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.5') });
+        .createValidator(this.secondValidatorPubKey, { value: ethers.parseEther('0.5') });
       await this.sfc.connect(this.secondValidator).delegate(2, { value: ethers.parseEther('0.3') });
       expect(
         await this.sfc.getStake(this.secondValidator, await this.sfc.getValidatorID(this.secondValidator)),
@@ -230,9 +226,7 @@ describe('SFC', () => {
     });
 
     it('Should succeed and return the total of received Stake', async function () {
-      await this.sfc
-        .connect(this.validator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.5') });
+      await this.sfc.connect(this.validator).createValidator(this.validatorPubKey, { value: ethers.parseEther('0.5') });
 
       await this.sfc.connect(this.validator).delegate(1, { value: ethers.parseEther('0.1') });
       await this.sfc.connect(this.secondValidator).delegate(1, { value: ethers.parseEther('0.2') });
@@ -311,10 +305,10 @@ describe('SFC', () => {
   describe('Validator', () => {
     const validatorsFixture = async function (this: Context) {
       const [validator, delegator, secondDelegator, thirdDelegator] = await ethers.getSigners();
+      const validatorPubKey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
 
-      await this.sfc
-        .connect(validator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('10') });
+      await this.sfc.connect(validator).createValidator(validatorPubKey, { value: ethers.parseEther('10') });
       await this.sfc.connect(delegator).delegate(1, { value: ethers.parseEther('11') });
 
       await this.sfc.connect(secondDelegator).delegate(1, { value: ethers.parseEther('8') });
@@ -324,6 +318,7 @@ describe('SFC', () => {
 
       return {
         validator,
+        validatorPubKey,
         validatorStruct,
         delegator,
         secondDelegator,
@@ -398,16 +393,16 @@ describe('SFC', () => {
     it('Should succeed and check createValidator function', async function () {
       const node = new BlockchainNode(this.sfc);
       const [validator, secondValidator] = await ethers.getSigners();
-      const pubkey = ethers.Wallet.createRandom().publicKey;
-      const secondPubkey = ethers.Wallet.createRandom().publicKey;
+      const pubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
+      const secondPubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5251';
       await this.sfc.enableNonNodeCalls();
 
       expect(await this.sfc.lastValidatorID()).to.equal(0);
 
       await expect(
-        this.sfc
-          .connect(validator)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.1') }),
+        this.sfc.connect(validator).createValidator(pubkey, { value: ethers.parseEther('0.1') }),
       ).to.be.revertedWithCustomError(this.sfc, 'InsufficientSelfStake');
 
       await node.handleTx(
@@ -415,9 +410,7 @@ describe('SFC', () => {
       );
 
       await expect(
-        this.sfc
-          .connect(validator)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.5') }),
+        this.sfc.connect(validator).createValidator(secondPubkey, { value: ethers.parseEther('0.5') }),
       ).to.be.revertedWithCustomError(this.sfc, 'ValidatorExists');
 
       await node.handleTx(
@@ -467,18 +460,21 @@ describe('SFC', () => {
     it('Should succeed and check sealing epoch', async function () {
       const node = new BlockchainNode(this.sfc);
       const [validator, secondValidator, thirdValidator] = await ethers.getSigners();
+      const pubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
+      const secondPubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5251';
+      const thirdPubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5252';
+
       await this.sfc.enableNonNodeCalls();
 
       await node.handleTx(
-        await this.sfc
-          .connect(validator)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.3175') }),
+        await this.sfc.connect(validator).createValidator(pubkey, { value: ethers.parseEther('0.3175') }),
       );
 
       await node.handleTx(
-        await this.sfc
-          .connect(secondValidator)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.6825') }),
+        await this.sfc.connect(secondValidator).createValidator(secondPubkey, { value: ethers.parseEther('0.6825') }),
       );
 
       await node.sealEpoch(100);
@@ -491,9 +487,7 @@ describe('SFC', () => {
       await node.handleTx(await this.sfc.connect(validator).delegate(1, { value: ethers.parseEther('0.1') }));
 
       await node.handleTx(
-        await this.sfc
-          .connect(thirdValidator)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.4') }),
+        await this.sfc.connect(thirdValidator).createValidator(thirdPubkey, { value: ethers.parseEther('0.4') }),
       );
       const thirdValidatorID = await this.sfc.getValidatorID(thirdValidator);
 
@@ -509,14 +503,14 @@ describe('SFC', () => {
 
     it('Should succeed and balance gas price', async function () {
       const [validator] = await ethers.getSigners();
+      const pubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
       await this.sfc.enableNonNodeCalls();
 
       await this.constants.updateGasPriceBalancingCounterweight(24 * 60 * 60);
       await this.sfc.rebaseTime();
 
-      await this.sfc
-        .connect(validator)
-        .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('1') });
+      await this.sfc.connect(validator).createValidator(pubkey, { value: ethers.parseEther('1') });
 
       await this.constants.updateTargetGasPowerPerSecond(1000);
       await this.sfc.sealEpoch([1], [1], [1], [1], 1_000);
@@ -584,27 +578,27 @@ describe('SFC', () => {
   describe('Staking / Sealed Epoch functions', () => {
     const validatorsFixture = async function (this: Context) {
       const [validator, secondValidator, thirdValidator, delegator, secondDelegator] = await ethers.getSigners();
+      const pubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
+      const secondPubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5251';
+      const thirdPubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5252';
       const blockchainNode = new BlockchainNode(this.sfc);
 
       await this.sfc.rebaseTime();
       await this.sfc.enableNonNodeCalls();
 
       await blockchainNode.handleTx(
-        await this.sfc
-          .connect(validator)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.4') }),
+        await this.sfc.connect(validator).createValidator(pubkey, { value: ethers.parseEther('0.4') }),
       );
       const validatorId = await this.sfc.getValidatorID(validator);
       await blockchainNode.handleTx(
-        await this.sfc
-          .connect(secondValidator)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.8') }),
+        await this.sfc.connect(secondValidator).createValidator(secondPubkey, { value: ethers.parseEther('0.8') }),
       );
       const secondValidatorId = await this.sfc.getValidatorID(secondValidator);
       await blockchainNode.handleTx(
-        await this.sfc
-          .connect(thirdValidator)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('0.8') }),
+        await this.sfc.connect(thirdValidator).createValidator(thirdPubkey, { value: ethers.parseEther('0.8') }),
       );
       const thirdValidatorId = await this.sfc.getValidatorID(thirdValidator);
 
@@ -616,10 +610,13 @@ describe('SFC', () => {
 
       return {
         validator,
+        pubkey,
         validatorId,
         secondValidator,
+        secondPubkey,
         secondValidatorId,
         thirdValidator,
+        thirdPubkey,
         thirdValidatorId,
         delegator,
         secondDelegator,
@@ -920,6 +917,12 @@ describe('SFC', () => {
     const validatorsFixture = async function (this: Context) {
       const [validator, testValidator, firstDelegator, secondDelegator, thirdDelegator, account1, account2, account3] =
         await ethers.getSigners();
+      const pubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
+      const secondPubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5251';
+      const thirdPubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5252';
       const blockchainNode = new BlockchainNode(this.sfc);
 
       await this.sfc.rebaseTime();
@@ -927,19 +930,13 @@ describe('SFC', () => {
       await this.constants.updateBaseRewardPerSecond(ethers.parseEther('1'));
 
       await blockchainNode.handleTx(
-        await this.sfc
-          .connect(account1)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('10') }),
+        await this.sfc.connect(account1).createValidator(pubkey, { value: ethers.parseEther('10') }),
       );
       await blockchainNode.handleTx(
-        await this.sfc
-          .connect(account2)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('5') }),
+        await this.sfc.connect(account2).createValidator(secondPubkey, { value: ethers.parseEther('5') }),
       );
       await blockchainNode.handleTx(
-        await this.sfc
-          .connect(account3)
-          .createValidator(ethers.Wallet.createRandom().publicKey, { value: ethers.parseEther('1') }),
+        await this.sfc.connect(account3).createValidator(thirdPubkey, { value: ethers.parseEther('1') }),
       );
 
       const validatorId = await this.sfc.getValidatorID(account1);
@@ -961,6 +958,9 @@ describe('SFC', () => {
         account1,
         account2,
         account3,
+        pubkey,
+        secondPubkey,
+        thirdPubkey,
       };
     };
 
