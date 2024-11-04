@@ -4,11 +4,15 @@ pragma solidity 0.8.27;
 import {Initializable} from "../common/Initializable.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {IEVMWriter} from "../interfaces/IEVMWriter.sol";
+import {INodeDriver} from "../interfaces/INodeDriver.sol";
 
 /**
+ * @title Node Driver Contract
+ * @notice Ensures interaction of on-chain contracts with the Sonic client itself.
+ * @dev Methods with onlyNode modifier are called by Sonic internal txs during epoch sealing.
  * @custom:security-contact security@fantom.foundation
  */
-contract NodeDriver is Initializable {
+contract NodeDriver is Initializable, INodeDriver {
     NodeDriverAuth internal backend;
     IEVMWriter internal evmWriter;
 

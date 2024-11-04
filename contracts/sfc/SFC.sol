@@ -10,7 +10,8 @@ import {GP} from "./GasPriceConstants.sol";
 import {Version} from "../version/Version.sol";
 
 /**
- * @dev SFC contract for Sonic network.
+ * @title Special Fee Contract for Sonic network
+ * @notice The SFC maintains a list of validators and delegators and distributes rewards to them.
  * @custom:security-contact security@fantom.foundation
  */
 contract SFC is Initializable, Ownable, Version {

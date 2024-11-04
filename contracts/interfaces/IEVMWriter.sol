@@ -2,6 +2,9 @@
 pragma solidity 0.8.27;
 
 /**
+ * @title EVM Writer Interface
+ * @notice Allows the NodeDriver contract to write into the state database.
+ * @dev Implemented in the native code of the Sonic client.
  * @custom:security-contact security@fantom.foundation
  */
 interface IEVMWriter {
