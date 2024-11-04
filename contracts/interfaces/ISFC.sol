@@ -63,6 +63,8 @@ interface ISFC {
 
     function getValidatorPubkey(uint256) external view returns (bytes memory);
 
+    function pubkeyAddressToValidatorID(address pubkeyAddress) external view returns (uint256);
+
     function getWithdrawalRequest(
         address,
         uint256,

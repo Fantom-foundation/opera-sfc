@@ -109,8 +109,8 @@ contract SFC is Initializable, Ownable, Version {
     // the governance contract (to recalculate votes when the stake changes)
     address public voteBookAddress;
 
-    // keccak256(pubkey bytes) => validator ID (prevents using the same key by multiple validators)
-    mapping(bytes32 pubkeyHash => uint256 validatorID) internal pubkeyHashToValidatorID;
+    // address derived from the validator pubkey => validator id
+    mapping(address pubkeyAddress => uint256 validatorID) public pubkeyAddressToValidatorID;
 
     // address authorized to initiate redirection
     address public redirectionAuthorizer;
@@ -358,7 +358,7 @@ contract SFC is Initializable, Ownable, Version {
         if (pubkey.length != 66 || pubkey[0] != 0xc0) {
             revert MalformedPubkey();
         }
-        if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
+        if (pubkeyAddressToValidatorID[_pubkeyToAddress(pubkey)] != 0) {
             revert PubkeyUsedByOtherValidator();
         }
         _createValidator(msg.sender, pubkey);
@@ -932,7 +932,7 @@ contract SFC is Initializable, Ownable, Version {
     }
 
     /// Create a new validator.
-    function _createValidator(address auth, bytes memory pubkey) internal {
+    function _createValidator(address auth, bytes calldata pubkey) internal {
         uint256 validatorID = ++lastValidatorID;
         _rawCreateValidator(auth, validatorID, pubkey, OK_STATUS, currentEpoch(), _now(), 0, 0);
     }
@@ -941,7 +941,7 @@ contract SFC is Initializable, Ownable, Version {
     function _rawCreateValidator(
         address auth,
         uint256 validatorID,
-        bytes memory pubkey,
+        bytes calldata pubkey,
         uint256 status,
         uint256 createdEpoch,
         uint256 createdTime,
@@ -959,7 +959,7 @@ contract SFC is Initializable, Ownable, Version {
         getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
         getValidator[validatorID].auth = auth;
         getValidatorPubkey[validatorID] = pubkey;
-        pubkeyHashToValidatorID[keccak256(pubkey)] = validatorID;
+        pubkeyAddressToValidatorID[_pubkeyToAddress(pubkey)] = validatorID;
 
         emit CreatedValidator(validatorID, auth, createdEpoch, createdTime);
         if (deactivatedEpoch != 0) {
@@ -1066,6 +1066,11 @@ contract SFC is Initializable, Ownable, Version {
     /// Calculate validator commission.
     function _calcValidatorCommission(uint256 rawReward, uint256 commission) internal pure returns (uint256) {
         return (rawReward * commission) / Decimal.unit();
+    }
+
+    /// Derive address from validator private key
+    function _pubkeyToAddress(bytes calldata pubkey) private pure returns (address) {
+        return address(uint160(uint256(keccak256(pubkey[2:]))));
     }
 
     /// Get current time.
