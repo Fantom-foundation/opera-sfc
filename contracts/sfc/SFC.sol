@@ -934,7 +934,7 @@ contract SFC is Initializable, Ownable, Version {
             (bool success, ) = treasuryAddress.call{value: feeShare, gas: 1000000}("");
             // solhint-disable-next-line no-empty-blocks
             if (!success) {
-                // ignore treasure transfer failure
+                // ignore treasury transfer failure
                 // this is prevention against treasuryAddress being able to break epoch sealing
             }
         }
