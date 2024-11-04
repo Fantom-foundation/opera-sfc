@@ -933,7 +933,8 @@ contract SFC is Initializable, Ownable, Version {
             _mintNativeToken(feeShare);
             (bool success, ) = treasuryAddress.call{value: feeShare, gas: 1000000}("");
             if (!success) {
-                revert TransferFailed();
+                // ignore treasure transfer failure
+                // this is prevention against treasuryAddress being able to break epoch sealing
             }
         }
     }
