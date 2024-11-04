@@ -178,8 +178,6 @@ interface ISFC {
 
     function voteBookAddress() external view returns (address);
 
-    function updateValidatorPubkey(bytes calldata pubkey) external;
-
     function setRedirectionAuthorizer(address v) external;
 
     function announceRedirection(address to) external;
