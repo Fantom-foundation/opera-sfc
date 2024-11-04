@@ -932,8 +932,10 @@ contract SFC is Initializable, Ownable, Version {
             uint256 feeShare = (ctx.epochFee * c.treasuryFeeShare()) / Decimal.unit();
             _mintNativeToken(feeShare);
             (bool success, ) = treasuryAddress.call{value: feeShare, gas: 1000000}("");
+            // solhint-disable-next-line no-empty-blocks
             if (!success) {
-                revert TransferFailed();
+                // ignore treasury transfer failure
+                // the treasury failure must not endanger the epoch sealing
             }
         }
     }
