@@ -935,7 +935,7 @@ contract SFC is Initializable, Ownable, Version {
             // solhint-disable-next-line no-empty-blocks
             if (!success) {
                 // ignore treasury transfer failure
-                // this is prevention against treasuryAddress being able to break epoch sealing
+                // the treasury failure must not endanger the epoch sealing
             }
         }
     }
