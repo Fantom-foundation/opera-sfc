@@ -170,12 +170,6 @@ contract SFC is Initializable, Ownable, Version {
     error TransfersNotAllowed();
     error TransferFailed();
 
-    // updater
-    error SFCAlreadyUpdated();
-    error SFCWrongVersion();
-    error SFCGovAlreadyUpdated();
-    error SFCWrongGovVersion();
-
     // governance
     error GovVotesRecountFailed();
 
@@ -217,9 +211,8 @@ contract SFC is Initializable, Ownable, Version {
         _;
     }
 
-    /*
-     * Initializer
-     */
+    /// Initialization is called only once, after the contract deployment.
+    /// Because the contract code is written directly into genesis, constructor cannot be used.
     function initialize(
         uint256 sealedEpoch,
         uint256 _totalSupply,
@@ -236,10 +229,12 @@ contract SFC is Initializable, Ownable, Version {
         getEpochSnapshot[sealedEpoch].endTime = _now();
     }
 
+    /// Receive fallback to revert transfers.
     receive() external payable {
         revert TransfersNotAllowed();
     }
 
+    /// Update validator's public key.
     function updateValidatorPubkey(bytes calldata pubkey) external {
         if (pubkey.length != 66 || pubkey[0] != 0xc0) {
             revert MalformedPubkey();
@@ -264,6 +259,7 @@ contract SFC is Initializable, Ownable, Version {
         _syncValidator(validatorID, true);
     }
 
+    /// Set admin address responsible for initiating redirections.
     function setRedirectionAuthorizer(address v) external onlyOwner {
         if (redirectionAuthorizer == v) {
             revert SameRedirectionAuthorizer();
@@ -271,10 +267,15 @@ contract SFC is Initializable, Ownable, Version {
         redirectionAuthorizer = v;
     }
 
+    /// Announce redirection of address to be called by validator whose auth key was compromised.
+    /// Produced events are used to notify redirect authorizer about redirection request.
+    /// Redirect authorizer then initiates creating of appropriate redirect by calling initiateRedirection().
     function announceRedirection(address to) external {
         emit AnnouncedRedirection(msg.sender, to);
     }
 
+    /// Initiate redirection of withdrawals/claims for a compromised validator account.
+    /// Needs to be accepted by validator key holder before the redirect is active.
     function initiateRedirection(address from, address to) external {
         if (msg.sender != redirectionAuthorizer) {
             revert NotAuthorized();
@@ -288,6 +289,8 @@ contract SFC is Initializable, Ownable, Version {
         getRedirectionRequest[from] = to;
     }
 
+    /// Accept redirection proposal.
+    /// Redirection must by accepted by the validator key holder before it start to be applied.
     function redirect(address to) external {
         address from = msg.sender;
         if (to == address(0)) {
@@ -300,6 +303,9 @@ contract SFC is Initializable, Ownable, Version {
         getRedirectionRequest[from] = address(0);
     }
 
+    /// Seal current epoch - deactivate validators who were offline too long, create an epoch snapshot
+    /// for the current epoch (provides information for rewards calculation), calculate new minimal gas price.
+    /// This method is called BEFORE the epoch sealing made by the client itself.
     function sealEpoch(
         uint256[] calldata offlineTime,
         uint256[] calldata offlineBlocks,
@@ -328,6 +334,9 @@ contract SFC is Initializable, Ownable, Version {
         snapshot.totalSupply = totalSupply;
     }
 
+    /// Finish epoch sealing - store validators of the new epoch into a snapshot.
+    /// Apply minGasPrice calculated in the sealEpoch().
+    /// This method is called AFTER the epoch sealing made by the client itself.
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         // fill data for the next snapshot
@@ -341,6 +350,8 @@ contract SFC is Initializable, Ownable, Version {
         node.updateMinGasPrice(minGasPrice);
     }
 
+    /// Set an initial validator.
+    /// Called only as part of network initialization/genesis file generating.
     function setGenesisValidator(
         address auth,
         uint256 validatorID,
@@ -362,11 +373,14 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Set an initial delegation.
+    /// Called only as part of network initialization/genesis file generating.
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external onlyDriver {
         _rawDelegate(delegator, toValidatorID, stake, false);
         _mintNativeToken(stake);
     }
 
+    /// Create a validator with a given public key while using attached value as the validator's self-stake.
     function createValidator(bytes calldata pubkey) external payable {
         if (msg.value < c.minSelfStake()) {
             revert InsufficientSelfStake();
@@ -381,6 +395,8 @@ contract SFC is Initializable, Ownable, Version {
         _delegate(msg.sender, lastValidatorID, msg.value);
     }
 
+    /// Update slashing refund ratio for a validator.
+    /// The refund ratio is used to calculate the amount of stake that can be withdrawn after slashing.
     function updateSlashingRefundRatio(uint256 validatorID, uint256 refundRatio) external onlyOwner {
         if (!isSlashed(validatorID)) {
             revert ValidatorNotSlashed();
@@ -392,6 +408,8 @@ contract SFC is Initializable, Ownable, Version {
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
     }
 
+    /// Recount votes for a delegator and a validator.
+    /// Forces applying validators weights changes in governance voting.
     function recountVotes(address delegator, address validatorAuth, bool strict, uint256 gas) external {
         // solhint-disable-next-line avoid-low-level-calls
         (bool success, ) = voteBookAddress.call{gas: gas}(
@@ -402,14 +420,19 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Delegate stake to a validator.
     function delegate(uint256 toValidatorID) external payable {
         _delegate(msg.sender, toValidatorID, msg.value);
     }
 
+    /// Withdraw stake from a validator after its un-delegation.
+    /// Un-delegated stake is locked for a certain period of time.
     function withdraw(uint256 toValidatorID, uint256 wrID) public {
         _withdraw(msg.sender, toValidatorID, wrID, _receiverOf(msg.sender));
     }
 
+    /// Deactivate a validator.
+    /// Called by the chain client when a client misbehavior is observed.
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
         if (status == OK_STATUS) {
             revert NotDeactivatedStatus();
@@ -421,33 +444,39 @@ contract SFC is Initializable, Ownable, Version {
         _recountVotes(validatorAddr, validatorAddr, false);
     }
 
+    /// Stash rewards for a delegator.
     function stashRewards(address delegator, uint256 toValidatorID) external {
         if (!_stashRewards(delegator, toValidatorID)) {
             revert NothingToStash();
         }
     }
 
-    // burnFTM allows SFC to burn an arbitrary amount of FTM tokens
+    /// burnFTM allows SFC to burn an arbitrary amount of FTM tokens.
     function burnFTM(uint256 amount) external onlyOwner {
         _burnFTM(amount);
     }
 
+    /// Update treasury address.
     function updateTreasuryAddress(address v) external onlyOwner {
         treasuryAddress = v;
     }
 
+    /// Update consts address.
     function updateConstsAddress(address v) external onlyOwner {
         c = ConstantsManager(v);
     }
 
+    /// Update voteBook address.
     function updateVoteBookAddress(address v) external onlyOwner {
         voteBookAddress = v;
     }
 
+    /// Get consts address.
     function constsAddress() external view returns (address) {
         return address(c);
     }
 
+    /// Claim rewards for stake delegated to a validator.
     function claimRewards(uint256 toValidatorID) public {
         address delegator = msg.sender;
         uint256 rewards = _claimRewards(delegator, toValidatorID);
@@ -460,10 +489,12 @@ contract SFC is Initializable, Ownable, Version {
         emit ClaimedRewards(delegator, toValidatorID, rewards);
     }
 
+    /// Get amount of currently stashed rewards.
     function rewardsStash(address delegator, uint256 validatorID) public view returns (uint256) {
         return _rewardsStash[delegator][validatorID];
     }
 
+    /// Un-delegate stake from a validator.
     function undelegate(uint256 toValidatorID, uint256 wrID, uint256 amount) public {
         address delegator = msg.sender;
 
@@ -488,6 +519,8 @@ contract SFC is Initializable, Ownable, Version {
         emit Undelegated(delegator, toValidatorID, wrID, amount);
     }
 
+    /// Re-stake rewards - claim rewards for staking and delegate it immediately
+    /// to the same validator - add it to the current stake.
     function restakeRewards(uint256 toValidatorID) public {
         address delegator = msg.sender;
         uint256 rewards = _claimRewards(delegator, toValidatorID);
@@ -496,65 +529,81 @@ contract SFC is Initializable, Ownable, Version {
         emit RestakedRewards(delegator, toValidatorID, rewards);
     }
 
+    /// Get the current epoch number.
     function currentEpoch() public view returns (uint256) {
         return currentSealedEpoch + 1;
     }
 
+    /// Get self-stake of a validator.
     function getSelfStake(uint256 validatorID) public view returns (uint256) {
         return getStake[getValidator[validatorID].auth][validatorID];
     }
 
+    /// Get validator IDs for given epoch.
     function getEpochValidatorIDs(uint256 epoch) public view returns (uint256[] memory) {
         return getEpochSnapshot[epoch].validatorIDs;
     }
 
+    /// Get received stake for a validator in a given epoch.
     function getEpochReceivedStake(uint256 epoch, uint256 validatorID) public view returns (uint256) {
         return getEpochSnapshot[epoch].receivedStake[validatorID];
     }
 
+    /// Get accumulated reward per token for a validator in a given epoch.
     function getEpochAccumulatedRewardPerToken(uint256 epoch, uint256 validatorID) public view returns (uint256) {
         return getEpochSnapshot[epoch].accumulatedRewardPerToken[validatorID];
     }
 
+    /// Get accumulated uptime for a validator in a given epoch.
     function getEpochAccumulatedUptime(uint256 epoch, uint256 validatorID) public view returns (uint256) {
         return getEpochSnapshot[epoch].accumulatedUptime[validatorID];
     }
 
+    /// Get accumulated originated txs fee for a validator in a given epoch.
     function getEpochAccumulatedOriginatedTxsFee(uint256 epoch, uint256 validatorID) public view returns (uint256) {
         return getEpochSnapshot[epoch].accumulatedOriginatedTxsFee[validatorID];
     }
 
+    /// Get offline time for a validator in a given epoch.
     function getEpochOfflineTime(uint256 epoch, uint256 validatorID) public view returns (uint256) {
         return getEpochSnapshot[epoch].offlineTime[validatorID];
     }
 
+    /// Get offline blocks for a validator in a given epoch.
     function getEpochOfflineBlocks(uint256 epoch, uint256 validatorID) public view returns (uint256) {
         return getEpochSnapshot[epoch].offlineBlocks[validatorID];
     }
 
+    /// Get end block for a given epoch.
     function getEpochEndBlock(uint256 epoch) public view returns (uint256) {
         return getEpochSnapshot[epoch].endBlock;
     }
 
+    /// Check whether the given validator is slashed - the stake (or its part) cannot
+    /// be withdrawn because of misbehavior (double-sign) of the validator.
     function isSlashed(uint256 validatorID) public view returns (bool) {
         return getValidator[validatorID].status & CHEATER_MASK != 0;
     }
 
+    /// Get the amount of rewards which can be currently claimed by the given delegator for the given validator.
     function pendingRewards(address delegator, uint256 toValidatorID) public view returns (uint256) {
         uint256 reward = _newRewards(delegator, toValidatorID);
         return _rewardsStash[delegator][toValidatorID] + reward;
     }
 
+    /// Check whether the self-stake covers the required fraction of all delegations for the given validator.
     function _checkDelegatedStakeLimit(uint256 validatorID) internal view returns (bool) {
         return
             getValidator[validatorID].receivedStake <=
             (getSelfStake(validatorID) * c.maxDelegatedRatio()) / Decimal.unit();
     }
 
+    /// Check if an address is the NodeDriverAuth contract.
     function isNode(address addr) internal view virtual returns (bool) {
         return addr == address(node);
     }
 
+    /// Delegate stake to a validator.
     function _delegate(address delegator, uint256 toValidatorID, uint256 amount) internal {
         if (!_validatorExists(toValidatorID)) {
             revert ValidatorNotExists();
@@ -568,6 +617,7 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Delegate stake to a validator without checking delegation limit.
     function _rawDelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict) internal {
         if (amount == 0) {
             revert ZeroAmount();
@@ -590,6 +640,7 @@ contract SFC is Initializable, Ownable, Version {
         _recountVotes(delegator, getValidator[toValidatorID].auth, strict);
     }
 
+    /// Un-delegate stake from a validator.
     function _rawUndelegate(
         address delegator,
         uint256 toValidatorID,
@@ -624,6 +675,7 @@ contract SFC is Initializable, Ownable, Version {
         _recountVotes(delegator, getValidator[toValidatorID].auth, strict);
     }
 
+    /// Get slashing penalty for a stake.
     function getSlashingPenalty(
         uint256 amount,
         bool isCheater,
@@ -640,6 +692,8 @@ contract SFC is Initializable, Ownable, Version {
         return penalty;
     }
 
+    /// Withdraw stake from a validator.
+    /// The stake must be undelegated first.
     function _withdraw(address delegator, uint256 toValidatorID, uint256 wrID, address payable receiver) private {
         WithdrawalRequest memory request = getWithdrawalRequest[delegator][toValidatorID][wrID];
         if (request.epoch == 0) {
@@ -682,6 +736,9 @@ contract SFC is Initializable, Ownable, Version {
         emit Withdrawn(delegator, toValidatorID, wrID, amount);
     }
 
+    /// Get highest epoch for which can be claimed rewards for the given validator.
+    // If the validator is deactivated, the highest payable epoch is the deactivation epoch
+    // or the current epoch, whichever is lower
     function _highestPayableEpoch(uint256 validatorID) internal view returns (uint256) {
         if (getValidator[validatorID].deactivatedEpoch != 0) {
             if (currentSealedEpoch < getValidator[validatorID].deactivatedEpoch) {
@@ -692,6 +749,8 @@ contract SFC is Initializable, Ownable, Version {
         return currentSealedEpoch;
     }
 
+    /// Get new rewards for a delegator.
+    /// The rewards are calculated from the last stashed epoch until the highest payable epoch.
     function _newRewards(address delegator, uint256 toValidatorID) internal view returns (uint256) {
         uint256 stashedUntil = stashedRewardsUntilEpoch[delegator][toValidatorID];
         uint256 payableUntil = _highestPayableEpoch(toValidatorID);
@@ -700,6 +759,7 @@ contract SFC is Initializable, Ownable, Version {
         return fullReward;
     }
 
+    /// Get new rewards for a delegator for a given stake amount and epoch range.
     function _newRewardsOf(
         uint256 stakeAmount,
         uint256 toValidatorID,
@@ -714,6 +774,7 @@ contract SFC is Initializable, Ownable, Version {
         return ((currentRate - stashedRate) * stakeAmount) / Decimal.unit();
     }
 
+    /// Stash rewards for a delegator.
     function _stashRewards(address delegator, uint256 toValidatorID) internal returns (bool updated) {
         uint256 nonStashedReward = _newRewards(delegator, toValidatorID);
         stashedRewardsUntilEpoch[delegator][toValidatorID] = _highestPayableEpoch(toValidatorID);
@@ -721,6 +782,7 @@ contract SFC is Initializable, Ownable, Version {
         return nonStashedReward != 0;
     }
 
+    /// Claim rewards for a delegator.
     function _claimRewards(address delegator, uint256 toValidatorID) internal returns (uint256) {
         _stashRewards(delegator, toValidatorID);
         uint256 rewards = _rewardsStash[delegator][toValidatorID];
@@ -733,6 +795,8 @@ contract SFC is Initializable, Ownable, Version {
         return rewards;
     }
 
+    /// Burn FTM tokens.
+    /// The tokens are sent to the zero address.
     function _burnFTM(uint256 amount) internal {
         if (amount != 0) {
             payable(address(0)).transfer(amount);
@@ -740,14 +804,18 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Get epoch end time.
     function epochEndTime(uint256 epoch) internal view returns (uint256) {
         return getEpochSnapshot[epoch].endTime;
     }
 
+    /// Check if an address is redirected.
     function _redirected(address addr) internal view returns (bool) {
         return getRedirection[addr] != address(0);
     }
 
+    /// Get address which should receive rewards and withdrawn stake for the given delegator.
+    /// The delegator is usually the receiver, unless a redirection is created.
     function _receiverOf(address addr) internal view returns (address payable) {
         address to = getRedirection[addr];
         if (to == address(0)) {
@@ -756,10 +824,7 @@ contract SFC is Initializable, Ownable, Version {
         return payable(address(uint160(to)));
     }
 
-    /*
-    Epoch callbacks
-    */
-
+    /// Seal epoch - sync validators.
     function _sealEpochOffline(
         EpochSnapshot storage snapshot,
         uint256[] memory validatorIDs,
@@ -781,6 +846,7 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Seal epoch - calculate rewards.
     function _sealEpochRewards(
         uint256 epochDuration,
         EpochSnapshot storage snapshot,
@@ -872,6 +938,7 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Seal epoch - calculate min gas price for the next epoch.
     function _sealEpochMinGasPrice(uint256 epochDuration, uint256 epochGas) internal {
         // change minGasPrice proportionally to the difference between target and received epochGas
         uint256 targetEpochGas = epochDuration * c.targetGasPowerPerSecond() + 1;
@@ -892,11 +959,13 @@ contract SFC is Initializable, Ownable, Version {
         minGasPrice = newMinGasPrice;
     }
 
+    /// Create a new validator.
     function _createValidator(address auth, bytes memory pubkey) internal {
         uint256 validatorID = ++lastValidatorID;
         _rawCreateValidator(auth, validatorID, pubkey, OK_STATUS, currentEpoch(), _now(), 0, 0);
     }
 
+    /// Create a new validator without incrementing lastValidatorID.
     function _rawCreateValidator(
         address auth,
         uint256 validatorID,
@@ -929,6 +998,7 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Calculate raw validator epoch transaction reward.
     function _calcRawValidatorEpochTxReward(
         uint256 epochFee,
         uint256 txRewardWeight,
@@ -942,6 +1012,7 @@ contract SFC is Initializable, Ownable, Version {
         return (txReward * (Decimal.unit() - c.burntFeeShare() - c.treasuryFeeShare())) / Decimal.unit();
     }
 
+    /// Calculate raw validator epoch base reward.
     function _calcRawValidatorEpochBaseReward(
         uint256 epochDuration,
         uint256 _baseRewardPerSecond,
@@ -955,12 +1026,15 @@ contract SFC is Initializable, Ownable, Version {
         return (totalReward * baseRewardWeight) / totalBaseRewardWeight;
     }
 
+    /// Mint native token.
     function _mintNativeToken(uint256 amount) internal {
         // balance will be increased after the transaction is processed
         node.incBalance(address(this), amount);
         totalSupply = totalSupply + amount;
     }
 
+    /// Recount votes for a delegator and a validator.
+    /// Force applying validators weights changes in governance voting.
     function _recountVotes(address delegator, address validatorAuth, bool strict) internal {
         if (voteBookAddress != address(0)) {
             // Don't allow recountVotes to use up all the gas
@@ -975,6 +1049,7 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Set validator deactivated status.
     function _setValidatorDeactivated(uint256 validatorID, uint256 status) internal {
         if (getValidator[validatorID].status == OK_STATUS && status != OK_STATUS) {
             totalActiveStake = totalActiveStake - getValidator[validatorID].receivedStake;
@@ -995,6 +1070,7 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Sync validator with node.
     function _syncValidator(uint256 validatorID, bool syncPubkey) public {
         if (!_validatorExists(validatorID)) {
             revert ValidatorNotExists();
@@ -1010,14 +1086,17 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Check if a validator exists.
     function _validatorExists(uint256 validatorID) internal view returns (bool) {
         return getValidator[validatorID].createdTime != 0;
     }
 
+    /// Calculate validator commission.
     function _calcValidatorCommission(uint256 rawReward, uint256 commission) internal pure returns (uint256) {
         return (rawReward * commission) / Decimal.unit();
     }
 
+    /// Get current time.
     function _now() internal view virtual returns (uint256) {
         return block.timestamp;
     }
