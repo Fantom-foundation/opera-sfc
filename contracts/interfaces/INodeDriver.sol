@@ -8,7 +8,6 @@ pragma solidity 0.8.27;
  * @custom:security-contact security@fantom.foundation
  */
 interface INodeDriver {
-
     /// Set an initial validator. Called only as part of network initialization/genesis file generating.
     function setGenesisValidator(
         address auth,
