@@ -109,9 +109,6 @@ contract SFC is Initializable, Ownable, Version {
     // the governance contract (to recalculate votes when the stake changes)
     address public voteBookAddress;
 
-    // validator ID => amount of pubkey changes
-    mapping(uint256 validatorID => uint256 changes) internal validatorPubkeyChanges;
-
     // keccak256(pubkey bytes) => validator ID (prevents using the same key by multiple validators)
     mapping(bytes32 pubkeyHash => uint256 validatorID) internal pubkeyHashToValidatorID;
 
@@ -147,9 +144,6 @@ contract SFC is Initializable, Ownable, Version {
     // pubkeys
     error PubkeyUsedByOtherValidator();
     error MalformedPubkey();
-    error PubkeyNotChanged();
-    error EmptyPubkey();
-    error TooManyPubkeyUpdates();
 
     // redirections
     error AlreadyRedirected();
@@ -233,31 +227,6 @@ contract SFC is Initializable, Ownable, Version {
     /// Receive fallback to revert transfers.
     receive() external payable {
         revert TransfersNotAllowed();
-    }
-
-    /// Update validator's public key.
-    function updateValidatorPubkey(bytes calldata pubkey) external {
-        if (pubkey.length != 66 || pubkey[0] != 0xc0) {
-            revert MalformedPubkey();
-        }
-        uint256 validatorID = getValidatorID[msg.sender];
-        if (!_validatorExists(validatorID)) {
-            revert ValidatorNotExists();
-        }
-        if (keccak256(pubkey) == keccak256(getValidatorPubkey[validatorID])) {
-            revert PubkeyNotChanged();
-        }
-        if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
-            revert PubkeyUsedByOtherValidator();
-        }
-        if (validatorPubkeyChanges[validatorID] != 0) {
-            revert TooManyPubkeyUpdates();
-        }
-
-        validatorPubkeyChanges[validatorID]++;
-        pubkeyHashToValidatorID[keccak256(pubkey)] = validatorID;
-        getValidatorPubkey[validatorID] = pubkey;
-        _syncValidator(validatorID, true);
     }
 
     /// Set admin address responsible for initiating redirections.
@@ -386,8 +355,8 @@ contract SFC is Initializable, Ownable, Version {
         if (msg.value < c.minSelfStake()) {
             revert InsufficientSelfStake();
         }
-        if (pubkey.length == 0) {
-            revert EmptyPubkey();
+        if (pubkey.length != 66 || pubkey[0] != 0xc0) {
+            revert MalformedPubkey();
         }
         if (pubkeyHashToValidatorID[keccak256(pubkey)] != 0) {
             revert PubkeyUsedByOtherValidator();
