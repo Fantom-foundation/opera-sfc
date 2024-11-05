@@ -153,8 +153,7 @@ interface ISFC {
         uint256[] calldata offlineTime,
         uint256[] calldata offlineBlocks,
         uint256[] calldata uptimes,
-        uint256[] calldata originatedTxsFee,
-        uint256 epochGas
+        uint256[] calldata originatedTxsFee
     ) external;
 
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external;

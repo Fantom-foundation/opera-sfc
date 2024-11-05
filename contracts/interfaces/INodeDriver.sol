@@ -31,15 +31,6 @@ interface INodeDriver {
         uint256[] calldata originatedTxsFee
     ) external;
 
-    /// Seal epoch. To be called BEFORE epoch sealing made by the client itself - currently not used.
-    function sealEpochV1(
-        uint256[] calldata offlineTimes,
-        uint256[] calldata offlineBlocks,
-        uint256[] calldata uptimes,
-        uint256[] calldata originatedTxsFee,
-        uint256 usedGas
-    ) external;
-
     /// Seal epoch. Called AFTER epoch sealing made by the client itself.
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external;
 }

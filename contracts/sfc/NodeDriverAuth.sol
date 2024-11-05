@@ -114,12 +114,6 @@ contract NodeDriverAuth is Initializable, Ownable {
         driver.updateNetworkRules(diff);
     }
 
-    /// Update MinGasPrice. Called by SFC during epoch sealing.
-    function updateMinGasPrice(uint256 minGasPrice) external onlySFC {
-        // prettier-ignore
-        driver.updateNetworkRules(bytes(strConcat("{\"Economy\":{\"MinGasPrice\":", uint256ToStr(minGasPrice), "}}")));
-    }
-
     /// Update advertised network version.
     function updateNetworkVersion(uint256 version) external onlyOwner {
         driver.updateNetworkVersion(version);
@@ -166,10 +160,9 @@ contract NodeDriverAuth is Initializable, Ownable {
         uint256[] calldata offlineTimes,
         uint256[] calldata offlineBlocks,
         uint256[] calldata uptimes,
-        uint256[] calldata originatedTxsFee,
-        uint256 usedGas
+        uint256[] calldata originatedTxsFee
     ) external onlyDriver {
-        sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee, usedGas);
+        sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFee);
     }
 
     /// Seal epoch. Called AFTER epoch sealing made by the client itself.
@@ -184,52 +177,6 @@ contract NodeDriverAuth is Initializable, Ownable {
             size := extcodesize(account)
         }
         return size > 0;
-    }
-
-    function decimalsNum(uint256 num) internal pure returns (uint256) {
-        uint256 decimals;
-        while (num != 0) {
-            decimals++;
-            num /= 10;
-        }
-        return decimals;
-    }
-
-    function uint256ToStr(uint256 num) internal pure returns (string memory) {
-        if (num == 0) {
-            return "0";
-        }
-        uint256 decimals = decimalsNum(num);
-        bytes memory bstr = new bytes(decimals);
-        uint256 strIdx = decimals - 1;
-        while (num != 0) {
-            bstr[strIdx] = bytes1(uint8(48 + (num % 10)));
-            num /= 10;
-            if (strIdx > 0) {
-                strIdx--;
-            }
-        }
-        return string(bstr);
-    }
-
-    function strConcat(string memory _a, string memory _b, string memory _c) internal pure returns (string memory) {
-        bytes memory _ba = bytes(_a);
-        bytes memory _bb = bytes(_b);
-        bytes memory _bc = bytes(_c);
-        string memory abc = new string(_ba.length + _bb.length + _bc.length);
-        bytes memory babc = bytes(abc);
-        uint256 k = 0;
-        uint256 i = 0;
-        for (i = 0; i < _ba.length; i++) {
-            babc[k++] = _ba[i];
-        }
-        for (i = 0; i < _bb.length; i++) {
-            babc[k++] = _bb[i];
-        }
-        for (i = 0; i < _bc.length; i++) {
-            babc[k++] = _bc[i];
-        }
-        return string(babc);
     }
 
     function _getCodeHash(address addr) internal view returns (bytes32) {

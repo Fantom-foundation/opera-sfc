@@ -66,7 +66,7 @@ describe('SFC', () => {
     });
 
     it('Should revert when sealEpoch not called by node', async function () {
-      await expect(this.sfc.sealEpoch([1], [1], [1], [1], 0)).to.be.revertedWithCustomError(this.sfc, 'NotDriverAuth');
+      await expect(this.sfc.sealEpoch([1], [1], [1], [1])).to.be.revertedWithCustomError(this.sfc, 'NotDriverAuth');
     });
 
     it('Should revert when SealEpochValidators not called by node', async function () {
@@ -367,11 +367,11 @@ describe('SFC', () => {
         expect(await this.sfc.currentEpoch.call()).to.equal(1);
         expect(await this.sfc.currentSealedEpoch()).to.equal(0);
         await this.sfc.enableNonNodeCalls();
-        await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102], 0);
+        await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102]);
         expect(await this.sfc.currentEpoch.call()).to.equal(2);
         expect(await this.sfc.currentSealedEpoch()).to.equal(1);
         for (let i = 0; i < 4; i++) {
-          await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102], 0);
+          await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102]);
         }
         expect(await this.sfc.currentEpoch.call()).to.equal(6);
         expect(await this.sfc.currentSealedEpoch()).to.equal(5);
@@ -380,7 +380,7 @@ describe('SFC', () => {
       it('Should succeed and return endBlock', async function () {
         const epochNumber = await this.sfc.currentEpoch();
         await this.sfc.enableNonNodeCalls();
-        await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102], 0);
+        await this.sfc.sealEpoch([100, 101, 102], [100, 101, 102], [100, 101, 102], [100, 101, 102]);
         const lastBlock = await ethers.provider.getBlockNumber();
         // endBlock is on second position
         expect((await this.sfc.getEpochSnapshot(epochNumber))[1]).to.equal(lastBlock);
@@ -506,79 +506,6 @@ describe('SFC', () => {
       expect(node.nextValidatorWeights.get(firstValidatorID)).to.equal(ethers.parseEther('0.4175'));
       expect(node.nextValidatorWeights.get(secondValidatorID)).to.equal(ethers.parseEther('0.6825'));
       expect(node.nextValidatorWeights.get(thirdValidatorID)).to.equal(ethers.parseEther('0.4'));
-    });
-
-    it('Should succeed and balance gas price', async function () {
-      const [validator] = await ethers.getSigners();
-      const pubkey =
-        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
-      await this.sfc.enableNonNodeCalls();
-
-      await this.constants.updateGasPriceBalancingCounterweight(24 * 60 * 60);
-      await this.sfc.rebaseTime();
-
-      await this.sfc.connect(validator).createValidator(pubkey, { value: ethers.parseEther('1') });
-
-      await this.constants.updateTargetGasPowerPerSecond(1000);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 1_000);
-      await this.sfc.sealEpochValidators([1]);
-
-      expect(await this.sfc.minGasPrice()).to.equal(95_000_000_000);
-
-      await this.sfc.advanceTime(1);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 1_000);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(94_999_998_901);
-
-      await this.sfc.advanceTime(2);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 2_000);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(94_999_997_802);
-
-      await this.sfc.advanceTime(1_000);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 1_000_000);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(94_999_996_715);
-
-      await this.sfc.advanceTime(1_000);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 666_666);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(94_637_676_437);
-
-      await this.sfc.advanceTime(1_000);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 1_500_000);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(95_179_080_284);
-
-      await this.sfc.advanceTime(1);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 666);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(95_178_711_617);
-
-      await this.sfc.advanceTime(1);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 1_500);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(95_179_260_762);
-
-      await this.sfc.advanceTime(1_000);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 10_000_000_000);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(99_938_223_800);
-
-      await this.sfc.advanceTime(10_000);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 0);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(94_941_312_610);
-
-      await this.sfc.advanceTime(100);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 200_000);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(95_051_069_157);
-
-      await this.sfc.advanceTime(100);
-      await this.sfc.sealEpoch([1], [1], [1], [1], 50_000);
-      await this.sfc.sealEpochValidators([1]);
-      expect(await this.sfc.minGasPrice()).to.equal(94_996_125_793);
     });
   });
 
@@ -745,7 +672,7 @@ describe('SFC', () => {
       }
 
       await this.sfc.advanceTime(24 * 60 * 60);
-      await this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0);
+      await this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees);
       await this.sfc.sealEpochValidators(allValidators);
     });
 
@@ -776,7 +703,7 @@ describe('SFC', () => {
       }
 
       await this.sfc.advanceTime(24 * 60 * 60);
-      await this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0);
+      await this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees);
       await this.sfc.sealEpochValidators(allValidators);
     });
 
@@ -848,7 +775,7 @@ describe('SFC', () => {
 
         await this.sfc.advanceTime(24 * 60 * 60);
         await expect(
-          this.nodeDriverAuth.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0),
+          this.nodeDriverAuth.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees),
         ).to.be.revertedWithCustomError(this.nodeDriverAuth, 'NotDriver');
       });
     });

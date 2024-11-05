@@ -6,7 +6,6 @@ import {Initializable} from "../common/Initializable.sol";
 import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
-import {GP} from "./GasPriceConstants.sol";
 import {Version} from "../version/Version.sol";
 
 /**
@@ -97,9 +96,6 @@ contract SFC is Initializable, Ownable, Version {
 
     // validator ID -> slashing refund ratio (allows to withdraw slashed stake)
     mapping(uint256 validatorID => uint256 refundRatio) public slashingRefundRatio;
-
-    // the minimal gas price calculated for the current epoch
-    uint256 public minGasPrice;
 
     // the treasure contract (receives unlock penalties and a part of epoch fees)
     address public treasuryAddress;
@@ -220,7 +216,6 @@ contract SFC is Initializable, Ownable, Version {
         node = NodeDriverAuth(nodeDriver);
         c = ConstantsManager(_c);
         totalSupply = _totalSupply;
-        minGasPrice = GP.initialMinGasPrice();
         getEpochSnapshot[sealedEpoch].endTime = _now();
     }
 
@@ -280,8 +275,7 @@ contract SFC is Initializable, Ownable, Version {
         uint256[] calldata offlineTime,
         uint256[] calldata offlineBlocks,
         uint256[] calldata uptimes,
-        uint256[] calldata originatedTxsFee,
-        uint256 epochGas
+        uint256[] calldata originatedTxsFee
     ) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         uint256[] memory validatorIDs = snapshot.validatorIDs;
@@ -294,7 +288,6 @@ contract SFC is Initializable, Ownable, Version {
                 epochDuration = _now() - prevSnapshot.endTime;
             }
             _sealEpochRewards(epochDuration, snapshot, prevSnapshot, validatorIDs, uptimes, originatedTxsFee);
-            _sealEpochMinGasPrice(epochDuration, epochGas);
         }
 
         currentSealedEpoch = currentEpoch();
@@ -305,7 +298,6 @@ contract SFC is Initializable, Ownable, Version {
     }
 
     /// Finish epoch sealing - store validators of the new epoch into a snapshot.
-    /// Apply minGasPrice calculated in the sealEpoch().
     /// This method is called AFTER the epoch sealing made by the client itself.
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
@@ -317,7 +309,6 @@ contract SFC is Initializable, Ownable, Version {
             snapshot.totalStake = snapshot.totalStake + receivedStake;
         }
         snapshot.validatorIDs = nextValidatorIDs;
-        node.updateMinGasPrice(minGasPrice);
     }
 
     /// Set an initial validator.
@@ -908,27 +899,6 @@ contract SFC is Initializable, Ownable, Version {
                 // the treasury failure must not endanger the epoch sealing
             }
         }
-    }
-
-    /// Seal epoch - calculate min gas price for the next epoch.
-    function _sealEpochMinGasPrice(uint256 epochDuration, uint256 epochGas) internal {
-        // change minGasPrice proportionally to the difference between target and received epochGas
-        uint256 targetEpochGas = epochDuration * c.targetGasPowerPerSecond() + 1;
-        uint256 gasPriceDeltaRatio = (epochGas * Decimal.unit()) / targetEpochGas;
-        uint256 counterweight = c.gasPriceBalancingCounterweight();
-        // scale down the change speed (estimate gasPriceDeltaRatio ^ (epochDuration / counterweight))
-        gasPriceDeltaRatio =
-            (epochDuration * gasPriceDeltaRatio + counterweight * Decimal.unit()) /
-            (epochDuration + counterweight);
-        // limit the max/min possible delta in one epoch
-        gasPriceDeltaRatio = GP.trimGasPriceChangeRatio(gasPriceDeltaRatio);
-
-        // apply the ratio
-        uint256 newMinGasPrice = (minGasPrice * gasPriceDeltaRatio) / Decimal.unit();
-        // limit the max/min possible minGasPrice
-        newMinGasPrice = GP.trimMinGasPrice(newMinGasPrice);
-        // apply new minGasPrice
-        minGasPrice = newMinGasPrice;
     }
 
     /// Create a new validator.

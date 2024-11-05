@@ -65,7 +65,7 @@ class BlockchainNode {
     );
 
     await this.sfc.advanceTime(duration);
-    await this.handleTx(await this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees, 0));
+    await this.handleTx(await this.sfc.sealEpoch(offlineTimes, offlineBlocks, uptimes, originatedTxsFees));
     await this.handleTx(await this.sfc.sealEpochValidators(nextValidatorIds));
 
     // update validators

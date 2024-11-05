@@ -155,10 +155,6 @@ describe('NodeDriver', () => {
         this.nodeDriver,
         'NotNode',
       );
-      await expect(this.nodeDriver.sealEpochV1([0, 1], [0, 1], [0, 1], [0, 1], 0)).to.be.revertedWithCustomError(
-        this.nodeDriver,
-        'NotNode',
-      );
     });
   });
 });
