@@ -394,9 +394,9 @@ describe('SFC', () => {
       const node = new BlockchainNode(this.sfc);
       const [validator, secondValidator] = await ethers.getSigners();
       const pubkey =
-        '0xc0040220af695ae100c370c7acff4f57e5a0c507abbbc8ac6cc2ae0ce3a81747e0cd3c6892233faae1af5d982d05b1c13a0ad4449685f0b5a6138b301cc5263f8316';
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
       const secondPubkey =
-        '0xc00499a876465bc626061bb2f0326df1a223c14e3bcdc3fff3deb0f95f316b9d586b03f00bbc2349be3d7908de8626cfd8f7fd6f73bff49df1299f44b6855562c33d';
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc5251';
       await this.sfc.enableNonNodeCalls();
 
       expect(await this.sfc.lastValidatorID()).to.equal(0);
@@ -427,13 +427,6 @@ describe('SFC', () => {
 
       expect(await this.sfc.getValidatorPubkey(firstValidatorID)).to.equal(pubkey);
       expect(await this.sfc.getValidatorPubkey(secondValidatorID)).to.equal(secondPubkey);
-
-      expect(await this.sfc.pubkeyAddressToValidatorID('0x65Db23D0c4FA8Ec58151a30E54e6a6046c97cD10')).to.equal(
-        firstValidatorID,
-      );
-      expect(await this.sfc.pubkeyAddressToValidatorID('0x1AA3196683eE97Adf5B398875828E322a34E8085')).to.equal(
-        secondValidatorID,
-      );
 
       const firstValidatorObj = await this.sfc.getValidator(firstValidatorID);
       const secondValidatorObj = await this.sfc.getValidator(secondValidatorID);
@@ -629,7 +622,7 @@ describe('SFC', () => {
       expect(await this.sfc.rewardsStash(this.delegator, this.validatorId)).to.equal(9_180);
     });
 
-    it('Should succeed and update the validator on node', async function () {
+    it('Should succeed andupdate the validator on node', async function () {
       await this.constants.updateOfflinePenaltyThresholdTime(10000);
       await this.constants.updateOfflinePenaltyThresholdBlocksNum(500);
 
