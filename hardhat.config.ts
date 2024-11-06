@@ -2,10 +2,11 @@ import { HardhatUserConfig } from 'hardhat/config';
 import * as dotenv from 'dotenv';
 import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomicfoundation/hardhat-ethers';
+import '@openzeppelin/hardhat-upgrades';
+import '@typechain/hardhat';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
-import '@typechain/hardhat';
 
 dotenv.config();
 
