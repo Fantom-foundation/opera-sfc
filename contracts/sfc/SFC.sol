@@ -69,13 +69,13 @@ contract SFC is Initializable, Ownable, Version {
     mapping(address delegator => mapping(uint256 validatorID => uint256 stake)) public getStake;
 
     // data structure to compute average uptime for each active validator
-    struct AverageData {
-        // average uptime
-        int32 averageUptime;
-        // average uptime error term
-        int32 averageUptimeError;
-        // number of alive epochs (counts only up to averageUptimeEpochsWindow)
-        int32 numEpochsAlive;
+    struct AverageUptime {
+        // average uptime ratio as a value between 0 and (1 << 30)
+        uint32 averageUptime;
+        // remainder from the division in the average calculation
+        uint32 remainder;
+        // number of epochs in the average (at most averageUptimeEpochsWindow)
+        uint32 epochs;
     }
 
     struct EpochSnapshot {
@@ -86,7 +86,7 @@ contract SFC is Initializable, Ownable, Version {
         // validator ID => accumulated online time
         mapping(uint256 => uint256) accumulatedUptime;
         // validator ID => average uptime as a percentage
-        mapping(uint256 => AverageData) averageData;
+        mapping(uint256 => AverageUptime) averageUptime;
         // validator ID => gas fees from txs originated by the validator
         mapping(uint256 => uint256) accumulatedOriginatedTxsFee;
         mapping(uint256 => uint256) offlineTime;
@@ -533,8 +533,9 @@ contract SFC is Initializable, Ownable, Version {
         return getEpochSnapshot[epoch].accumulatedUptime[validatorID];
     }
 
-    function getEpochAverageUptime(uint256 epoch, uint256 validatorID) public view returns (int32) {
-        return getEpochSnapshot[epoch].averageData[validatorID].averageUptime;
+    /// Get average uptime for a validator in a given epoch.
+    function getEpochAverageUptime(uint256 epoch, uint256 validatorID) public view returns (uint32) {
+        return getEpochSnapshot[epoch].averageUptime[validatorID].averageUptime;
     }
 
     /// Get accumulated originated txs fee for a validator in a given epoch.
@@ -918,6 +919,7 @@ contract SFC is Initializable, Ownable, Version {
         }
     }
 
+    /// Seal epoch - recalculate average uptime time of validators
     function _sealEpochAverageUptime(
         uint256 epochDuration,
         EpochSnapshot storage snapshot,
@@ -928,37 +930,37 @@ contract SFC is Initializable, Ownable, Version {
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             uint256 validatorID = validatorIDs[i];
             uint256 normalisedUptime = (uptimes[i] * (1 << 30)) / epochDuration;
-            if (normalisedUptime < 0) {
-                normalisedUptime = 0;
-            } else if (normalisedUptime > 1 << 30) {
+            if (normalisedUptime > 1 << 30) {
                 normalisedUptime = 1 << 30;
             }
-            // Assumes that if in the previous snapshot the validator
-            // does not exist, the map returns zero.
-            int32 n = prevSnapshot.averageData[validatorID].numEpochsAlive;
-            int64 tmp;
-            if (n > 0) {
-                tmp =
-                    int64(n - 1) *
-                    int64(snapshot.averageData[validatorID].averageUptime) +
-                    int64(uint64(normalisedUptime));
-                if (n > 1) {
-                    tmp += (int64(n) * int64(prevSnapshot.averageData[validatorID].averageUptimeError)) / int64(n - 1);
-                }
-                snapshot.averageData[validatorID].averageUptimeError = int32(tmp % int64(n));
-                tmp /= int64(n);
+            AverageUptime memory prev = prevSnapshot.averageUptime[validatorID];
+            AverageUptime memory cur;
+
+            if (prev.epochs == 0) {
+                // the only element for the average
+                cur.averageUptime = uint32(normalisedUptime);
             } else {
-                tmp = int64(uint64(normalisedUptime));
+                uint64 n = prev.epochs + 1; // the number of elements for the average
+                uint64 tmp = (n - 1) * (prev.averageUptime) + uint64(normalisedUptime);
+
+                if (prev.remainder != 0) {
+                    // apply remainder from the division in the previous iteration
+                    tmp += (n * prev.remainder) / (n - 1);
+                }
+
+                cur.averageUptime = uint32(tmp / n);
+                cur.remainder = uint32(tmp % n);
             }
-            if (tmp < 0) {
-                tmp = 0;
-            } else if (tmp > 1 << 30) {
-                tmp = 1 << 30;
+
+            if (cur.averageUptime > 1 << 30) {
+                cur.averageUptime = 1 << 30;
             }
-            snapshot.averageData[validatorID].averageUptime = int32(tmp);
-            if (n < c.averageUptimeEpochsWindow()) {
-                snapshot.averageData[validatorID].numEpochsAlive = n + 1;
+            if (prev.epochs < c.averageUptimeEpochsWindow()) {
+                cur.epochs = prev.epochs + 1;
+            } else {
+                cur.epochs = prev.epochs;
             }
+            snapshot.averageUptime[validatorID] = cur;
         }
     }
 

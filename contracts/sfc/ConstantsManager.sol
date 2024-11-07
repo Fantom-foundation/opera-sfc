@@ -30,10 +30,10 @@ contract ConstantsManager is Ownable {
     uint256 public gasPriceBalancingCounterweight;
 
     // the number of epochs for counting the average uptime of validators
-    int32 public averageUptimeEpochsWindow;
+    uint32 public averageUptimeEpochsWindow;
 
     // minimum average uptime
-    int32 public minAverageUptime;
+    uint32 public minAverageUptime;
 
     /**
      * @dev Given value is too small
@@ -160,7 +160,7 @@ contract ConstantsManager is Ownable {
         gasPriceBalancingCounterweight = v;
     }
 
-    function updateAverageUptimeEpochsWindow(int32 v) external virtual onlyOwner {
+    function updateAverageUptimeEpochsWindow(uint32 v) external virtual onlyOwner {
         if (v < 10) {
             revert ValueTooSmall();
         }
@@ -170,10 +170,7 @@ contract ConstantsManager is Ownable {
         averageUptimeEpochsWindow = v;
     }
 
-    function updateMinAverageUptime(int32 v) external virtual onlyOwner {
-        if (v < 0) {
-            revert ValueTooSmall();
-        }
+    function updateMinAverageUptime(uint32 v) external virtual onlyOwner {
         if (v > 966367641) {
             // 0.9 in Q1.30
             revert ValueTooLarge();

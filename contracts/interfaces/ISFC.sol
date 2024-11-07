@@ -111,6 +111,8 @@ interface ISFC {
 
     function getEpochAccumulatedUptime(uint256 epoch, uint256 validatorID) external view returns (uint256);
 
+    function getEpochAverageUptime(uint256 epoch, uint256 validatorID) external view returns (uint32);
+
     function getEpochAccumulatedOriginatedTxsFee(uint256 epoch, uint256 validatorID) external view returns (uint256);
 
     function getEpochOfflineTime(uint256 epoch, uint256 validatorID) external view returns (uint256);
