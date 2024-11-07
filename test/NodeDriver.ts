@@ -1,12 +1,15 @@
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { IEVMWriter, NetworkInitializer, NodeDriver, NodeDriverAuth, UnitTestSFC } from '../typechain-types';
+import { IEVMWriter, NetworkInitializer, NodeDriver, NodeDriverAuth } from '../typechain-types';
 
 describe('NodeDriver', () => {
   const fixture = async () => {
     const [owner, nonOwner] = await ethers.getSigners();
-    const sfc: UnitTestSFC = await ethers.deployContract('UnitTestSFC');
+    const sfc = await upgrades.deployProxy(await ethers.getContractFactory('UnitTestSFC'), {
+      kind: 'uups',
+      initializer: false,
+    });
     const nodeDriver: NodeDriver = await ethers.deployContract('NodeDriver');
     const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
     const nodeDriverAuth: NodeDriverAuth = await ethers.deployContract('NodeDriverAuth');
