@@ -222,6 +222,7 @@ contract SFC is Initializable, OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Override the upgrade authorization check to allow upgrades only from the owner.
+    // solhint-disable-next-line no-empty-blocks
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
     /// Receive fallback to revert transfers.
