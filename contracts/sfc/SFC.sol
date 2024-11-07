@@ -17,6 +17,7 @@ contract SFC is Initializable, Ownable, Version {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;
+    uint256 internal constant OFFLINE_AVG_BIT = 1 << 4;
     uint256 internal constant DOUBLESIGN_BIT = 1 << 7;
     uint256 internal constant CHEATER_MASK = DOUBLESIGN_BIT;
 
@@ -929,16 +930,28 @@ contract SFC is Initializable, Ownable, Version {
     ) internal {
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             uint256 validatorID = validatorIDs[i];
+            // compute normalised uptime as a percentage in the Q1.30 fixed-point format
             uint256 normalisedUptime = (uptimes[i] * (1 << 30)) / epochDuration;
             if (normalisedUptime > 1 << 30) {
                 normalisedUptime = 1 << 30;
             }
-            AverageUptime memory previousAverage = prevSnapshot.averageUptime[validatorID];
-            snapshot.averageUptime[validatorID] = _addElementIntoAverageUptime(normalisedUptime, previousAverage);
+            AverageUptime memory previous = prevSnapshot.averageUptime[validatorID];
+            AverageUptime memory current = _addElementIntoAverageUptime(uint32(normalisedUptime), previous);
+            snapshot.averageUptime[validatorID] = current;
+
+            // remove validator if average uptime drops below min average uptime
+            // (by setting minAverageUptime to zero, this check is ignored)
+            if (current.averageUptime < c.minAverageUptime() && current.epochs >= c.averageUptimeEpochsThreshold()) {
+                _setValidatorDeactivated(validatorID, OFFLINE_AVG_BIT);
+                _syncValidator(validatorID, false);
+            }
         }
     }
 
-    function _addElementIntoAverageUptime(uint32 newValue, AverageUptime memory prev) private returns (AverageUptime memory) {
+    function _addElementIntoAverageUptime(
+        uint32 newValue,
+        AverageUptime memory prev
+    ) private view returns (AverageUptime memory) {
         AverageUptime memory cur;
         if (prev.epochs == 0) {
             // the only element for the average
@@ -963,7 +976,7 @@ contract SFC is Initializable, Ownable, Version {
         if (cur.averageUptime > 1 << 30) {
             cur.averageUptime = 1 << 30;
         }
-        if (prev.epochs < c.averageUptimeEpochsWindow()) {
+        if (prev.epochs < c.averageUptimeEpochsThreshold()) {
             cur.epochs = prev.epochs + 1;
         } else {
             cur.epochs = prev.epochs;

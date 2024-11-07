@@ -29,10 +29,12 @@ contract ConstantsManager is Ownable {
     uint256 public targetGasPowerPerSecond;
     uint256 public gasPriceBalancingCounterweight;
 
-    // the number of epochs for counting the average uptime of validators
-    uint32 public averageUptimeEpochsWindow;
+    // Epoch threshold for stop counting alive epochs (avoid diminishing impact of new uptimes).
+    // Is also the minimum number of epochs necessary for deactivation of offline validators.
+    uint32 public averageUptimeEpochsThreshold;
 
-    // minimum average uptime
+    // Minimum average uptime in Q1.30 format; acceptable bounds [0,0.9]
+    // Zero to disable validators deactivation by this metric.
     uint32 public minAverageUptime;
 
     /**
@@ -160,14 +162,14 @@ contract ConstantsManager is Ownable {
         gasPriceBalancingCounterweight = v;
     }
 
-    function updateAverageUptimeEpochsWindow(uint32 v) external virtual onlyOwner {
+    function updateAverageUptimeEpochsThreshold(uint32 v) external virtual onlyOwner {
         if (v < 10) {
             revert ValueTooSmall();
         }
         if (v > 87600) {
             revert ValueTooLarge();
         }
-        averageUptimeEpochsWindow = v;
+        averageUptimeEpochsThreshold = v;
     }
 
     function updateMinAverageUptime(uint32 v) external virtual onlyOwner {
