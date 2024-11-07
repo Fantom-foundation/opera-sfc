@@ -933,35 +933,42 @@ contract SFC is Initializable, Ownable, Version {
             if (normalisedUptime > 1 << 30) {
                 normalisedUptime = 1 << 30;
             }
-            AverageUptime memory prev = prevSnapshot.averageUptime[validatorID];
-            AverageUptime memory cur;
-
-            if (prev.epochs == 0) {
-                // the only element for the average
-                cur.averageUptime = uint32(normalisedUptime);
-            } else {
-                uint64 n = prev.epochs + 1; // the number of elements for the average
-                uint64 tmp = (n - 1) * (prev.averageUptime) + uint64(normalisedUptime);
-
-                if (prev.remainder != 0) {
-                    // apply remainder from the division in the previous iteration
-                    tmp += (n * prev.remainder) / (n - 1);
-                }
-
-                cur.averageUptime = uint32(tmp / n);
-                cur.remainder = uint32(tmp % n);
-            }
-
-            if (cur.averageUptime > 1 << 30) {
-                cur.averageUptime = 1 << 30;
-            }
-            if (prev.epochs < c.averageUptimeEpochsWindow()) {
-                cur.epochs = prev.epochs + 1;
-            } else {
-                cur.epochs = prev.epochs;
-            }
-            snapshot.averageUptime[validatorID] = cur;
+            AverageUptime memory previousAverage = prevSnapshot.averageUptime[validatorID];
+            snapshot.averageUptime[validatorID] = _addElementIntoAverageUptime(normalisedUptime, previousAverage);
         }
+    }
+
+    function _addElementIntoAverageUptime(uint32 newValue, AverageUptime memory prev) private returns (AverageUptime memory) {
+        AverageUptime memory cur;
+        if (prev.epochs == 0) {
+            // the only element for the average
+            cur.averageUptime = uint32(newValue);
+            cur.epochs = 1;
+            return cur;
+        }
+
+        // the number of elements to calculate the average from
+        uint64 n = prev.epochs + 1;
+        // use lemma to add new value into the average
+        uint64 tmp = (n - 1) * uint64(prev.averageUptime) + uint64(newValue);
+
+        // apply remainder from the division in the previous iteration to reduce error
+        if (prev.remainder != 0) {
+            tmp += (n * prev.remainder) / (n - 1);
+        }
+
+        cur.averageUptime = uint32(tmp / n);
+        cur.remainder = uint32(tmp % n);
+
+        if (cur.averageUptime > 1 << 30) {
+            cur.averageUptime = 1 << 30;
+        }
+        if (prev.epochs < c.averageUptimeEpochsWindow()) {
+            cur.epochs = prev.epochs + 1;
+        } else {
+            cur.epochs = prev.epochs;
+        }
+        return cur;
     }
 
     /// Create a new validator.
