@@ -961,7 +961,7 @@ contract SFC is Initializable, Ownable, Version {
 
         // the number of elements the average is calculated from
         uint128 n = prev.epochs + 1;
-        // use lemma to add new value into the average
+        // add new value into the average
         uint128 tmp = (n - 1) * uint128(prev.averageUptime) + uint128(newValue) + prev.remainder;
 
         cur.averageUptime = uint64(tmp / n);
