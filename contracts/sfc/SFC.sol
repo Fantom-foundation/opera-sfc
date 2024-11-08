@@ -73,6 +73,8 @@ contract SFC is Initializable, Ownable, Version {
     struct AverageUptime {
         // average uptime ratio as a value between 0 and 1e18
         uint64 averageUptime;
+        // remainder from the division in the average calculation
+        uint32 remainder;
         // number of epochs in the average (at most averageUptimeEpochsWindow)
         uint32 epochs;
     }
@@ -960,7 +962,10 @@ contract SFC is Initializable, Ownable, Version {
         // the number of elements the average is calculated from
         uint128 n = prev.epochs + 1;
         // use lemma to add new value into the average
-        cur.averageUptime = uint64(((n - 1) * uint128(prev.averageUptime) + uint128(newValue)) / n);
+        uint128 tmp = (n - 1) * uint128(prev.averageUptime) + uint128(newValue) + prev.remainder;
+
+        cur.averageUptime = uint64(tmp / n);
+        cur.remainder = uint32(tmp % n);
 
         if (cur.averageUptime > Decimal.unit()) {
             cur.averageUptime = uint64(Decimal.unit());
