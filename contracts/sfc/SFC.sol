@@ -71,10 +71,8 @@ contract SFC is Initializable, Ownable, Version {
 
     // data structure to compute average uptime for each active validator
     struct AverageUptime {
-        // average uptime ratio as a value between 0 and (1 << 30)
-        uint32 averageUptime;
-        // remainder from the division in the average calculation
-        uint32 remainder;
+        // average uptime ratio as a value between 0 and 1e18
+        uint64 averageUptime;
         // number of epochs in the average (at most averageUptimeEpochsWindow)
         uint32 epochs;
     }
@@ -535,7 +533,7 @@ contract SFC is Initializable, Ownable, Version {
     }
 
     /// Get average uptime for a validator in a given epoch.
-    function getEpochAverageUptime(uint256 epoch, uint256 validatorID) public view returns (uint32) {
+    function getEpochAverageUptime(uint256 epoch, uint256 validatorID) public view returns (uint64) {
         return getEpochSnapshot[epoch].averageUptime[validatorID].averageUptime;
     }
 
@@ -930,18 +928,18 @@ contract SFC is Initializable, Ownable, Version {
     ) internal {
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             uint256 validatorID = validatorIDs[i];
-            // compute normalised uptime as a percentage in the Q1.30 fixed-point format
-            uint256 normalisedUptime = (uptimes[i] * (1 << 30)) / epochDuration;
-            if (normalisedUptime > 1 << 30) {
-                normalisedUptime = 1 << 30;
+            // compute normalised uptime as a percentage in the fixed-point format
+            uint256 normalisedUptime = (uptimes[i] * Decimal.unit()) / epochDuration;
+            if (normalisedUptime > Decimal.unit()) {
+                normalisedUptime = Decimal.unit();
             }
             AverageUptime memory previous = prevSnapshot.averageUptime[validatorID];
-            AverageUptime memory current = _addElementIntoAverageUptime(uint32(normalisedUptime), previous);
+            AverageUptime memory current = _addElementIntoAverageUptime(uint64(normalisedUptime), previous);
             snapshot.averageUptime[validatorID] = current;
 
             // remove validator if average uptime drops below min average uptime
             // (by setting minAverageUptime to zero, this check is ignored)
-            if (current.averageUptime < c.minAverageUptime() && current.epochs >= c.averageUptimeEpochsThreshold()) {
+            if (current.averageUptime < c.minAverageUptime() && current.epochs >= c.averageUptimeEpochWindow()) {
                 _setValidatorDeactivated(validatorID, OFFLINE_AVG_BIT);
                 _syncValidator(validatorID, false);
             }
@@ -949,34 +947,25 @@ contract SFC is Initializable, Ownable, Version {
     }
 
     function _addElementIntoAverageUptime(
-        uint32 newValue,
+        uint64 newValue,
         AverageUptime memory prev
     ) private view returns (AverageUptime memory) {
         AverageUptime memory cur;
         if (prev.epochs == 0) {
-            // the only element for the average
-            cur.averageUptime = uint32(newValue);
+            cur.averageUptime = newValue; // the only element for the average
             cur.epochs = 1;
             return cur;
         }
 
-        // the number of elements to calculate the average from
-        uint64 n = prev.epochs + 1;
+        // the number of elements the average is calculated from
+        uint128 n = prev.epochs + 1;
         // use lemma to add new value into the average
-        uint64 tmp = (n - 1) * uint64(prev.averageUptime) + uint64(newValue);
+        cur.averageUptime = uint64(((n - 1) * uint128(prev.averageUptime) + uint128(newValue)) / n);
 
-        // apply remainder from the division in the previous iteration to reduce error
-        if (prev.remainder != 0) {
-            tmp += (n * prev.remainder) / (n - 1);
+        if (cur.averageUptime > Decimal.unit()) {
+            cur.averageUptime = uint64(Decimal.unit());
         }
-
-        cur.averageUptime = uint32(tmp / n);
-        cur.remainder = uint32(tmp % n);
-
-        if (cur.averageUptime > 1 << 30) {
-            cur.averageUptime = 1 << 30;
-        }
-        if (prev.epochs < c.averageUptimeEpochsThreshold()) {
+        if (prev.epochs < c.averageUptimeEpochWindow()) {
             cur.epochs = prev.epochs + 1;
         } else {
             cur.epochs = prev.epochs;

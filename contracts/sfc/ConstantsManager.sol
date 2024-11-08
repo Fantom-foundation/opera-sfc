@@ -29,13 +29,13 @@ contract ConstantsManager is Ownable {
     uint256 public targetGasPowerPerSecond;
     uint256 public gasPriceBalancingCounterweight;
 
-    // Epoch threshold for stop counting alive epochs (avoid diminishing impact of new uptimes).
+    // The number of epochs to calculate the average uptime ratio from, acceptable bound [10, 87600].
     // Is also the minimum number of epochs necessary for deactivation of offline validators.
-    uint32 public averageUptimeEpochsThreshold;
+    uint32 public averageUptimeEpochWindow;
 
-    // Minimum average uptime in Q1.30 format; acceptable bounds [0,0.9]
+    // Minimum average uptime ratio in fixed-point format; acceptable bounds [0,0.9].
     // Zero to disable validators deactivation by this metric.
-    uint32 public minAverageUptime;
+    uint64 public minAverageUptime;
 
     /**
      * @dev Given value is too small
@@ -162,19 +162,19 @@ contract ConstantsManager is Ownable {
         gasPriceBalancingCounterweight = v;
     }
 
-    function updateAverageUptimeEpochsThreshold(uint32 v) external virtual onlyOwner {
+    function updateAverageUptimeEpochWindow(uint32 v) external virtual onlyOwner {
         if (v < 10) {
+            // needs to be long enough to allow permissible downtime for validators maintenance
             revert ValueTooSmall();
         }
         if (v > 87600) {
             revert ValueTooLarge();
         }
-        averageUptimeEpochsThreshold = v;
+        averageUptimeEpochWindow = v;
     }
 
-    function updateMinAverageUptime(uint32 v) external virtual onlyOwner {
-        if (v > 966367641) {
-            // 0.9 in Q1.30
+    function updateMinAverageUptime(uint64 v) external virtual onlyOwner {
+        if (v > ((Decimal.unit() * 9) / 10)) {
             revert ValueTooLarge();
         }
         minAverageUptime = v;

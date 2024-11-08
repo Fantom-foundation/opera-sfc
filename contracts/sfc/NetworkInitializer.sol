@@ -37,7 +37,7 @@ contract NetworkInitializer {
         consts.updateOfflinePenaltyThresholdBlocksNum(1000);
         consts.updateTargetGasPowerPerSecond(2000000);
         consts.updateGasPriceBalancingCounterweight(3600);
-        consts.updateAverageUptimeEpochsThreshold(100);
+        consts.updateAverageUptimeEpochWindow(100);
         consts.updateMinAverageUptime(0); // check disabled by default
         consts.transferOwnership(_owner);
 
