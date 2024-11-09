@@ -17,6 +17,7 @@ contract SFC is Initializable, Ownable, Version {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;
+    uint256 internal constant OFFLINE_AVG_BIT = 1 << 4;
     uint256 internal constant DOUBLESIGN_BIT = 1 << 7;
     uint256 internal constant CHEATER_MASK = DOUBLESIGN_BIT;
 
@@ -68,6 +69,16 @@ contract SFC is Initializable, Ownable, Version {
     // delegator => validator ID => current stake
     mapping(address delegator => mapping(uint256 validatorID => uint256 stake)) public getStake;
 
+    // data structure to compute average uptime for each active validator
+    struct AverageUptime {
+        // average uptime ratio as a value between 0 and 1e18
+        uint64 averageUptime;
+        // remainder from the division in the average calculation
+        uint32 remainder;
+        // number of epochs in the average (at most averageUptimeEpochsWindow)
+        uint32 epochs;
+    }
+
     struct EpochSnapshot {
         // validator ID => validator weight in the epoch
         mapping(uint256 => uint256) receivedStake;
@@ -75,6 +86,8 @@ contract SFC is Initializable, Ownable, Version {
         mapping(uint256 => uint256) accumulatedRewardPerToken;
         // validator ID => accumulated online time
         mapping(uint256 => uint256) accumulatedUptime;
+        // validator ID => average uptime as a percentage
+        mapping(uint256 => AverageUptime) averageUptime;
         // validator ID => gas fees from txs originated by the validator
         mapping(uint256 => uint256) accumulatedOriginatedTxsFee;
         mapping(uint256 => uint256) offlineTime;
@@ -288,6 +301,7 @@ contract SFC is Initializable, Ownable, Version {
                 epochDuration = _now() - prevSnapshot.endTime;
             }
             _sealEpochRewards(epochDuration, snapshot, prevSnapshot, validatorIDs, uptimes, originatedTxsFee);
+            _sealEpochAverageUptime(epochDuration, snapshot, prevSnapshot, validatorIDs, uptimes);
         }
 
         currentSealedEpoch = currentEpoch();
@@ -518,6 +532,11 @@ contract SFC is Initializable, Ownable, Version {
     /// Get accumulated uptime for a validator in a given epoch.
     function getEpochAccumulatedUptime(uint256 epoch, uint256 validatorID) public view returns (uint256) {
         return getEpochSnapshot[epoch].accumulatedUptime[validatorID];
+    }
+
+    /// Get average uptime for a validator in a given epoch.
+    function getEpochAverageUptime(uint256 epoch, uint256 validatorID) public view returns (uint64) {
+        return getEpochSnapshot[epoch].averageUptime[validatorID].averageUptime;
     }
 
     /// Get accumulated originated txs fee for a validator in a given epoch.
@@ -899,6 +918,64 @@ contract SFC is Initializable, Ownable, Version {
                 // the treasury failure must not endanger the epoch sealing
             }
         }
+    }
+
+    /// Seal epoch - recalculate average uptime time of validators
+    function _sealEpochAverageUptime(
+        uint256 epochDuration,
+        EpochSnapshot storage snapshot,
+        EpochSnapshot storage prevSnapshot,
+        uint256[] memory validatorIDs,
+        uint256[] memory uptimes
+    ) internal {
+        for (uint256 i = 0; i < validatorIDs.length; i++) {
+            uint256 validatorID = validatorIDs[i];
+            // compute normalised uptime as a percentage in the fixed-point format
+            uint256 normalisedUptime = (uptimes[i] * Decimal.unit()) / epochDuration;
+            if (normalisedUptime > Decimal.unit()) {
+                normalisedUptime = Decimal.unit();
+            }
+            AverageUptime memory previous = prevSnapshot.averageUptime[validatorID];
+            AverageUptime memory current = _addElementIntoAverageUptime(uint64(normalisedUptime), previous);
+            snapshot.averageUptime[validatorID] = current;
+
+            // remove validator if average uptime drops below min average uptime
+            // (by setting minAverageUptime to zero, this check is ignored)
+            if (current.averageUptime < c.minAverageUptime() && current.epochs >= c.averageUptimeEpochWindow()) {
+                _setValidatorDeactivated(validatorID, OFFLINE_AVG_BIT);
+                _syncValidator(validatorID, false);
+            }
+        }
+    }
+
+    function _addElementIntoAverageUptime(
+        uint64 newValue,
+        AverageUptime memory prev
+    ) private view returns (AverageUptime memory) {
+        AverageUptime memory cur;
+        if (prev.epochs == 0) {
+            cur.averageUptime = newValue; // the only element for the average
+            cur.epochs = 1;
+            return cur;
+        }
+
+        // the number of elements the average is calculated from
+        uint128 n = prev.epochs + 1;
+        // add new value into the average
+        uint128 tmp = (n - 1) * uint128(prev.averageUptime) + uint128(newValue) + prev.remainder;
+
+        cur.averageUptime = uint64(tmp / n);
+        cur.remainder = uint32(tmp % n);
+
+        if (cur.averageUptime > Decimal.unit()) {
+            cur.averageUptime = uint64(Decimal.unit());
+        }
+        if (prev.epochs < c.averageUptimeEpochWindow()) {
+            cur.epochs = prev.epochs + 1;
+        } else {
+            cur.epochs = prev.epochs;
+        }
+        return cur;
     }
 
     /// Create a new validator.
