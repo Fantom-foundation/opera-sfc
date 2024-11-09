@@ -162,7 +162,7 @@ contract SFC is Initializable, Ownable, Version {
     error TransferFailed();
 
     // stake changes subscriber
-    error StateSubscriberFailed();
+    error StakeSubscriberFailed();
 
     // staking
     error InsufficientSelfStake();
@@ -964,7 +964,7 @@ contract SFC is Initializable, Ownable, Version {
     }
 
     /// Notify stake subscriber about staking changes.
-    /// Used to recount votes for a delegator and a validator in governance contract.
+    /// Used to recount votes from delegators in the governance contract.
     function _notifyStakeSubscriber(address delegator, address validatorAuth, bool strict) internal {
         if (stakeSubscriberAddress != address(0)) {
             // Don't allow announceStakeChange to use up all the gas
@@ -974,7 +974,7 @@ contract SFC is Initializable, Ownable, Version {
             );
             // Don't revert if announceStakeChange failed unless strict mode enabled
             if (!success && strict) {
-                revert StateSubscriberFailed();
+                revert StakeSubscriberFailed();
             }
         }
     }
