@@ -177,9 +177,9 @@ interface ISFC {
 
     function setGenesisDelegation(address delegator, uint256 toValidatorID, uint256 stake) external;
 
-    function updateVoteBookAddress(address v) external;
+    function updateStakeSubscriberAddress(address v) external;
 
-    function voteBookAddress() external view returns (address);
+    function stakeSubscriberAddress() external view returns (address);
 
     function setRedirectionAuthorizer(address v) external;
 

@@ -115,8 +115,8 @@ contract SFC is Initializable, Ownable, Version {
 
     ConstantsManager internal c;
 
-    // the governance contract (to recalculate votes when the stake changes)
-    address public voteBookAddress;
+    // the contract subscribed to stake changes notifications
+    address public stakeSubscriberAddress;
 
     // address derived from the validator pubkey => validator id
     mapping(address pubkeyAddress => uint256 validatorID) public pubkeyAddressToValidatorID;
@@ -174,8 +174,8 @@ contract SFC is Initializable, Ownable, Version {
     error TransfersNotAllowed();
     error TransferFailed();
 
-    // governance
-    error GovVotesRecountFailed();
+    // stake changes subscriber
+    error StakeSubscriberFailed();
 
     // staking
     error InsufficientSelfStake();
@@ -383,18 +383,6 @@ contract SFC is Initializable, Ownable, Version {
         emit UpdatedSlashingRefundRatio(validatorID, refundRatio);
     }
 
-    /// Recount votes for a delegator and a validator.
-    /// Forces applying validators weights changes in governance voting.
-    function recountVotes(address delegator, address validatorAuth, bool strict, uint256 gas) external {
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, ) = voteBookAddress.call{gas: gas}(
-            abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth)
-        );
-        if (!success && strict) {
-            revert GovVotesRecountFailed();
-        }
-    }
-
     /// Delegate stake to a validator.
     function delegate(uint256 toValidatorID) external payable {
         _delegate(msg.sender, toValidatorID, msg.value);
@@ -416,7 +404,7 @@ contract SFC is Initializable, Ownable, Version {
         _setValidatorDeactivated(validatorID, status);
         _syncValidator(validatorID, false);
         address validatorAddr = getValidator[validatorID].auth;
-        _recountVotes(validatorAddr, validatorAddr, false);
+        _notifyStakeSubscriber(validatorAddr, validatorAddr, false);
     }
 
     /// Stash rewards for a delegator.
@@ -442,8 +430,8 @@ contract SFC is Initializable, Ownable, Version {
     }
 
     /// Update voteBook address.
-    function updateVoteBookAddress(address v) external onlyOwner {
-        voteBookAddress = v;
+    function updateStakeSubscriberAddress(address v) external onlyOwner {
+        stakeSubscriberAddress = v;
     }
 
     /// Get consts address.
@@ -617,7 +605,7 @@ contract SFC is Initializable, Ownable, Version {
 
         emit Delegated(delegator, toValidatorID, amount);
 
-        _recountVotes(delegator, getValidator[toValidatorID].auth, strict);
+        _notifyStakeSubscriber(delegator, getValidator[toValidatorID].auth, strict);
     }
 
     /// Un-delegate stake from a validator.
@@ -652,7 +640,7 @@ contract SFC is Initializable, Ownable, Version {
             _setValidatorDeactivated(toValidatorID, WITHDRAWN_BIT);
         }
 
-        _recountVotes(delegator, getValidator[toValidatorID].auth, strict);
+        _notifyStakeSubscriber(delegator, getValidator[toValidatorID].auth, strict);
     }
 
     /// Get slashing penalty for a stake.
@@ -1052,18 +1040,18 @@ contract SFC is Initializable, Ownable, Version {
         totalSupply = totalSupply + amount;
     }
 
-    /// Recount votes for a delegator and a validator.
-    /// Force applying validators weights changes in governance voting.
-    function _recountVotes(address delegator, address validatorAuth, bool strict) internal {
-        if (voteBookAddress != address(0)) {
-            // Don't allow recountVotes to use up all the gas
+    /// Notify stake subscriber about staking changes.
+    /// Used to recount votes from delegators in the governance contract.
+    function _notifyStakeSubscriber(address delegator, address validatorAuth, bool strict) internal {
+        if (stakeSubscriberAddress != address(0)) {
+            // Don't allow announceStakeChange to use up all the gas
             // solhint-disable-next-line avoid-low-level-calls
-            (bool success, ) = voteBookAddress.call{gas: 8000000}(
-                abi.encodeWithSignature("recountVotes(address,address)", delegator, validatorAuth)
+            (bool success, ) = stakeSubscriberAddress.call{gas: 8000000}(
+                abi.encodeWithSignature("announceStakeChange(address,address)", delegator, validatorAuth)
             );
-            // Don't revert if recountVotes failed unless strict mode enabled
+            // Don't revert if announceStakeChange failed unless strict mode enabled
             if (!success && strict) {
-                revert GovVotesRecountFailed();
+                revert StakeSubscriberFailed();
             }
         }
     }
