@@ -945,4 +945,82 @@ describe('SFC', () => {
       await expect(this.sfc._syncValidator(33, false)).to.be.revertedWithCustomError(this.sfc, 'ValidatorNotExists');
     });
   });
+
+  describe('Average uptime calculation', () => {
+    const validatorsFixture = async function (this: Context) {
+      const [validator] = await ethers.getSigners();
+      const pubkey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
+      const blockchainNode = new BlockchainNode(this.sfc);
+
+      await this.sfc.rebaseTime();
+      await this.sfc.enableNonNodeCalls();
+
+      await blockchainNode.handleTx(
+        await this.sfc.connect(validator).createValidator(pubkey, { value: ethers.parseEther('10') }),
+      );
+
+      const validatorId = await this.sfc.getValidatorID(validator);
+
+      await blockchainNode.sealEpoch(0);
+
+      return {
+        validatorId,
+        blockchainNode,
+      };
+    };
+
+    beforeEach(async function () {
+      return Object.assign(this, await loadFixture(validatorsFixture.bind(this)));
+    });
+
+    it('Should calculate uptime correctly', async function () {
+      // validator online 100% of time in the first epoch => average 100%
+      await this.blockchainNode.sealEpoch(
+        100,
+        new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 100, 0n)]]),
+      );
+      expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
+        1000000000000000000n,
+      );
+
+      // validator online 20% of time in the second epoch => average 60%
+      await this.blockchainNode.sealEpoch(
+        100,
+        new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 20, 0n)]]),
+      );
+      expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
+        600000000000000000n,
+      );
+
+      // validator online 30% of time in the third epoch => average 50%
+      await this.blockchainNode.sealEpoch(
+        100,
+        new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 30, 0n)]]),
+      );
+      expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
+        500000000000000000n,
+      );
+
+      // fill the averaging window
+      for (let i = 0; i < 10; i++) {
+        await this.blockchainNode.sealEpoch(
+          100,
+          new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 50, 0n)]]),
+        );
+        expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
+          500000000000000000n,
+        );
+      }
+
+      // (50 * 10 + 28) / 11 = 48
+      await this.blockchainNode.sealEpoch(
+        100,
+        new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 28, 0n)]]),
+      );
+      expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
+        480000000000000000n,
+      );
+    });
+  });
 });

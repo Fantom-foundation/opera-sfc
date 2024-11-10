@@ -75,6 +75,8 @@ contract UnitTestNetworkInitializer {
         consts.updateOfflinePenaltyThresholdBlocksNum(1000);
         consts.updateTargetGasPowerPerSecond(2000000);
         consts.updateGasPriceBalancingCounterweight(6 * 60 * 60);
+        consts.updateAverageUptimeEpochWindow(10);
+        consts.updateMinAverageUptime(0); // check disabled by default
         consts.transferOwnership(_owner);
 
         ISFC(_sfc).initialize(sealedEpoch, totalSupply, _auth, address(consts), _owner);

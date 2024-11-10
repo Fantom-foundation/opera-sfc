@@ -29,6 +29,14 @@ contract ConstantsManager is OwnableUpgradeable {
     uint256 public targetGasPowerPerSecond;
     uint256 public gasPriceBalancingCounterweight;
 
+    // The number of epochs to calculate the average uptime ratio from, acceptable bound [10, 87600].
+    // Is also the minimum number of epochs necessary for deactivation of offline validators.
+    uint32 public averageUptimeEpochWindow;
+
+    // Minimum average uptime ratio in fixed-point format; acceptable bounds [0,0.9].
+    // Zero to disable validators deactivation by this metric.
+    uint64 public minAverageUptime;
+
     /**
      * @dev Given value is too small
      */
@@ -152,5 +160,23 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         gasPriceBalancingCounterweight = v;
+    }
+
+    function updateAverageUptimeEpochWindow(uint32 v) external virtual onlyOwner {
+        if (v < 10) {
+            // needs to be long enough to allow permissible downtime for validators maintenance
+            revert ValueTooSmall();
+        }
+        if (v > 87600) {
+            revert ValueTooLarge();
+        }
+        averageUptimeEpochWindow = v;
+    }
+
+    function updateMinAverageUptime(uint64 v) external virtual onlyOwner {
+        if (v > ((Decimal.unit() * 9) / 10)) {
+            revert ValueTooLarge();
+        }
+        minAverageUptime = v;
     }
 }
