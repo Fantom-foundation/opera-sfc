@@ -21,7 +21,7 @@ contract NetworkInitializer {
         address _evmWriter,
         address _owner
     ) external {
-        NodeDriver(_driver).initialize(_auth, _evmWriter);
+        NodeDriver(_driver).initialize(_auth, _evmWriter, _owner);
         NodeDriverAuth(_auth).initialize(_sfc, _driver, _owner);
 
         ConstantsManager consts = new ConstantsManager();

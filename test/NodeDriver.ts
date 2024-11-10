@@ -1,7 +1,7 @@
 import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { IEVMWriter, NetworkInitializer, NodeDriver, NodeDriverAuth } from '../typechain-types';
+import { IEVMWriter, NetworkInitializer, NodeDriverAuth } from '../typechain-types';
 
 describe('NodeDriver', () => {
   const fixture = async () => {
@@ -10,7 +10,10 @@ describe('NodeDriver', () => {
       kind: 'uups',
       initializer: false,
     });
-    const nodeDriver: NodeDriver = await ethers.deployContract('NodeDriver');
+    const nodeDriver = await upgrades.deployProxy(await ethers.getContractFactory('NodeDriver'), {
+      kind: 'uups',
+      initializer: false,
+    });
     const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
     const nodeDriverAuth: NodeDriverAuth = await ethers.deployContract('NodeDriverAuth');
     const initializer: NetworkInitializer = await ethers.deployContract('NetworkInitializer');

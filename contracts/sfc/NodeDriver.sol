@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.27;
 
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {IEVMWriter} from "../interfaces/IEVMWriter.sol";
 import {INodeDriver} from "../interfaces/INodeDriver.sol";
@@ -12,7 +14,7 @@ import {INodeDriver} from "../interfaces/INodeDriver.sol";
  * @dev Methods with onlyNode modifier are called by Sonic internal txs during epoch sealing.
  * @custom:security-contact security@fantom.foundation
  */
-contract NodeDriver is Initializable, INodeDriver {
+contract NodeDriver is Initializable, OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
     NodeDriverAuth internal backend;
     IEVMWriter internal evmWriter;
 
@@ -44,11 +46,17 @@ contract NodeDriver is Initializable, INodeDriver {
 
     /// Initialization is called only once, after the contract deployment.
     /// Because the contract code is written directly into genesis, constructor cannot be used.
-    function initialize(address _backend, address _evmWriterAddress) external initializer {
+    function initialize(address _backend, address _evmWriterAddress, address _owner) external initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
         backend = NodeDriverAuth(_backend);
         emit UpdatedBackend(_backend);
         evmWriter = IEVMWriter(_evmWriterAddress);
     }
+
+    /// Override the upgrade authorization check to allow upgrades only from the owner.
+    // solhint-disable-next-line no-empty-blocks
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function setBalance(address acc, uint256 value) external onlyBackend {
         evmWriter.setBalance(acc, value);
