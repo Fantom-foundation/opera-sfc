@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.27;
 
-import {Initializable} from "../common/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {IEVMWriter} from "../interfaces/IEVMWriter.sol";
 import {INodeDriver} from "../interfaces/INodeDriver.sol";

@@ -2,7 +2,8 @@
 pragma solidity 0.8.27;
 
 import {ISFC} from "../interfaces/ISFC.sol";
-import {NodeDriver, NodeDriverAuth} from "./NodeDriver.sol";
+import {NodeDriver} from "./NodeDriver.sol";
+import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {Decimal} from "../common/Decimal.sol";
 

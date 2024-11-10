@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.27;
 
-import {Initializable} from "../common/Initializable.sol";
-import {Ownable} from "../ownership/Ownable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ISFC} from "../interfaces/ISFC.sol";
 import {NodeDriver} from "./NodeDriver.sol";
 import {INodeDriverExecutable} from "../interfaces/INodeDriverExecutable.sol";
@@ -10,7 +10,7 @@ import {INodeDriverExecutable} from "../interfaces/INodeDriverExecutable.sol";
 /**
  * @custom:security-contact security@fantom.foundation
  */
-contract NodeDriverAuth is Initializable, Ownable {
+contract NodeDriverAuth is Initializable, OwnableUpgradeable {
     ISFC internal sfc;
     NodeDriver internal driver;
 
@@ -23,7 +23,7 @@ contract NodeDriverAuth is Initializable, Ownable {
 
     // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
     function initialize(address payable _sfc, address _driver, address _owner) external initializer {
-        Ownable.initialize(_owner);
+        __Ownable_init(_owner);
         driver = NodeDriver(_driver);
         sfc = ISFC(_sfc);
     }
