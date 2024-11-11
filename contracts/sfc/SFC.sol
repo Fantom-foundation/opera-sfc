@@ -3,7 +3,6 @@ pragma solidity 0.8.27;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
@@ -14,7 +13,7 @@ import {Version} from "../version/Version.sol";
  * @notice The SFC maintains a list of validators and delegators and distributes rewards to them.
  * @custom:security-contact security@fantom.foundation
  */
-contract SFC is Initializable, OwnableUpgradeable, UUPSUpgradeable, Version {
+contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;

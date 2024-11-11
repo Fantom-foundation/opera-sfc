@@ -47,8 +47,8 @@ contract ConstantsManager is OwnableUpgradeable {
      */
     error ValueTooLarge();
 
-    function initialize() external initializer {
-        __Ownable_init(msg.sender);
+    function initialize(address owner) external initializer {
+        __Ownable_init(owner);
     }
 
     function updateMinSelfStake(uint256 v) external virtual onlyOwner {

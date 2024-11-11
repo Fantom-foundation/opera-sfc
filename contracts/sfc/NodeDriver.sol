@@ -2,7 +2,6 @@
 pragma solidity 0.8.27;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {IEVMWriter} from "../interfaces/IEVMWriter.sol";
@@ -14,20 +13,12 @@ import {INodeDriver} from "../interfaces/INodeDriver.sol";
  * @dev Methods with onlyNode modifier are called by Sonic internal txs during epoch sealing.
  * @custom:security-contact security@fantom.foundation
  */
-contract NodeDriver is Initializable, OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
+contract NodeDriver is OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
     NodeDriverAuth internal backend;
     IEVMWriter internal evmWriter;
 
     error NotNode();
     error NotBackend();
-
-    event UpdatedBackend(address indexed backend);
-
-    /// NodeDriverAuth can replace itself
-    function setBackend(address _backend) external onlyBackend {
-        emit UpdatedBackend(_backend);
-        backend = NodeDriverAuth(_backend);
-    }
 
     /// Callable only by NodeDriverAuth (which mediates calls from SFC and from admins)
     modifier onlyBackend() {
@@ -50,7 +41,6 @@ contract NodeDriver is Initializable, OwnableUpgradeable, UUPSUpgradeable, INode
         __Ownable_init(_owner);
         __UUPSUpgradeable_init();
         backend = NodeDriverAuth(_backend);
-        emit UpdatedBackend(_backend);
         evmWriter = IEVMWriter(_evmWriterAddress);
     }
 

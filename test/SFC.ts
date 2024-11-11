@@ -1,7 +1,7 @@
 import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { IEVMWriter, NodeDriverAuth, UnitTestConstantsManager, UnitTestNetworkInitializer } from '../typechain-types';
+import { IEVMWriter, UnitTestConstantsManager, UnitTestNetworkInitializer } from '../typechain-types';
 import { beforeEach, Context } from 'mocha';
 import { BlockchainNode, ValidatorMetrics } from './helpers/BlockchainNode';
 
@@ -16,8 +16,12 @@ describe('SFC', () => {
       kind: 'uups',
       initializer: false,
     });
+    const nodeDriverAuth = await upgrades.deployProxy(await ethers.getContractFactory('NodeDriverAuth'), {
+      kind: 'uups',
+      initializer: false,
+    });
+
     const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
-    const nodeDriverAuth: NodeDriverAuth = await ethers.deployContract('NodeDriverAuth');
     const initializer: UnitTestNetworkInitializer = await ethers.deployContract('UnitTestNetworkInitializer');
 
     await initializer.initializeAll(0, 0, sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
