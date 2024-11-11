@@ -1,16 +1,26 @@
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { IEVMWriter, NetworkInitializer, NodeDriver, NodeDriverAuth, UnitTestSFC } from '../typechain-types';
+import { IEVMWriter, NetworkInitializer } from '../typechain-types';
 
 describe('NodeDriver', () => {
   const fixture = async () => {
     const [owner, nonOwner] = await ethers.getSigners();
-    const sfc: UnitTestSFC = await ethers.deployContract('UnitTestSFC');
-    const nodeDriver: NodeDriver = await ethers.deployContract('NodeDriver');
-    const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
-    const nodeDriverAuth: NodeDriverAuth = await ethers.deployContract('NodeDriverAuth');
+    const sfc = await upgrades.deployProxy(await ethers.getContractFactory('UnitTestSFC'), {
+      kind: 'uups',
+      initializer: false,
+    });
+    const nodeDriver = await upgrades.deployProxy(await ethers.getContractFactory('NodeDriver'), {
+      kind: 'uups',
+      initializer: false,
+    });
+    const nodeDriverAuth = await upgrades.deployProxy(await ethers.getContractFactory('NodeDriverAuth'), {
+      kind: 'uups',
+      initializer: false,
+    });
+
     const initializer: NetworkInitializer = await ethers.deployContract('NetworkInitializer');
+    const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
 
     await initializer.initializeAll(12, 0, sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
 
@@ -26,21 +36,6 @@ describe('NodeDriver', () => {
 
   beforeEach(async function () {
     Object.assign(this, await loadFixture(fixture));
-  });
-
-  describe('Migrate', () => {
-    it('Should succeed and migrate to a new address', async function () {
-      const account = ethers.Wallet.createRandom();
-      await this.nodeDriverAuth.migrateTo(account);
-    });
-
-    it('Should revert when not owner', async function () {
-      const account = ethers.Wallet.createRandom();
-      await expect(this.nodeDriverAuth.connect(this.nonOwner).migrateTo(account)).to.be.revertedWithCustomError(
-        this.nodeDriverAuth,
-        'OwnableUnauthorizedAccount',
-      );
-    });
   });
 
   describe('Copy code', () => {
@@ -94,13 +89,6 @@ describe('NodeDriver', () => {
         this.nodeDriver,
         'NotBackend',
       );
-    });
-  });
-
-  describe('Set backend', () => {
-    it('Should revert when not backend', async function () {
-      const account = ethers.Wallet.createRandom();
-      await expect(this.nodeDriver.setBackend(account)).to.be.revertedWithCustomError(this.nodeDriver, 'NotBackend');
     });
   });
 

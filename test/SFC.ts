@@ -1,24 +1,27 @@
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import {
-  IEVMWriter,
-  NodeDriver,
-  NodeDriverAuth,
-  UnitTestSFC,
-  UnitTestConstantsManager,
-  UnitTestNetworkInitializer,
-} from '../typechain-types';
+import { IEVMWriter, UnitTestConstantsManager, UnitTestNetworkInitializer } from '../typechain-types';
 import { beforeEach, Context } from 'mocha';
 import { BlockchainNode, ValidatorMetrics } from './helpers/BlockchainNode';
 
 describe('SFC', () => {
   const fixture = async () => {
     const [owner, user] = await ethers.getSigners();
-    const sfc: UnitTestSFC = await ethers.deployContract('UnitTestSFC');
-    const nodeDriver: NodeDriver = await ethers.deployContract('NodeDriver');
+    const sfc = await upgrades.deployProxy(await ethers.getContractFactory('UnitTestSFC'), {
+      kind: 'uups',
+      initializer: false,
+    });
+    const nodeDriver = await upgrades.deployProxy(await ethers.getContractFactory('NodeDriver'), {
+      kind: 'uups',
+      initializer: false,
+    });
+    const nodeDriverAuth = await upgrades.deployProxy(await ethers.getContractFactory('NodeDriverAuth'), {
+      kind: 'uups',
+      initializer: false,
+    });
+
     const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
-    const nodeDriverAuth: NodeDriverAuth = await ethers.deployContract('NodeDriverAuth');
     const initializer: UnitTestNetworkInitializer = await ethers.deployContract('UnitTestNetworkInitializer');
 
     await initializer.initializeAll(0, 0, sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
@@ -239,11 +242,6 @@ describe('SFC', () => {
   describe('Ownable', () => {
     it('Should succeed and return the owner of the contract', async function () {
       expect(await this.sfc.owner()).to.equal(this.owner);
-    });
-
-    it('Should succeed and return true if the caller is the owner of the contract', async function () {
-      expect(await this.sfc.isOwner()).to.equal(true);
-      expect(await this.sfc.connect(this.user).isOwner()).to.equal(false);
     });
 
     it('Should succeed and return address(0) if owner leaves the contract without owner', async function () {

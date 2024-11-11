@@ -2,7 +2,8 @@
 pragma solidity 0.8.27;
 
 import {ISFC} from "../interfaces/ISFC.sol";
-import {NodeDriver, NodeDriverAuth} from "./NodeDriver.sol";
+import {NodeDriver} from "./NodeDriver.sol";
+import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {Decimal} from "../common/Decimal.sol";
 
@@ -20,11 +21,10 @@ contract NetworkInitializer {
         address _evmWriter,
         address _owner
     ) external {
-        NodeDriver(_driver).initialize(_auth, _evmWriter);
+        NodeDriver(_driver).initialize(_auth, _evmWriter, _owner);
         NodeDriverAuth(_auth).initialize(_sfc, _driver, _owner);
 
-        ConstantsManager consts = new ConstantsManager();
-        consts.initialize();
+        ConstantsManager consts = new ConstantsManager(address(this));
         consts.updateMinSelfStake(500000 * 1e18);
         consts.updateMaxDelegatedRatio(16 * Decimal.unit());
         consts.updateValidatorCommission((15 * Decimal.unit()) / 100);

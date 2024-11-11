@@ -24,6 +24,7 @@
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.7",
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.11",
+    "@openzeppelin/hardhat-upgrades": "^3.5.0",
     "@typechain/ethers-v6": "^0.5.1",
     "@typechain/hardhat": "^9.1.0",
     "@types/chai": "^4.3.19",
@@ -44,6 +45,7 @@
     "typescript-eslint": "^8.8.0"
   },
   "dependencies": {
+    "@openzeppelin/contracts-upgradeable": "^5.1.0",
     "dotenv": "^16.0.3"
   }
 }

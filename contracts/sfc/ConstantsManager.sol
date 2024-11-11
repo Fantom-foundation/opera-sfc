@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.27;
 
-import {Ownable} from "../ownership/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Decimal} from "../common/Decimal.sol";
 
 /**
  * @custom:security-contact security@fantom.foundation
  */
-contract ConstantsManager is Ownable {
+contract ConstantsManager is OwnableUpgradeable {
     // Minimum amount of stake for a validator, i.e., 500000 FTM
     uint256 public minSelfStake;
     // Maximum ratio of delegations a validator can have, say, 15 times of self-stake
@@ -47,8 +47,8 @@ contract ConstantsManager is Ownable {
      */
     error ValueTooLarge();
 
-    function initialize() external initializer {
-        Ownable.initialize(msg.sender);
+    constructor(address owner) initializer {
+        __Ownable_init(owner);
     }
 
     function updateMinSelfStake(uint256 v) external virtual onlyOwner {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.27;
 
-import {Initializable} from "../common/Initializable.sol";
-import {Ownable} from "../ownership/Ownable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ISFC} from "../interfaces/ISFC.sol";
 import {NodeDriver} from "./NodeDriver.sol";
 import {INodeDriverExecutable} from "../interfaces/INodeDriverExecutable.sol";
@@ -10,7 +10,7 @@ import {INodeDriverExecutable} from "../interfaces/INodeDriverExecutable.sol";
 /**
  * @custom:security-contact security@fantom.foundation
  */
-contract NodeDriverAuth is Initializable, Ownable {
+contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
     ISFC internal sfc;
     NodeDriver internal driver;
 
@@ -23,10 +23,15 @@ contract NodeDriverAuth is Initializable, Ownable {
 
     // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
     function initialize(address payable _sfc, address _driver, address _owner) external initializer {
-        Ownable.initialize(_owner);
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
         driver = NodeDriver(_driver);
         sfc = ISFC(_sfc);
     }
+
+    /// Override the upgrade authorization check to allow upgrades only from the owner.
+    // solhint-disable-next-line no-empty-blocks
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     /// Callable only by SFC contract.
     modifier onlySFC() {
@@ -42,11 +47,6 @@ contract NodeDriverAuth is Initializable, Ownable {
             revert NotDriver();
         }
         _;
-    }
-
-    /// Change NodeDriverAuth used by NodeDriver. Callable by network admin.
-    function migrateTo(address newDriverAuth) external onlyOwner {
-        driver.setBackend(newDriverAuth);
     }
 
     function _execute(address executable, address newOwner, bytes32 selfCodeHash, bytes32 driverCodeHash) internal {

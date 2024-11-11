@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.27;
 
-import {Ownable} from "../ownership/Ownable.sol";
-import {Initializable} from "../common/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
@@ -13,7 +13,7 @@ import {Version} from "../version/Version.sol";
  * @notice The SFC maintains a list of validators and delegators and distributes rewards to them.
  * @custom:security-contact security@fantom.foundation
  */
-contract SFC is Initializable, Ownable, Version {
+contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;
@@ -224,13 +224,18 @@ contract SFC is Initializable, Ownable, Version {
         address _c,
         address owner
     ) external initializer {
-        Ownable.initialize(owner);
+        __Ownable_init(owner);
+        __UUPSUpgradeable_init();
         currentSealedEpoch = sealedEpoch;
         node = NodeDriverAuth(nodeDriver);
         c = ConstantsManager(_c);
         totalSupply = _totalSupply;
         getEpochSnapshot[sealedEpoch].endTime = _now();
     }
+
+    /// Override the upgrade authorization check to allow upgrades only from the owner.
+    // solhint-disable-next-line no-empty-blocks
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     /// Receive fallback to revert transfers.
     receive() external payable {
