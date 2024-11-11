@@ -4,6 +4,8 @@ pragma solidity 0.8.27;
 import {ConstantsManager} from "../sfc/ConstantsManager.sol";
 
 contract UnitTestConstantsManager is ConstantsManager {
+    constructor(address owner) ConstantsManager(owner) {}
+
     function updateMinSelfStake(uint256 v) external override onlyOwner {
         minSelfStake = v;
     }

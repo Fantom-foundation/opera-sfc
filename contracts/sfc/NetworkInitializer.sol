@@ -24,8 +24,7 @@ contract NetworkInitializer {
         NodeDriver(_driver).initialize(_auth, _evmWriter, _owner);
         NodeDriverAuth(_auth).initialize(_sfc, _driver, _owner);
 
-        ConstantsManager consts = new ConstantsManager();
-        consts.initialize(address(this));
+        ConstantsManager consts = new ConstantsManager(address(this));
         consts.updateMinSelfStake(500000 * 1e18);
         consts.updateMaxDelegatedRatio(16 * Decimal.unit());
         consts.updateValidatorCommission((15 * Decimal.unit()) / 100);

@@ -47,7 +47,7 @@ contract ConstantsManager is OwnableUpgradeable {
      */
     error ValueTooLarge();
 
-    function initialize(address owner) external initializer {
+    constructor(address owner) initializer {
         __Ownable_init(owner);
     }
 

@@ -61,8 +61,7 @@ contract UnitTestNetworkInitializer {
         NodeDriver(_driver).initialize(_auth, _evmWriter, _owner);
         NodeDriverAuth(_auth).initialize(_sfc, _driver, _owner);
 
-        UnitTestConstantsManager consts = new UnitTestConstantsManager();
-        consts.initialize(address(this));
+        UnitTestConstantsManager consts = new UnitTestConstantsManager(address(this));
         consts.updateMinSelfStake(0.3175000 * 1e18);
         consts.updateMaxDelegatedRatio(16 * Decimal.unit());
         consts.updateValidatorCommission((15 * Decimal.unit()) / 100);
