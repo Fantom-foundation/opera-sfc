@@ -227,15 +227,15 @@ contract SFCLib is SFCBase {
         require(request.epoch != 0, "request doesn't exist");
         require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
 
-        uint256 requestTime = request.time;
-        uint256 requestEpoch = request.epoch;
-        if (getValidator[toValidatorID].deactivatedTime != 0 && getValidator[toValidatorID].deactivatedTime < requestTime) {
-            requestTime = getValidator[toValidatorID].deactivatedTime;
-            requestEpoch = getValidator[toValidatorID].deactivatedEpoch;
-        }
-
-        require(_now() >= requestTime + c.withdrawalPeriodTime(), "not enough time passed");
-        require(currentEpoch() >= requestEpoch + c.withdrawalPeriodEpochs(), "not enough epochs passed");
+//        uint256 requestTime = request.time;
+//        uint256 requestEpoch = request.epoch;
+//        if (getValidator[toValidatorID].deactivatedTime != 0 && getValidator[toValidatorID].deactivatedTime < requestTime) {
+//            requestTime = getValidator[toValidatorID].deactivatedTime;
+//            requestEpoch = getValidator[toValidatorID].deactivatedEpoch;
+//        }
+//
+//        require(_now() >= requestTime + c.withdrawalPeriodTime(), "not enough time passed");
+//        require(currentEpoch() >= requestEpoch + c.withdrawalPeriodEpochs(), "not enough epochs passed");
 
         uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID].amount;
         bool isCheater = isSlashed(toValidatorID);
@@ -525,15 +525,16 @@ contract SFCLib is SFCBase {
 
         _stashRewards(delegator, toValidatorID);
 
-        uint256 penalty = _popWholeUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
-        if (penalty > amount) {
-            penalty = amount;
-        }
+        uint256 penalty = 0;
+//        uint256 penalty = _popWholeUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
+//        if (penalty > amount) {
+//            penalty = amount;
+//        }
         ld.lockedStake -= amount;
-        if (penalty != 0) {
-            _rawUndelegate(delegator, toValidatorID, penalty, true, false, false);
-            treasuryAddress.call.value(penalty)("");
-        }
+//        if (penalty != 0) {
+//            _rawUndelegate(delegator, toValidatorID, penalty, true, false, false);
+//            treasuryAddress.call.value(penalty)("");
+//        }
 
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
