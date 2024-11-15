@@ -227,15 +227,15 @@ contract SFCLib is SFCBase {
         require(request.epoch != 0, "request doesn't exist");
         require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
 
-//        uint256 requestTime = request.time;
-//        uint256 requestEpoch = request.epoch;
-//        if (getValidator[toValidatorID].deactivatedTime != 0 && getValidator[toValidatorID].deactivatedTime < requestTime) {
-//            requestTime = getValidator[toValidatorID].deactivatedTime;
-//            requestEpoch = getValidator[toValidatorID].deactivatedEpoch;
-//        }
-//
-//        require(_now() >= requestTime + c.withdrawalPeriodTime(), "not enough time passed");
-//        require(currentEpoch() >= requestEpoch + c.withdrawalPeriodEpochs(), "not enough epochs passed");
+        uint256 requestTime = request.time;
+        uint256 requestEpoch = request.epoch;
+        if (getValidator[toValidatorID].deactivatedTime != 0 && getValidator[toValidatorID].deactivatedTime < requestTime) {
+            requestTime = getValidator[toValidatorID].deactivatedTime;
+            requestEpoch = getValidator[toValidatorID].deactivatedEpoch;
+        }
+
+        require(_now() >= requestTime + c.withdrawalPeriodTime(), "not enough time passed");
+        require(currentEpoch() >= requestEpoch + c.withdrawalPeriodEpochs(), "not enough epochs passed");
 
         uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID].amount;
         bool isCheater = isSlashed(toValidatorID);
@@ -486,25 +486,27 @@ contract SFCLib is SFCBase {
     }
 
     function _popNonStashedUnlockPenalty(address delegator, uint256 toValidatorID, uint256 unlockAmount, uint256 totalAmount) internal returns (uint256) {
-        Rewards storage r = getStashedLockupRewards[delegator][toValidatorID];
-        uint256 lockupExtraRewardShare = r.lockupExtraReward.mul(unlockAmount).div(totalAmount);
-        uint256 lockupBaseRewardShare = r.lockupBaseReward.mul(unlockAmount).div(totalAmount);
-        uint256 penalty = lockupExtraRewardShare + lockupBaseRewardShare / 2;
-        r.lockupExtraReward = r.lockupExtraReward.sub(lockupExtraRewardShare);
-        r.lockupBaseReward = r.lockupBaseReward.sub(lockupBaseRewardShare);
-        return penalty;
+//        Rewards storage r = getStashedLockupRewards[delegator][toValidatorID];
+//        uint256 lockupExtraRewardShare = r.lockupExtraReward.mul(unlockAmount).div(totalAmount);
+//        uint256 lockupBaseRewardShare = r.lockupBaseReward.mul(unlockAmount).div(totalAmount);
+//        uint256 penalty = lockupExtraRewardShare + lockupBaseRewardShare / 2;
+//        r.lockupExtraReward = r.lockupExtraReward.sub(lockupExtraRewardShare);
+//        r.lockupBaseReward = r.lockupBaseReward.sub(lockupBaseRewardShare);
+//        return penalty;
+        return 0;
     }
 
     function _popStashedUnlockPenalty(address delegator, uint256 toValidatorID, uint256 unlockAmount, uint256 totalAmount) internal returns (uint256) {
         _delStalePenalties(delegator, toValidatorID);
-        Penalty[] storage penalties = getStashedPenalties[delegator][toValidatorID];
-        uint256 total = 0;
-        for (uint256 i = 0; i < penalties.length; i++) {
-            uint256 penalty = penalties[i].amount.mul(unlockAmount).div(totalAmount);
-            penalties[i].amount = penalties[i].amount.sub(penalty);
-            total = total.add(penalty);
-        }
-        return total;
+//        Penalty[] storage penalties = getStashedPenalties[delegator][toValidatorID];
+//        uint256 total = 0;
+//        for (uint256 i = 0; i < penalties.length; i++) {
+//            uint256 penalty = penalties[i].amount.mul(unlockAmount).div(totalAmount);
+//            penalties[i].amount = penalties[i].amount.sub(penalty);
+//            total = total.add(penalty);
+//        }
+//        return total;
+        return 0;
     }
 
     function _popWholeUnlockPenalty(address delegator, uint256 toValidatorID, uint256 unlockAmount, uint256 totalAmount) internal returns (uint256) {
@@ -521,20 +523,19 @@ contract SFCLib is SFCBase {
         require(isLockedUp(delegator, toValidatorID), "not locked up");
         require(amount <= ld.lockedStake, "not enough locked stake");
         require(_checkAllowedToWithdraw(delegator, toValidatorID), "outstanding sFTM balance");
-        require(!_redirected(delegator), "redirected");
+//        require(!_redirected(delegator), "redirected");
 
         _stashRewards(delegator, toValidatorID);
 
-        uint256 penalty = 0;
-//        uint256 penalty = _popWholeUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
-//        if (penalty > amount) {
-//            penalty = amount;
-//        }
+        uint256 penalty = _popWholeUnlockPenalty(delegator, toValidatorID, amount, ld.lockedStake);
+        if (penalty > amount) {
+            penalty = amount;
+        }
         ld.lockedStake -= amount;
-//        if (penalty != 0) {
-//            _rawUndelegate(delegator, toValidatorID, penalty, true, false, false);
-//            treasuryAddress.call.value(penalty)("");
-//        }
+        if (penalty != 0) {
+            _rawUndelegate(delegator, toValidatorID, penalty, true, false, false);
+            treasuryAddress.call.value(penalty)("");
+        }
 
         emit UnlockedStake(delegator, toValidatorID, amount, penalty);
         return penalty;
