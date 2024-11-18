@@ -6,10 +6,9 @@ pragma solidity 0.8.27;
  */
 contract Version {
     /**
-     * @dev Returns the address of the current owner.
+     * @dev Returns the version of the SFC contract
      */
     function version() public pure returns (bytes3) {
-        // version 3.0.5
-        return "305";
+        return 0x040000; // version 4.0.0
     }
 }
