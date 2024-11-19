@@ -127,7 +127,7 @@ describe('SFC', () => {
     });
 
     it('Should succeed and return version of the current implementation', async function () {
-      expect(await this.sfc.version()).to.equal(ethers.hexlify(ethers.toUtf8Bytes('305')));
+      expect(await this.sfc.version()).to.equal('0x040000');
     });
   });
 
