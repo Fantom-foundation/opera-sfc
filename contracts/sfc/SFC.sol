@@ -3,6 +3,7 @@ pragma solidity 0.8.27;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
@@ -13,7 +14,7 @@ import {Version} from "../version/Version.sol";
  * @notice The SFC maintains a list of validators and delegators and distributes rewards to them.
  * @custom:security-contact security@fantom.foundation
  */
-contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
+contract SFC is OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, Version {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;
@@ -49,6 +50,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
     // total stake of active (OK_STATUS) validators (total weight)
     uint256 public totalActiveStake;
+
+    // unresolved fees that failed to be send to the treasury
+    uint256 public unresolvedTreasuryFees;
 
     // delegator => validator ID => stashed rewards (to be claimed/restaked)
     mapping(address delegator => mapping(uint256 validatorID => uint256 stashedRewards)) internal _rewardsStash;
@@ -190,6 +194,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     error ValidatorNotSlashed();
     error RefundRatioTooHigh();
 
+    // treasury
+    error TreasuryNotSet();
+    error NoUnresolvedTreasuryFees();
+
     event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
     event CreatedValidator(
@@ -207,6 +215,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
     event AnnouncedRedirection(address indexed from, address indexed to);
+    event TreasuryFeesResolved(uint256 amount);
 
     modifier onlyDriver() {
         if (!isNode(msg.sender)) {
@@ -226,6 +235,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     ) external initializer {
         __Ownable_init(owner);
         __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
         currentSealedEpoch = sealedEpoch;
         node = NodeDriverAuth(nodeDriver);
         c = ConstantsManager(_c);
@@ -417,6 +427,22 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         if (!_stashRewards(delegator, toValidatorID)) {
             revert NothingToStash();
         }
+    }
+
+    /// Resolve failed treasury transfers and send the unresolved fees to the treasury address.
+    function resolveTreasuryFees() external nonReentrant {
+        if (treasuryAddress == address(0)) {
+            revert TreasuryNotSet();
+        }
+        if (unresolvedTreasuryFees == 0) {
+            revert NoUnresolvedTreasuryFees();
+        }
+        (bool success, ) = treasuryAddress.call{value: unresolvedTreasuryFees, gas: 1000000}("");
+        if (!success) {
+            revert TransferFailed();
+        }
+        emit TreasuryFeesResolved(unresolvedTreasuryFees);
+        unresolvedTreasuryFees = 0;
     }
 
     /// burnFTM allows SFC to burn an arbitrary amount of FTM tokens.
@@ -909,6 +935,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             if (!success) {
                 // ignore treasury transfer failure
                 // the treasury failure must not endanger the epoch sealing
+
+                // store the unresolved treasury fees to be resolved later
+                unresolvedTreasuryFees += feeShare;
             }
         }
     }
