@@ -51,6 +51,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     // total stake of active (OK_STATUS) validators (total weight)
     uint256 public totalActiveStake;
 
+    // unresolved fees that failed to be send to the treasury
+    uint256 public unresolvedTreasuryFees;
+
     // delegator => validator ID => stashed rewards (to be claimed/restaked)
     mapping(address delegator => mapping(uint256 validatorID => uint256 stashedRewards)) internal _rewardsStash;
 
@@ -191,6 +194,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     error ValidatorNotSlashed();
     error RefundRatioTooHigh();
 
+    // treasury
+    error TreasuryNotSet();
+    error NoUnresolvedTreasuryFees();
+
     event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
     event CreatedValidator(
@@ -215,6 +222,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
     event AnnouncedRedirection(address indexed from, address indexed to);
+    event TreasuryFeesResolved(uint256 amount);
     event RedirectionAuthorizerUpdated(address addr);
     event RedirectionInitiated(address indexed from, address indexed to);
     event RedirectedTo(address indexed from, address indexed to);
@@ -458,6 +466,27 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         if (!_stashRewards(delegator, toValidatorID)) {
             revert NothingToStash();
         }
+    }
+
+    /// Resolve failed treasury transfers and send the unresolved fees to the treasury address.
+    function resolveTreasuryFees() external {
+        if (treasuryAddress == address(0)) {
+            revert TreasuryNotSet();
+        }
+        if (unresolvedTreasuryFees == 0) {
+            revert NoUnresolvedTreasuryFees();
+        }
+
+        // zero the fees before sending to prevent re-entrancy
+        uint256 fees = unresolvedTreasuryFees;
+        unresolvedTreasuryFees = 0;
+
+        (bool success, ) = treasuryAddress.call{value: fees, gas: 1000000}("");
+        if (!success) {
+            revert TransferFailed();
+        }
+
+        emit TreasuryFeesResolved(fees);
     }
 
     /// burnFTM allows SFC to burn an arbitrary amount of FTM tokens.
@@ -953,6 +982,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             if (!success) {
                 // ignore treasury transfer failure
                 // the treasury failure must not endanger the epoch sealing
+
+                // store the unresolved treasury fees to be resolved later
+                unresolvedTreasuryFees += feeShare;
             }
         }
     }
