@@ -2,6 +2,7 @@ import { HardhatUserConfig } from 'hardhat/config';
 import * as dotenv from 'dotenv';
 import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomicfoundation/hardhat-ethers';
+import "@nomicfoundation/hardhat-ignition";
 import '@openzeppelin/hardhat-upgrades';
 import '@typechain/hardhat';
 import 'hardhat-contract-sizer';
@@ -22,9 +23,13 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    hardhat: {
-      allowUnlimitedContractSize: true,
-    },
+    hardhat: {},
+    testnet: {
+      url: process.env.TESTNET_RPC_URL!,
+      accounts: [
+        process.env.TESTNET_PRIVATE_KEY_DEPLOY!,
+      ],
+    }
   },
   gasReporter: {
     currency: 'USD',

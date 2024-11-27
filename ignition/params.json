@@ -1,0 +1,18 @@
+{
+  "ConstantsManager": {
+    "minSelfStake": "500000000000000000000000n",
+    "maxDelegatedRatio":  "16000000000000000000n",
+    "validatorCommissions" : "150000000000000000n",
+    "burntFeeShare": "200000000000000000n",
+    "treasuryFeeShare": "100000000000000000n",
+    "withdrawalPeriodEpochs": 3,
+    "withdrawalPeriodTime": 604800,
+    "baseRewardPerSecond": "2668658453701531600n",
+    "offlinePenaltyThresholdTime": 432000,
+    "offlinePenaltyThresholdBlocksNumber": 1000,
+    "targetGasPowerPerSecond": 2000000,
+    "gasPriceBalancingCounterweights": 3600,
+    "averageUptimeEpochWindow": 100,
+    "updateMinAverageUptime": 0
+  }
+}
