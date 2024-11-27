@@ -207,7 +207,13 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     );
     event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
     event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
-    event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
+    event Withdrawn(
+        address indexed delegator,
+        uint256 indexed toValidatorID,
+        uint256 indexed wrID,
+        uint256 amount,
+        uint256 penalty
+    );
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event BurntFTM(uint256 amount);
@@ -735,7 +741,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
         _burnFTM(penalty);
 
-        emit Withdrawn(delegator, toValidatorID, wrID, amount);
+        emit Withdrawn(delegator, toValidatorID, wrID, amount - penalty, penalty);
     }
 
     /// Get highest epoch for which can be claimed rewards for the given validator.
