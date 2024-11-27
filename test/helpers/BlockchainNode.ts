@@ -1,4 +1,4 @@
-import { SFCUnitTestI } from '../../typechain-types';
+import { UnitTestSFC } from '../../typechain-types';
 import { TransactionResponse } from 'ethers';
 import { ethers } from 'hardhat';
 
@@ -17,11 +17,11 @@ class ValidatorMetrics {
 }
 
 class BlockchainNode {
-  public readonly sfc: SFCUnitTestI;
-  public validatorWeights: Map<number, bigint>;
-  public nextValidatorWeights: Map<number, bigint>;
+  public readonly sfc: UnitTestSFC;
+  public validatorWeights: Map<bigint, bigint>;
+  public nextValidatorWeights: Map<bigint, bigint>;
 
-  constructor(sfc: SFCUnitTestI) {
+  constructor(sfc: UnitTestSFC) {
     this.sfc = sfc;
     this.validatorWeights = new Map();
     this.nextValidatorWeights = new Map();
@@ -44,7 +44,7 @@ class BlockchainNode {
     }
   }
 
-  async sealEpoch(duration: number, validatorMetrics?: Map<number, ValidatorMetrics>) {
+  async sealEpoch(duration: number, validatorMetrics?: Map<bigint, ValidatorMetrics>) {
     const validatorIds = Array.from(this.validatorWeights.keys());
     const nextValidatorIds = Array.from(this.nextValidatorWeights.keys());
 
