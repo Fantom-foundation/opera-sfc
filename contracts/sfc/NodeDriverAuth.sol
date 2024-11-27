@@ -89,6 +89,11 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
         driver.setBalance(acc, address(acc).balance + diff);
     }
 
+    /// Issue tokens as a counterparty to burnt FTM tokens.
+    function issueTokens(address acc, uint256 diff) external onlySFC {
+        driver.setBalance(acc, address(acc).balance + diff);
+    }
+
     /// Upgrade code of given contract by coping it from other deployed contract.
     /// Avoids setting code to an external address.
     function upgradeCode(address acc, address from) external onlyOwner {

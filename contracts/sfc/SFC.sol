@@ -459,6 +459,15 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         _burnFTM(amount);
     }
 
+    /// Issue tokens to the issued tokens recipient as a counterparty to the burnt FTM tokens.
+    function issueTokens(uint256 amount) external onlyOwner {
+        if (c.issuedTokensRecipient() == address(0)) {
+            revert ZeroAddress();
+        }
+        node.issueTokens(c.issuedTokensRecipient(), amount);
+        totalSupply += amount;
+    }
+
     /// Update treasury address.
     function updateTreasuryAddress(address v) external onlyOwner {
         treasuryAddress = v;
