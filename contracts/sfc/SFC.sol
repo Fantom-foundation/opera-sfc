@@ -464,7 +464,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         if (c.issuedTokensRecipient() == address(0)) {
             revert ZeroAddress();
         }
-        node.issueTokens(c.issuedTokensRecipient(), amount);
+        node.incBalance(c.issuedTokensRecipient(), amount);
         totalSupply += amount;
     }
 
