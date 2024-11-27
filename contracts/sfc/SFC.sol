@@ -3,7 +3,6 @@ pragma solidity 0.8.27;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
@@ -14,7 +13,7 @@ import {Version} from "../version/Version.sol";
  * @notice The SFC maintains a list of validators and delegators and distributes rewards to them.
  * @custom:security-contact security@fantom.foundation
  */
-contract SFC is OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, Version {
+contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;
@@ -235,7 +234,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable,
     ) external initializer {
         __Ownable_init(owner);
         __UUPSUpgradeable_init();
-        __ReentrancyGuard_init();
         currentSealedEpoch = sealedEpoch;
         node = NodeDriverAuth(nodeDriver);
         c = ConstantsManager(_c);
@@ -430,19 +428,24 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable,
     }
 
     /// Resolve failed treasury transfers and send the unresolved fees to the treasury address.
-    function resolveTreasuryFees() external nonReentrant {
+    function resolveTreasuryFees() external {
         if (treasuryAddress == address(0)) {
             revert TreasuryNotSet();
         }
         if (unresolvedTreasuryFees == 0) {
             revert NoUnresolvedTreasuryFees();
         }
-        (bool success, ) = treasuryAddress.call{value: unresolvedTreasuryFees, gas: 1000000}("");
+
+        // zero the fees before sending to prevent re-entrancy
+        uint256 fees = unresolvedTreasuryFees;
+        unresolvedTreasuryFees = 0;
+
+        (bool success, ) = treasuryAddress.call{value: fees, gas: 1000000}("");
         if (!success) {
             revert TransferFailed();
         }
-        emit TreasuryFeesResolved(unresolvedTreasuryFees);
-        unresolvedTreasuryFees = 0;
+
+        emit TreasuryFeesResolved(fees);
     }
 
     /// burnFTM allows SFC to burn an arbitrary amount of FTM tokens.
