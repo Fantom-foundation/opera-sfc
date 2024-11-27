@@ -1149,4 +1149,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     function _now() internal view virtual returns (uint256) {
         return block.timestamp;
     }
+
+    uint256[50] private __gap;
 }

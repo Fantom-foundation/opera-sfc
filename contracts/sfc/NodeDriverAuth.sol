@@ -186,4 +186,6 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
         }
         return codeHash;
     }
+
+    uint256[50] private __gap;
 }

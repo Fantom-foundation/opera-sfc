@@ -144,4 +144,6 @@ contract NodeDriver is OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyNode {
         backend.sealEpochValidators(nextValidatorIDs);
     }
+
+    uint256[50] private __gap;
 }
