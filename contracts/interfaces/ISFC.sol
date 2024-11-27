@@ -15,7 +15,13 @@ interface ISFC {
     );
     event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
     event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
-    event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
+    event Withdrawn(
+        address indexed delegator,
+        uint256 indexed toValidatorID,
+        uint256 indexed wrID,
+        uint256 amount,
+        uint256 penalty
+    );
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event BurntFTM(uint256 amount);
