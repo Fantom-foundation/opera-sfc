@@ -131,6 +131,30 @@ describe('SFC', () => {
     });
   });
 
+  describe('Issue tokens', () => {
+    it('Should revert when not owner', async function () {
+      await expect(this.sfc.connect(this.user).issueTokens(ethers.parseEther('100'))).to.be.revertedWithCustomError(
+        this.sfc,
+        'OwnableUnauthorizedAccount',
+      );
+    });
+
+    it('Should revert when recipient is not set', async function () {
+      await expect(this.sfc.connect(this.owner).issueTokens(ethers.parseEther('100'))).to.be.revertedWithCustomError(
+        this.sfc,
+        'ZeroAddress',
+      );
+    });
+
+    it('Should succeed and issue tokens', async function () {
+      await this.constants.updateIssuedTokensRecipient(this.user);
+      const supply = await this.sfc.totalSupply();
+      const amount = ethers.parseEther('100');
+      await this.sfc.connect(this.owner).issueTokens(amount);
+      expect(await this.sfc.totalSupply()).to.equal(supply + amount);
+    });
+  });
+
   describe('Create validator', () => {
     const validatorsFixture = async () => {
       const validatorPubKey =

@@ -37,6 +37,10 @@ contract ConstantsManager is Ownable {
     // Zero to disable validators deactivation by this metric.
     uint64 public minAverageUptime;
 
+    // The address of the recipient that receives issued tokens
+    // as a counterparty to the burnt FTM tokens
+    address public issuedTokensRecipient;
+
     /**
      * @dev Given value is too small
      */
@@ -176,5 +180,9 @@ contract ConstantsManager is Ownable {
             revert ValueTooLarge();
         }
         minAverageUptime = v;
+    }
+
+    function updateIssuedTokensRecipient(address v) external virtual onlyOwner {
+        issuedTokensRecipient = v;
     }
 }
