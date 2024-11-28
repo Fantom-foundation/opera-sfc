@@ -215,6 +215,11 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /// Initialization is called only once, after the contract deployment.
     /// Because the contract code is written directly into genesis, constructor cannot be used.
     function initialize(
