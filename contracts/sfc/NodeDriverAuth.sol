@@ -21,6 +21,11 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
     error DriverCodeHashMismatch();
     error RecipientNotSFC();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
     function initialize(address payable _sfc, address _driver, address _owner) external initializer {
         __Ownable_init(_owner);
