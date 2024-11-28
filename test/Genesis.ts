@@ -222,21 +222,21 @@ describe('Genesis initialization', () => {
     it('Should revert when SFC upgrade made on implementation', async function () {
       const sfc: SFC = await ethers.getContractAt('SFC', this.sfc);
       await expect(
-        sfc.connect(this.user).upgradeToAndCall(ethers.Wallet.createRandom(), '0x'),
+        sfc.connect(this.owner).upgradeToAndCall(ethers.Wallet.createRandom(), '0x'),
       ).to.be.revertedWithCustomError(sfc, 'UUPSUnauthorizedCallContext');
     });
 
     it('Should revert when NodeDriver upgrade made on implementation', async function () {
       const nodeDriver: NodeDriver = await ethers.getContractAt('NodeDriver', this.nodeDriver);
       await expect(
-        nodeDriver.connect(this.user).upgradeToAndCall(ethers.Wallet.createRandom(), '0x'),
+        nodeDriver.connect(this.owner).upgradeToAndCall(ethers.Wallet.createRandom(), '0x'),
       ).to.be.revertedWithCustomError(nodeDriver, 'UUPSUnauthorizedCallContext');
     });
 
     it('Should revert when NodeDriverAuth upgrade made on implementation', async function () {
       const nodeDriverAuth: NodeDriverAuth = await ethers.getContractAt('NodeDriverAuth', this.nodeDriverAuth);
       await expect(
-        nodeDriverAuth.connect(this.user).upgradeToAndCall(ethers.Wallet.createRandom(), '0x'),
+        nodeDriverAuth.connect(this.owner).upgradeToAndCall(ethers.Wallet.createRandom(), '0x'),
       ).to.be.revertedWithCustomError(nodeDriverAuth, 'UUPSUnauthorizedCallContext');
     });
 
