@@ -925,6 +925,97 @@ describe('SFC', () => {
       // delegator has already delegated 0.4 in fixture
       expect(await this.sfc.getStake(this.delegator, this.validatorId)).to.equal(ethers.parseEther('1.4'));
     });
+
+    it('Should revert when undelegating 0 amount', async function () {
+      await this.blockchainNode.sealEpoch(1_000);
+      await expect(this.sfc.undelegate(this.validatorId, 0, 0)).to.be.revertedWithCustomError(this.sfc, 'ZeroAmount');
+    });
+
+    it('Should revert when withdrawing non-existent request', async function () {
+        await expect(this.sfc.withdraw(1, 1)).to.be.revertedWithCustomError(this.sfc, 'RequestNotExists');
+    });
+
+    it('Should succeed and undelegate/withdraw', async function () {
+      const delegatorStake = await this.sfc.getStake(this.delegator, this.validatorId);
+      const undelegatedAmount = delegatorStake / 2n;
+      const requestId = 1;
+
+        // undelegate half of the stake
+        await this.sfc.connect(this.delegator).undelegate(this.validatorId, requestId, undelegatedAmount);
+
+        // check the stake after undelegating
+        expect(await this.sfc.getStake(this.delegator, this.validatorId)).to.equal(delegatorStake - undelegatedAmount);
+
+        // should revert when withdrawing and not enough time passed
+        await expect(this.sfc.connect(this.delegator).withdraw(this.validatorId, requestId))
+            .to.be.revertedWithCustomError(this.sfc, 'NotEnoughTimePassed');
+
+        // advance time
+        await this.sfc.advanceTime(await this.constants.withdrawalPeriodTime());
+
+        // should revert when not enough epochs passed
+        await expect(this.sfc.connect(this.delegator).withdraw(this.validatorId, requestId))
+            .to.be.revertedWithCustomError(this.sfc, 'NotEnoughEpochsPassed');
+
+        // advance epochs
+        const epochs = await this.constants.withdrawalPeriodEpochs();
+        for (let i = 0n; i < epochs; i++) {
+          await this.blockchainNode.sealEpoch(60 * 60 * 24);
+        }
+
+        // withdraw
+        const tx = await this.sfc.connect(this.delegator).withdraw(this.validatorId, requestId);
+        await expect(tx).to.emit(this.sfc, 'Withdrawn')
+            .withArgs(this.delegator, this.validatorId, requestId, delegatorStake - undelegatedAmount, 0);
+        await expect(tx).to.changeEtherBalance(this.delegator, undelegatedAmount);
+        await expect(tx).to.changeEtherBalance(this.sfc, -undelegatedAmount);
+    });
+
+    it('Should revert when withdrawing fully slashed stake', async function () {
+      await this.sfc.deactivateValidator(this.validatorId, 1n << 7n);
+      const requestId = 1;
+      const delegatorStake = await this.sfc.getStake(this.delegator, this.validatorId);
+        await this.sfc.connect(this.delegator).undelegate(this.validatorId, requestId, delegatorStake);
+
+      // advance time
+      await this.sfc.advanceTime(await this.constants.withdrawalPeriodTime());
+      // advance epochs
+      const epochs = await this.constants.withdrawalPeriodEpochs();
+      for (let i = 0n; i < epochs; i++) {
+        await this.blockchainNode.sealEpoch(60 * 60 * 24);
+      }
+
+      await expect(this.sfc.connect(this.delegator)
+          .withdraw(this.validatorId, 1)).to.be.revertedWithCustomError(this.sfc, 'StakeIsFullySlashed');
+    });
+
+    it('Should succeed and withdraw with penalty', async function () {
+      await this.sfc.deactivateValidator(this.validatorId, 1n << 7n);
+      const requestId = 1;
+      const delegatorStake = await this.sfc.getStake(this.delegator, this.validatorId);
+      await this.sfc.connect(this.delegator).undelegate(this.validatorId, requestId, delegatorStake);
+
+      // advance time
+      await this.sfc.advanceTime(await this.constants.withdrawalPeriodTime());
+      // advance epochs
+      const epochs = await this.constants.withdrawalPeriodEpochs();
+      for (let i = 0n; i < epochs; i++) {
+        await this.blockchainNode.sealEpoch(60 * 60 * 24);
+      }
+
+      // update refund ratio to 25%
+      await this.sfc.updateSlashingRefundRatio(this.validatorId, BigInt(1e18) / 4n);
+
+      const expectedAmount = (delegatorStake * 25n) / 100n - 1n; // 1 is subtracted because of the ceiling
+      const expectedPenalty = delegatorStake - expectedAmount;
+      const tx = await this.sfc.connect(this.delegator).withdraw(this.validatorId, requestId);
+      await expect(tx).to.emit(this.sfc, 'Withdrawn')
+          .withArgs(this.delegator, this.validatorId, requestId, expectedAmount, expectedPenalty);
+      // delegator should receive the expected amount minus the penalty
+      await expect(tx).to.changeEtherBalance(this.delegator, expectedAmount);
+      // sfc should burn the penalty
+      await expect(tx).to.changeEtherBalance(this.sfc, -delegatorStake);
+    });
   });
 
   describe('Rewards calculation', () => {
@@ -1002,11 +1093,6 @@ describe('SFC', () => {
           this.sfc,
           'RequestNotExists',
         );
-      });
-
-      it('Should revert when undelegating 0 amount', async function () {
-        await this.blockchainNode.sealEpoch(1_000);
-        await expect(this.sfc.undelegate(this.validatorId, 0, 0)).to.be.revertedWithCustomError(this.sfc, 'ZeroAmount');
       });
 
       it('Should revert when when claiming and zero rewards', async function () {
