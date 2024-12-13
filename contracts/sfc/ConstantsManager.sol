@@ -37,6 +37,21 @@ contract ConstantsManager is OwnableUpgradeable {
     // Zero to disable validators deactivation by this metric.
     uint64 public minAverageUptime;
 
+    event MinSelfStakeUpdated(uint256 v);
+    event MaxDelegatedRatioUpdated(uint256 v);
+    event ValidatorCommissionUpdated(uint256 v);
+    event BurntFeeShareUpdated(uint256 v);
+    event TreasuryFeeShareUpdated(uint256 v);
+    event WithdrawalPeriodEpochsUpdated(uint256 v);
+    event WithdrawalPeriodTimeUpdated(uint256 v);
+    event BaseRewardPerSecondUpdated(uint256 v);
+    event OfflinePenaltyThresholdBlocksNumUpdated(uint256 v);
+    event OfflinePenaltyThresholdTimeUpdated(uint256 v);
+    event TargetGasPowerPerSecondUpdated(uint256 v);
+    event GasPriceBalancingCounterweightUpdated(uint256 v);
+    event AverageUptimeEpochWindowUpdated(uint32 v);
+    event MinAverageUptimeUpdated(uint64 v);
+
     /**
      * @dev Given value is too small
      */
@@ -59,6 +74,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         minSelfStake = v;
+        emit MinSelfStakeUpdated(v);
     }
 
     function updateMaxDelegatedRatio(uint256 v) external virtual onlyOwner {
@@ -69,6 +85,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         maxDelegatedRatio = v;
+        emit MaxDelegatedRatioUpdated(v);
     }
 
     function updateValidatorCommission(uint256 v) external virtual onlyOwner {
@@ -76,6 +93,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         validatorCommission = v;
+        emit ValidatorCommissionUpdated(v);
     }
 
     function updateBurntFeeShare(uint256 v) external virtual onlyOwner {
@@ -83,6 +101,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         burntFeeShare = v;
+        emit BurntFeeShareUpdated(v);
     }
 
     function updateTreasuryFeeShare(uint256 v) external virtual onlyOwner {
@@ -90,6 +109,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         treasuryFeeShare = v;
+        emit TreasuryFeeShareUpdated(v);
     }
 
     function updateWithdrawalPeriodEpochs(uint256 v) external virtual onlyOwner {
@@ -100,6 +120,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         withdrawalPeriodEpochs = v;
+        emit WithdrawalPeriodEpochsUpdated(v);
     }
 
     function updateWithdrawalPeriodTime(uint256 v) external virtual onlyOwner {
@@ -110,6 +131,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         withdrawalPeriodTime = v;
+        emit WithdrawalPeriodTimeUpdated(v);
     }
 
     function updateBaseRewardPerSecond(uint256 v) external virtual onlyOwner {
@@ -120,6 +142,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         baseRewardPerSecond = v;
+        emit BaseRewardPerSecondUpdated(v);
     }
 
     function updateOfflinePenaltyThresholdTime(uint256 v) external virtual onlyOwner {
@@ -130,6 +153,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         offlinePenaltyThresholdTime = v;
+        emit OfflinePenaltyThresholdTimeUpdated(v);
     }
 
     function updateOfflinePenaltyThresholdBlocksNum(uint256 v) external virtual onlyOwner {
@@ -140,6 +164,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         offlinePenaltyThresholdBlocksNum = v;
+        emit OfflinePenaltyThresholdBlocksNumUpdated(v);
     }
 
     function updateTargetGasPowerPerSecond(uint256 v) external virtual onlyOwner {
@@ -150,6 +175,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         targetGasPowerPerSecond = v;
+        emit TargetGasPowerPerSecondUpdated(v);
     }
 
     function updateGasPriceBalancingCounterweight(uint256 v) external virtual onlyOwner {
@@ -160,6 +186,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         gasPriceBalancingCounterweight = v;
+        emit GasPriceBalancingCounterweightUpdated(v);
     }
 
     function updateAverageUptimeEpochWindow(uint32 v) external virtual onlyOwner {
@@ -171,6 +198,7 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         averageUptimeEpochWindow = v;
+        emit AverageUptimeEpochWindowUpdated(v);
     }
 
     function updateMinAverageUptime(uint64 v) external virtual onlyOwner {
@@ -178,5 +206,6 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         minAverageUptime = v;
+        emit MinAverageUptimeUpdated(v);
     }
 }
