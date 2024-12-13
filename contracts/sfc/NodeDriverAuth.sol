@@ -171,19 +171,10 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function isContract(address account) internal view returns (bool) {
-        uint256 size;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
+        return account.code.length > 0;
     }
 
     function _getCodeHash(address addr) internal view returns (bytes32) {
-        bytes32 codeHash;
-        assembly {
-            codeHash := extcodehash(addr)
-        }
-        return codeHash;
+        return addr.codehash;
     }
 }
