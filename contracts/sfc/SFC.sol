@@ -792,9 +792,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     function _receiverOf(address addr) internal view returns (address payable) {
         address to = getRedirection[addr];
         if (to == address(0)) {
-            return payable(address(uint160(addr)));
+            return payable(addr);
         }
-        return payable(address(uint160(to)));
+        return payable(to);
     }
 
     /// Seal epoch - sync validators.
