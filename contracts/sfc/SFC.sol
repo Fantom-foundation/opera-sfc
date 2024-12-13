@@ -273,7 +273,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Accept redirection proposal.
-    /// Redirection must by accepted by the validator key holder before it start to be applied.
+    /// Redirection must by accepted by the validator key holder before it starts to be applied.
     function redirect(address to) external {
         address from = msg.sender;
         if (to == address(0)) {
