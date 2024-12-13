@@ -14,15 +14,7 @@ contract UnitTestConstantsManager is ConstantsManager {
         baseRewardPerSecond = v;
     }
 
-    function updateGasPriceBalancingCounterweight(uint256 v) external override onlyOwner {
-        gasPriceBalancingCounterweight = v;
-    }
-
     function updateOfflinePenaltyThresholdTime(uint256 v) external override onlyOwner {
         offlinePenaltyThresholdTime = v;
-    }
-
-    function updateTargetGasPowerPerSecond(uint256 v) external override onlyOwner {
-        targetGasPowerPerSecond = v;
     }
 }
