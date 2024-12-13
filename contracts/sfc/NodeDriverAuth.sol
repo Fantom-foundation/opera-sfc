@@ -91,7 +91,7 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
         if (acc != address(sfc)) {
             revert RecipientNotSFC();
         }
-        driver.setBalance(acc, address(acc).balance + diff);
+        driver.setBalance(acc, acc.balance + diff);
     }
 
     /// Upgrade code of given contract by coping it from other deployed contract.

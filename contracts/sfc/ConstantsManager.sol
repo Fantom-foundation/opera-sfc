@@ -28,10 +28,6 @@ contract ConstantsManager is OwnableUpgradeable {
     uint256 public offlinePenaltyThresholdBlocksNum;
     // The number of seconds a validator can be offline before being deactivated
     uint256 public offlinePenaltyThresholdTime;
-    // The target gas power per second
-    uint256 public targetGasPowerPerSecond;
-    // The counterweight for gas price balancing
-    uint256 public gasPriceBalancingCounterweight;
 
     // The number of epochs to calculate the average uptime ratio from, acceptable bound [10, 87600].
     // Is also the minimum number of epochs necessary for deactivation of offline validators.
@@ -170,28 +166,6 @@ contract ConstantsManager is OwnableUpgradeable {
         }
         offlinePenaltyThresholdBlocksNum = v;
         emit OfflinePenaltyThresholdBlocksNumUpdated(v);
-    }
-
-    function updateTargetGasPowerPerSecond(uint256 v) external virtual onlyOwner {
-        if (v < 1000000) {
-            revert ValueTooSmall();
-        }
-        if (v > 500000000) {
-            revert ValueTooLarge();
-        }
-        targetGasPowerPerSecond = v;
-        emit TargetGasPowerPerSecondUpdated(v);
-    }
-
-    function updateGasPriceBalancingCounterweight(uint256 v) external virtual onlyOwner {
-        if (v < 100) {
-            revert ValueTooSmall();
-        }
-        if (v > 10 * 86400) {
-            revert ValueTooLarge();
-        }
-        gasPriceBalancingCounterweight = v;
-        emit GasPriceBalancingCounterweightUpdated(v);
     }
 
     function updateAverageUptimeEpochWindow(uint32 v) external virtual onlyOwner {

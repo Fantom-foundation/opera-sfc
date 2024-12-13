@@ -539,8 +539,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     function undelegate(uint256 toValidatorID, uint256 wrID, uint256 amount) public {
         address delegator = msg.sender;
 
-        _stashRewards(delegator, toValidatorID);
-
         if (amount == 0) {
             revert ZeroAmount();
         }
@@ -548,6 +546,8 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         if (getWithdrawalRequest[delegator][toValidatorID][wrID].amount != 0) {
             revert RequestExists();
         }
+
+        _stashRewards(delegator, toValidatorID);
 
         getWithdrawalRequest[delegator][toValidatorID][wrID].amount = amount;
         getWithdrawalRequest[delegator][toValidatorID][wrID].epoch = currentEpoch();
@@ -850,24 +850,14 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
     }
 
-    /// Get epoch end time.
-    function epochEndTime(uint256 epoch) internal view returns (uint256) {
-        return getEpochSnapshot[epoch].endTime;
-    }
-
-    /// Check if an address is redirected.
-    function _redirected(address addr) internal view returns (bool) {
-        return getRedirection[addr] != address(0);
-    }
-
     /// Get address which should receive rewards and withdrawn stake for the given delegator.
     /// The delegator is usually the receiver, unless a redirection is created.
     function _receiverOf(address addr) internal view returns (address payable) {
         address to = getRedirection[addr];
         if (to == address(0)) {
-            return payable(address(uint160(addr)));
+            return payable(addr);
         }
-        return payable(address(uint160(to)));
+        return payable(to);
     }
 
     /// Seal epoch - sync validators.
@@ -921,9 +911,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             ctx.txRewardWeights[i] = (originatedTxsFee * uptimes[i]) / epochDuration;
             ctx.totalTxRewardWeight = ctx.totalTxRewardWeight + ctx.txRewardWeights[i];
             ctx.epochFee = ctx.epochFee + originatedTxsFee;
-        }
 
-        for (uint256 i = 0; i < validatorIDs.length; i++) {
             // baseRewardWeight = {stake} * {uptime ^ 2}
             ctx.baseRewardWeights[i] =
                 (((snapshot.receivedStake[validatorIDs[i]] * uptimes[i]) / epochDuration) * uptimes[i]) /
