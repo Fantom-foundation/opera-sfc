@@ -209,7 +209,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     event AnnouncedRedirection(address indexed from, address indexed to);
 
     modifier onlyDriver() {
-        if (!isNode(msg.sender)) {
+        if (!_isNode(msg.sender)) {
             revert NotDriverAuth();
         }
         _;
@@ -552,6 +552,11 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         return getEpochSnapshot[epoch].endBlock;
     }
 
+    /// Get epoch end time.
+    function epochEndTime(uint256 epoch) public view returns (uint256) {
+        return getEpochSnapshot[epoch].endTime;
+    }
+
     /// Check whether the given validator is slashed - the stake (or its part) cannot
     /// be withdrawn because of misbehavior (double-sign) of the validator.
     function isSlashed(uint256 validatorID) public view returns (bool) {
@@ -572,7 +577,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Check if an address is the NodeDriverAuth contract.
-    function isNode(address addr) internal view virtual returns (bool) {
+    function _isNode(address addr) internal view virtual returns (bool) {
         return addr == address(node);
     }
 
@@ -649,7 +654,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Get slashing penalty for a stake.
-    function getSlashingPenalty(
+    function _getSlashingPenalty(
         uint256 amount,
         bool isCheater,
         uint256 refundRatio
@@ -693,7 +698,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
         uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID].amount;
         bool isCheater = isSlashed(toValidatorID);
-        uint256 penalty = getSlashingPenalty(amount, isCheater, slashingRefundRatio[toValidatorID]);
+        uint256 penalty = _getSlashingPenalty(amount, isCheater, slashingRefundRatio[toValidatorID]);
         delete getWithdrawalRequest[delegator][toValidatorID][wrID];
 
         if (amount <= penalty) {
@@ -775,11 +780,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             payable(address(0)).transfer(amount);
             emit BurntFTM(amount);
         }
-    }
-
-    /// Get epoch end time.
-    function epochEndTime(uint256 epoch) internal view returns (uint256) {
-        return getEpochSnapshot[epoch].endTime;
     }
 
     /// Check if an address is redirected.
@@ -1045,6 +1045,22 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         totalSupply = totalSupply + amount;
     }
 
+    /// Sync validator with node.
+    function _syncValidator(uint256 validatorID, bool syncPubkey) internal {
+        if (!_validatorExists(validatorID)) {
+            revert ValidatorNotExists();
+        }
+        // emit special log for node
+        uint256 weight = getValidator[validatorID].receivedStake;
+        if (getValidator[validatorID].status != OK_STATUS) {
+            weight = 0;
+        }
+        node.updateValidatorWeight(validatorID, weight);
+        if (syncPubkey && weight != 0) {
+            node.updateValidatorPubkey(validatorID, getValidatorPubkey[validatorID]);
+        }
+    }
+
     /// Notify stake subscriber about staking changes.
     /// Used to recount votes from delegators in the governance contract.
     function _notifyStakeSubscriber(address delegator, address validatorAuth, bool strict) internal {
@@ -1079,22 +1095,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
                 );
             }
             emit ChangedValidatorStatus(validatorID, status);
-        }
-    }
-
-    /// Sync validator with node.
-    function _syncValidator(uint256 validatorID, bool syncPubkey) public {
-        if (!_validatorExists(validatorID)) {
-            revert ValidatorNotExists();
-        }
-        // emit special log for node
-        uint256 weight = getValidator[validatorID].receivedStake;
-        if (getValidator[validatorID].status != OK_STATUS) {
-            weight = 0;
-        }
-        node.updateValidatorWeight(validatorID, weight);
-        if (syncPubkey && weight != 0) {
-            node.updateValidatorPubkey(validatorID, getValidatorPubkey[validatorID]);
         }
     }
 
