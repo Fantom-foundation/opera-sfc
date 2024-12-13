@@ -772,7 +772,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     /// The tokens are sent to the zero address.
     function _burnFTM(uint256 amount) internal {
         if (amount != 0) {
-            payable(address(0)).transfer(amount);
+            payable(address(0)).call{value: amount}("");
             emit BurntFTM(amount);
         }
     }
