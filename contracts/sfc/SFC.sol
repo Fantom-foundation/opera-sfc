@@ -81,17 +81,17 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
     struct EpochSnapshot {
         // validator ID => validator weight in the epoch
-        mapping(uint256 => uint256) receivedStake;
+        mapping(uint256 validatorID => uint256) receivedStake;
         // validator ID => accumulated ( delegatorsReward * 1e18 / receivedStake )
-        mapping(uint256 => uint256) accumulatedRewardPerToken;
+        mapping(uint256 validatorID => uint256) accumulatedRewardPerToken;
         // validator ID => accumulated online time
-        mapping(uint256 => uint256) accumulatedUptime;
+        mapping(uint256 validatorID => uint256) accumulatedUptime;
         // validator ID => average uptime as a percentage
-        mapping(uint256 => AverageUptime) averageUptime;
+        mapping(uint256 validatorID => AverageUptime) averageUptime;
         // validator ID => gas fees from txs originated by the validator
-        mapping(uint256 => uint256) accumulatedOriginatedTxsFee;
-        mapping(uint256 => uint256) offlineTime;
-        mapping(uint256 => uint256) offlineBlocks;
+        mapping(uint256 validatorID => uint256) accumulatedOriginatedTxsFee;
+        mapping(uint256 validatorID => uint256) offlineTime;
+        mapping(uint256 validatorID => uint256) offlineBlocks;
         uint256[] validatorIDs;
         uint256 endTime;
         uint256 endBlock;
