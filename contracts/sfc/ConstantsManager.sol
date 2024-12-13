@@ -26,8 +26,6 @@ contract ConstantsManager is Ownable {
     uint256 public baseRewardPerSecond;
     uint256 public offlinePenaltyThresholdBlocksNum;
     uint256 public offlinePenaltyThresholdTime;
-    uint256 public targetGasPowerPerSecond;
-    uint256 public gasPriceBalancingCounterweight;
 
     // The number of epochs to calculate the average uptime ratio from, acceptable bound [10, 87600].
     // Is also the minimum number of epochs necessary for deactivation of offline validators.
@@ -81,14 +79,14 @@ contract ConstantsManager is Ownable {
     }
 
     function updateBurntFeeShare(uint256 v) external virtual onlyOwner {
-        if (v > Decimal.unit() / 2) {
+        if (v + treasuryFeeShare > Decimal.unit()) {
             revert ValueTooLarge();
         }
         burntFeeShare = v;
     }
 
     function updateTreasuryFeeShare(uint256 v) external virtual onlyOwner {
-        if (v > Decimal.unit() / 2) {
+        if (v + burntFeeShare > Decimal.unit()) {
             revert ValueTooLarge();
         }
         treasuryFeeShare = v;
@@ -115,9 +113,6 @@ contract ConstantsManager is Ownable {
     }
 
     function updateBaseRewardPerSecond(uint256 v) external virtual onlyOwner {
-        if (v < 0.5 * 1e18) {
-            revert ValueTooSmall();
-        }
         if (v > 32 * 1e18) {
             revert ValueTooLarge();
         }
@@ -142,26 +137,6 @@ contract ConstantsManager is Ownable {
             revert ValueTooLarge();
         }
         offlinePenaltyThresholdBlocksNum = v;
-    }
-
-    function updateTargetGasPowerPerSecond(uint256 v) external virtual onlyOwner {
-        if (v < 1000000) {
-            revert ValueTooSmall();
-        }
-        if (v > 500000000) {
-            revert ValueTooLarge();
-        }
-        targetGasPowerPerSecond = v;
-    }
-
-    function updateGasPriceBalancingCounterweight(uint256 v) external virtual onlyOwner {
-        if (v < 100) {
-            revert ValueTooSmall();
-        }
-        if (v > 10 * 86400) {
-            revert ValueTooLarge();
-        }
-        gasPriceBalancingCounterweight = v;
     }
 
     function updateAverageUptimeEpochWindow(uint32 v) external virtual onlyOwner {
