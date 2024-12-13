@@ -157,7 +157,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     // redirections
     error AlreadyRedirected();
     error SameRedirectionAuthorizer();
-    error Redirected();
 
     // validators
     error ValidatorNotExists();
@@ -205,11 +204,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event BurntFTM(uint256 amount);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
-    event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
     event AnnouncedRedirection(address indexed from, address indexed to);
 
     modifier onlyDriver() {
-        if (!isNode(msg.sender)) {
+        if (!_isNodeDriverAuth(msg.sender)) {
             revert NotDriverAuth();
         }
         _;
@@ -342,11 +340,8 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             auth,
             validatorID,
             pubkey,
-            OK_STATUS,
             0, // createdEpoch
-            createdTime,
-            0, // deactivatedEpoch - not deactivated
-            0 // deactivatedTime - not deactivated
+            createdTime
         );
         if (validatorID > lastValidatorID) {
             lastValidatorID = validatorID;
@@ -572,7 +567,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Check if an address is the NodeDriverAuth contract.
-    function isNode(address addr) internal view virtual returns (bool) {
+    function _isNodeDriverAuth(address addr) internal view virtual returns (bool) {
         return addr == address(node);
     }
 
@@ -782,11 +777,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         return getEpochSnapshot[epoch].endTime;
     }
 
-    /// Check if an address is redirected.
-    function _redirected(address addr) internal view returns (bool) {
-        return getRedirection[addr] != address(0);
-    }
-
     /// Get address which should receive rewards and withdrawn stake for the given delegator.
     /// The delegator is usually the receiver, unless a redirection is created.
     function _receiverOf(address addr) internal view returns (address payable) {
@@ -826,7 +816,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         EpochSnapshot storage prevSnapshot,
         uint256[] memory validatorIDs,
         uint256[] memory uptimes,
-        uint256[] memory accumulatedOriginatedTxsFee
+        uint256[] memory originatedTxsFee
     ) internal {
         SealEpochRewardsCtx memory ctx = SealEpochRewardsCtx(
             new uint256[](validatorIDs.length),
@@ -838,16 +828,16 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
             uint256 prevAccumulatedTxsFee = prevSnapshot.accumulatedOriginatedTxsFee[validatorIDs[i]];
-            uint256 originatedTxsFee = 0;
-            if (accumulatedOriginatedTxsFee[i] > prevAccumulatedTxsFee) {
-                originatedTxsFee = accumulatedOriginatedTxsFee[i] - prevAccumulatedTxsFee;
+            uint256 accumulatedTxsFee = 0;
+            if (originatedTxsFee[i] > prevAccumulatedTxsFee) {
+                accumulatedTxsFee = originatedTxsFee[i] - prevAccumulatedTxsFee;
             }
             // txRewardWeight = {originatedTxsFee} * {uptime}
             // originatedTxsFee is roughly proportional to {uptime} * {stake}, so the whole formula is roughly
             // {stake} * {uptime} ^ 2
-            ctx.txRewardWeights[i] = (originatedTxsFee * uptimes[i]) / epochDuration;
+            ctx.txRewardWeights[i] = (accumulatedTxsFee * uptimes[i]) / epochDuration;
             ctx.totalTxRewardWeight = ctx.totalTxRewardWeight + ctx.txRewardWeights[i];
-            ctx.epochFee = ctx.epochFee + originatedTxsFee;
+            ctx.epochFee = ctx.epochFee + accumulatedTxsFee;
         }
 
         for (uint256 i = 0; i < validatorIDs.length; i++) {
@@ -889,7 +879,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
                 prevSnapshot.accumulatedRewardPerToken[validatorID] +
                 rewardPerToken;
 
-            snapshot.accumulatedOriginatedTxsFee[validatorID] = accumulatedOriginatedTxsFee[i];
+            snapshot.accumulatedOriginatedTxsFee[validatorID] = originatedTxsFee[i];
             snapshot.accumulatedUptime[validatorID] = prevSnapshot.accumulatedUptime[validatorID] + uptimes[i];
         }
 
@@ -974,7 +964,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     /// Create a new validator.
     function _createValidator(address auth, bytes calldata pubkey) internal {
         uint256 validatorID = ++lastValidatorID;
-        _rawCreateValidator(auth, validatorID, pubkey, OK_STATUS, currentEpoch(), _now(), 0, 0);
+        _rawCreateValidator(auth, validatorID, pubkey, currentEpoch(), _now());
     }
 
     /// Create a new validator without incrementing lastValidatorID.
@@ -982,32 +972,23 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         address auth,
         uint256 validatorID,
         bytes calldata pubkey,
-        uint256 status,
         uint256 createdEpoch,
-        uint256 createdTime,
-        uint256 deactivatedEpoch,
-        uint256 deactivatedTime
+        uint256 createdTime
     ) internal {
         if (getValidatorID[auth] != 0) {
             revert ValidatorExists();
         }
         getValidatorID[auth] = validatorID;
-        getValidator[validatorID].status = status;
+        getValidator[validatorID].status = OK_STATUS;
         getValidator[validatorID].createdEpoch = createdEpoch;
         getValidator[validatorID].createdTime = createdTime;
-        getValidator[validatorID].deactivatedTime = deactivatedTime;
-        getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
+        getValidator[validatorID].deactivatedTime = 0;
+        getValidator[validatorID].deactivatedEpoch = 0;
         getValidator[validatorID].auth = auth;
         getValidatorPubkey[validatorID] = pubkey;
         pubkeyAddressToValidatorID[_pubkeyToAddress(pubkey)] = validatorID;
 
         emit CreatedValidator(validatorID, auth, createdEpoch, createdTime);
-        if (deactivatedEpoch != 0) {
-            emit DeactivatedValidator(validatorID, deactivatedEpoch, deactivatedTime);
-        }
-        if (status != 0) {
-            emit ChangedValidatorStatus(validatorID, status);
-        }
     }
 
     /// Calculate raw validator epoch transaction reward.

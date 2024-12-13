@@ -61,7 +61,7 @@ contract ConstantsManager is OwnableUpgradeable {
         minSelfStake = v;
     }
 
-    function updateMaxDelegatedRatio(uint256 v) external virtual onlyOwner {
+    function updateMaxDelegatedRatio(uint256 v) external onlyOwner {
         if (v < Decimal.unit()) {
             revert ValueTooSmall();
         }
@@ -71,28 +71,28 @@ contract ConstantsManager is OwnableUpgradeable {
         maxDelegatedRatio = v;
     }
 
-    function updateValidatorCommission(uint256 v) external virtual onlyOwner {
+    function updateValidatorCommission(uint256 v) external onlyOwner {
         if (v > Decimal.unit() / 2) {
             revert ValueTooLarge();
         }
         validatorCommission = v;
     }
 
-    function updateBurntFeeShare(uint256 v) external virtual onlyOwner {
+    function updateBurntFeeShare(uint256 v) external onlyOwner {
         if (v > Decimal.unit() / 2) {
             revert ValueTooLarge();
         }
         burntFeeShare = v;
     }
 
-    function updateTreasuryFeeShare(uint256 v) external virtual onlyOwner {
+    function updateTreasuryFeeShare(uint256 v) external onlyOwner {
         if (v > Decimal.unit() / 2) {
             revert ValueTooLarge();
         }
         treasuryFeeShare = v;
     }
 
-    function updateWithdrawalPeriodEpochs(uint256 v) external virtual onlyOwner {
+    function updateWithdrawalPeriodEpochs(uint256 v) external onlyOwner {
         if (v < 2) {
             revert ValueTooSmall();
         }
@@ -102,7 +102,7 @@ contract ConstantsManager is OwnableUpgradeable {
         withdrawalPeriodEpochs = v;
     }
 
-    function updateWithdrawalPeriodTime(uint256 v) external virtual onlyOwner {
+    function updateWithdrawalPeriodTime(uint256 v) external onlyOwner {
         if (v < 86400) {
             revert ValueTooSmall();
         }
@@ -132,7 +132,7 @@ contract ConstantsManager is OwnableUpgradeable {
         offlinePenaltyThresholdTime = v;
     }
 
-    function updateOfflinePenaltyThresholdBlocksNum(uint256 v) external virtual onlyOwner {
+    function updateOfflinePenaltyThresholdBlocksNum(uint256 v) external onlyOwner {
         if (v < 100) {
             revert ValueTooSmall();
         }
@@ -162,7 +162,7 @@ contract ConstantsManager is OwnableUpgradeable {
         gasPriceBalancingCounterweight = v;
     }
 
-    function updateAverageUptimeEpochWindow(uint32 v) external virtual onlyOwner {
+    function updateAverageUptimeEpochWindow(uint32 v) external onlyOwner {
         if (v < 10) {
             // needs to be long enough to allow permissible downtime for validators maintenance
             revert ValueTooSmall();
@@ -173,7 +173,7 @@ contract ConstantsManager is OwnableUpgradeable {
         averageUptimeEpochWindow = v;
     }
 
-    function updateMinAverageUptime(uint64 v) external virtual onlyOwner {
+    function updateMinAverageUptime(uint64 v) external onlyOwner {
         if (v > ((Decimal.unit() * 9) / 10)) {
             revert ValueTooLarge();
         }
