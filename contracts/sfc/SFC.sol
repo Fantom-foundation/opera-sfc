@@ -962,6 +962,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
         if (cur.averageUptime > Decimal.unit()) {
             cur.averageUptime = uint64(Decimal.unit());
+            cur.remainder = 0; // reset the remainder when capping the averageUptime
         }
         if (prev.epochs < c.averageUptimeEpochWindow()) {
             cur.epochs = prev.epochs + 1;
