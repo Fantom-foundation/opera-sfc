@@ -204,9 +204,25 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event BurntFTM(uint256 amount);
+    event MintedNativeToken(uint256 amount);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
     event AnnouncedRedirection(address indexed from, address indexed to);
+    event RedirectionAuthorizerUpdated(address addr);
+    event RedirectionInitiated(address indexed from, address indexed to);
+    event RedirectedTo(address indexed from, address indexed to);
+    event ConstantsManagerUpdated(address addr);
+    event TreasuryAddressUpdated(address addr);
+    event StakeSubscriberUpdated(address addr);
+
+    event SealedEpoch(
+        uint256 indexed epoch,
+        uint256 endTime,
+        uint256 endBlock,
+        uint256 baseRewardPerSecond,
+        uint256 totalSupply
+    );
+    event SealedEpochValidators(uint256 indexed epoch, uint256 totalStake, uint256[] validatorIDs);
 
     modifier onlyDriver() {
         if (!isNode(msg.sender)) {
@@ -248,6 +264,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             revert SameRedirectionAuthorizer();
         }
         redirectionAuthorizer = v;
+        emit RedirectionAuthorizerUpdated(v);
     }
 
     /// Announce redirection of address to be called by validator whose auth key was compromised.
@@ -270,6 +287,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             revert SameAddress();
         }
         getRedirectionRequest[from] = to;
+        emit RedirectionInitiated(from, to);
     }
 
     /// Accept redirection proposal.
@@ -284,6 +302,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
         getRedirection[from] = to;
         getRedirectionRequest[from] = address(0);
+        emit RedirectedTo(from, to);
     }
 
     /// Seal current epoch - deactivate validators who were offline too long, create an epoch snapshot
@@ -314,6 +333,14 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         snapshot.endBlock = block.number;
         snapshot.baseRewardPerSecond = c.baseRewardPerSecond();
         snapshot.totalSupply = totalSupply;
+
+        emit SealedEpoch(
+            currentSealedEpoch,
+            snapshot.endTime,
+            snapshot.endBlock,
+            snapshot.baseRewardPerSecond,
+            snapshot.totalSupply
+        );
     }
 
     /// Finish epoch sealing - store validators of the new epoch into a snapshot.
@@ -328,6 +355,8 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             snapshot.totalStake = snapshot.totalStake + receivedStake;
         }
         snapshot.validatorIDs = nextValidatorIDs;
+
+        emit SealedEpochValidators(currentEpoch(), snapshot.totalStake, snapshot.validatorIDs);
     }
 
     /// Set an initial validator.
@@ -427,16 +456,19 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     /// Update treasury address.
     function updateTreasuryAddress(address v) external onlyOwner {
         treasuryAddress = v;
+        emit TreasuryAddressUpdated(v);
     }
 
     /// Update consts address.
     function updateConstsAddress(address v) external onlyOwner {
         c = ConstantsManager(v);
+        emit ConstantsManagerUpdated(v);
     }
 
     /// Update voteBook address.
     function updateStakeSubscriberAddress(address v) external onlyOwner {
         stakeSubscriberAddress = v;
+        emit StakeSubscriberUpdated(v);
     }
 
     /// Get consts address.
@@ -1043,6 +1075,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         // balance will be increased after the transaction is processed
         node.incBalance(address(this), amount);
         totalSupply = totalSupply + amount;
+        emit MintedNativeToken(amount);
     }
 
     /// Notify stake subscriber about staking changes.
