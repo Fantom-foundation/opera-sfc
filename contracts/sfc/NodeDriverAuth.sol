@@ -53,7 +53,6 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
         _transferOwnership(executable);
         INodeDriverExecutable(executable).execute();
         _transferOwnership(newOwner);
-        //require(driver.backend() == address(this), "ownership of driver is lost");
         if (_getCodeHash(address(this)) != selfCodeHash) {
             revert SelfCodeHashMismatch();
         }
