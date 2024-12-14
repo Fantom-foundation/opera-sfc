@@ -476,11 +476,11 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             revert RequestExists();
         }
 
-        _rawUndelegate(delegator, toValidatorID, amount, true, false, true);
-
         getWithdrawalRequest[delegator][toValidatorID][wrID].amount = amount;
         getWithdrawalRequest[delegator][toValidatorID][wrID].epoch = currentEpoch();
         getWithdrawalRequest[delegator][toValidatorID][wrID].time = _now();
+
+        _rawUndelegate(delegator, toValidatorID, amount, true, false, true);
 
         _syncValidator(toValidatorID, false);
 
