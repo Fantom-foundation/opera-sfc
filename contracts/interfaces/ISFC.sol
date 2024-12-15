@@ -7,31 +7,6 @@ pragma solidity 0.8.27;
  * @custom:security-contact security@fantom.foundation
  */
 interface ISFC {
-    event CreatedValidator(
-        uint256 indexed validatorID,
-        address indexed auth,
-        uint256 createdEpoch,
-        uint256 createdTime
-    );
-    event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
-    event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
-    event Withdrawn(
-        address indexed delegator,
-        uint256 indexed toValidatorID,
-        uint256 indexed wrID,
-        uint256 amount,
-        uint256 penalty
-    );
-    event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
-    event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
-    event BurntFTM(uint256 amount);
-    event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
-    event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
-
-    event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
-    event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
-    event AnnouncedRedirection(address indexed from, address indexed to);
-
     function currentSealedEpoch() external view returns (uint256);
 
     function getEpochSnapshot(
@@ -77,15 +52,7 @@ interface ISFC {
         uint256
     ) external view returns (uint256 epoch, uint256 time, uint256 amount);
 
-    function isOwner() external view returns (bool);
-
     function lastValidatorID() external view returns (uint256);
-
-    function minGasPrice() external view returns (uint256);
-
-    function owner() external view returns (address);
-
-    function renounceOwnership() external;
 
     function slashingRefundRatio(uint256) external view returns (uint256);
 
@@ -97,11 +64,7 @@ interface ISFC {
 
     function totalSupply() external view returns (uint256);
 
-    function transferOwnership(address newOwner) external;
-
     function treasuryAddress() external view returns (address);
-
-    function version() external pure returns (bytes3);
 
     function currentEpoch() external view returns (uint256);
 
@@ -117,7 +80,7 @@ interface ISFC {
 
     function getEpochAccumulatedUptime(uint256 epoch, uint256 validatorID) external view returns (uint256);
 
-    function getEpochAverageUptime(uint256 epoch, uint256 validatorID) external view returns (uint32);
+    function getEpochAverageUptime(uint256 epoch, uint256 validatorID) external view returns (uint64);
 
     function getEpochAccumulatedOriginatedTxsFee(uint256 epoch, uint256 validatorID) external view returns (uint256);
 

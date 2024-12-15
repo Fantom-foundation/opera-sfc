@@ -8,13 +8,14 @@ import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {Version} from "../version/Version.sol";
 import {IStakeSubscriber} from "../interfaces/IStakeSubscriber.sol";
+import {ISFC} from "../interfaces/ISFC.sol";
 
 /**
  * @title Special Fee Contract for Sonic network
  * @notice The SFC maintains a list of validators and delegators and distributes rewards to them.
  * @custom:security-contact security@fantom.foundation
  */
-contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
+contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version, ISFC {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;
