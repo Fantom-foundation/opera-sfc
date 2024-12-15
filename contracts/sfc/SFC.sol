@@ -7,13 +7,15 @@ import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {Version} from "../version/Version.sol";
+import {IStakeSubscriber} from "../interfaces/IStakeSubscriber.sol";
+import {ISFC} from "../interfaces/ISFC.sol";
 
 /**
  * @title Special Fee Contract for Sonic network
  * @notice The SFC maintains a list of validators and delegators and distributes rewards to them.
  * @custom:security-contact security@fantom.foundation
  */
-contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
+contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version, ISFC {
     uint256 internal constant OK_STATUS = 0;
     uint256 internal constant WITHDRAWN_BIT = 1;
     uint256 internal constant OFFLINE_BIT = 1 << 3;
@@ -49,6 +51,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
     // total stake of active (OK_STATUS) validators (total weight)
     uint256 public totalActiveStake;
+
+    // unresolved fees that failed to be send to the treasury
+    uint256 public unresolvedTreasuryFees;
 
     // delegator => validator ID => stashed rewards (to be claimed/restaked)
     mapping(address delegator => mapping(uint256 validatorID => uint256 stashedRewards)) internal _rewardsStash;
@@ -165,6 +170,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     error ValidatorNotActive();
     error ValidatorDelegationLimitExceeded();
     error NotDeactivatedStatus();
+    error InvalidValidatorID();
 
     // requests
     error RequestExists();
@@ -190,6 +196,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     error ValidatorNotSlashed();
     error RefundRatioTooHigh();
 
+    // treasury
+    error TreasuryNotSet();
+    error NoUnresolvedTreasuryFees();
+
     event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
     event CreatedValidator(
@@ -200,19 +210,47 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     );
     event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
     event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
-    event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
+    event Withdrawn(
+        address indexed delegator,
+        uint256 indexed toValidatorID,
+        uint256 indexed wrID,
+        uint256 amount,
+        uint256 penalty
+    );
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event BurntFTM(uint256 amount);
+    event MintedNativeToken(uint256 amount);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
     event AnnouncedRedirection(address indexed from, address indexed to);
+    event TreasuryFeesResolved(uint256 amount);
+    event RedirectionAuthorizerUpdated(address addr);
+    event RedirectionInitiated(address indexed from, address indexed to);
+    event RedirectedTo(address indexed from, address indexed to);
+    event ConstantsManagerUpdated(address addr);
+    event TreasuryAddressUpdated(address addr);
+    event StakeSubscriberUpdated(address addr);
+
+    event SealedEpoch(
+        uint256 indexed epoch,
+        uint256 endTime,
+        uint256 endBlock,
+        uint256 baseRewardPerSecond,
+        uint256 totalSupply
+    );
+    event SealedEpochValidators(uint256 indexed epoch, uint256 totalStake, uint256[] validatorIDs);
 
     modifier onlyDriver() {
         if (!isNode(msg.sender)) {
             revert NotDriverAuth();
         }
         _;
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
     /// Initialization is called only once, after the contract deployment.
@@ -226,6 +264,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     ) external initializer {
         __Ownable_init(owner);
         __UUPSUpgradeable_init();
+        if (nodeDriver == address(0) || _c == address(0)) {
+            revert ZeroAddress();
+        }
         currentSealedEpoch = sealedEpoch;
         node = NodeDriverAuth(nodeDriver);
         c = ConstantsManager(_c);
@@ -248,6 +289,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             revert SameRedirectionAuthorizer();
         }
         redirectionAuthorizer = v;
+        emit RedirectionAuthorizerUpdated(v);
     }
 
     /// Announce redirection of address to be called by validator whose auth key was compromised.
@@ -270,6 +312,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             revert SameAddress();
         }
         getRedirectionRequest[from] = to;
+        emit RedirectionInitiated(from, to);
     }
 
     /// Accept redirection proposal.
@@ -284,6 +327,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
         getRedirection[from] = to;
         getRedirectionRequest[from] = address(0);
+        emit RedirectedTo(from, to);
     }
 
     /// Seal current epoch - deactivate validators who were offline too long, create an epoch snapshot
@@ -314,6 +358,14 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         snapshot.endBlock = block.number;
         snapshot.baseRewardPerSecond = c.baseRewardPerSecond();
         snapshot.totalSupply = totalSupply;
+
+        emit SealedEpoch(
+            currentSealedEpoch,
+            snapshot.endTime,
+            snapshot.endBlock,
+            snapshot.baseRewardPerSecond,
+            snapshot.totalSupply
+        );
     }
 
     /// Finish epoch sealing - store validators of the new epoch into a snapshot.
@@ -321,13 +373,17 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         // fill data for the next snapshot
+        uint256 snapshotTotalStake = 0;
         for (uint256 i = 0; i < nextValidatorIDs.length; i++) {
             uint256 validatorID = nextValidatorIDs[i];
             uint256 receivedStake = getValidator[validatorID].receivedStake;
             snapshot.receivedStake[validatorID] = receivedStake;
-            snapshot.totalStake = snapshot.totalStake + receivedStake;
+            snapshotTotalStake += receivedStake;
         }
+        snapshot.totalStake = snapshotTotalStake;
         snapshot.validatorIDs = nextValidatorIDs;
+
+        emit SealedEpochValidators(currentEpoch(), snapshot.totalStake, snapshot.validatorIDs);
     }
 
     /// Set an initial validator.
@@ -338,6 +394,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         bytes calldata pubkey,
         uint256 createdTime
     ) external onlyDriver {
+        if (validatorID == 0) {
+            revert InvalidValidatorID();
+        }
+        _validatePubkey(pubkey);
         _rawCreateValidator(
             auth,
             validatorID,
@@ -365,12 +425,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         if (msg.value < c.minSelfStake()) {
             revert InsufficientSelfStake();
         }
-        if (pubkey.length != 66 || pubkey[0] != 0xc0) {
-            revert MalformedPubkey();
-        }
-        if (pubkeyAddressToValidatorID[_pubkeyToAddress(pubkey)] != 0) {
-            revert PubkeyUsedByOtherValidator();
-        }
+        _validatePubkey(pubkey);
         _createValidator(msg.sender, pubkey);
         _delegate(msg.sender, lastValidatorID, msg.value);
     }
@@ -419,6 +474,27 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
     }
 
+    /// Resolve failed treasury transfers and send the unresolved fees to the treasury address.
+    function resolveTreasuryFees() external {
+        if (treasuryAddress == address(0)) {
+            revert TreasuryNotSet();
+        }
+        if (unresolvedTreasuryFees == 0) {
+            revert NoUnresolvedTreasuryFees();
+        }
+
+        // zero the fees before sending to prevent re-entrancy
+        uint256 fees = unresolvedTreasuryFees;
+        unresolvedTreasuryFees = 0;
+
+        (bool success, ) = treasuryAddress.call{value: fees, gas: 1000000}("");
+        if (!success) {
+            revert TransferFailed();
+        }
+
+        emit TreasuryFeesResolved(fees);
+    }
+
     /// burnFTM allows SFC to burn an arbitrary amount of FTM tokens.
     function burnFTM(uint256 amount) external onlyOwner {
         _burnFTM(amount);
@@ -427,16 +503,22 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     /// Update treasury address.
     function updateTreasuryAddress(address v) external onlyOwner {
         treasuryAddress = v;
+        emit TreasuryAddressUpdated(v);
     }
 
     /// Update consts address.
     function updateConstsAddress(address v) external onlyOwner {
+        if (v == address(0)) {
+            revert ZeroAddress();
+        }
         c = ConstantsManager(v);
+        emit ConstantsManagerUpdated(v);
     }
 
     /// Update voteBook address.
     function updateStakeSubscriberAddress(address v) external onlyOwner {
         stakeSubscriberAddress = v;
+        emit StakeSubscriberUpdated(v);
     }
 
     /// Get consts address.
@@ -466,8 +548,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     function undelegate(uint256 toValidatorID, uint256 wrID, uint256 amount) public {
         address delegator = msg.sender;
 
-        _stashRewards(delegator, toValidatorID);
-
         if (amount == 0) {
             revert ZeroAmount();
         }
@@ -476,11 +556,13 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             revert RequestExists();
         }
 
-        _rawUndelegate(delegator, toValidatorID, amount, true, false, true);
+        _stashRewards(delegator, toValidatorID);
 
         getWithdrawalRequest[delegator][toValidatorID][wrID].amount = amount;
         getWithdrawalRequest[delegator][toValidatorID][wrID].epoch = currentEpoch();
         getWithdrawalRequest[delegator][toValidatorID][wrID].time = _now();
+
+        _rawUndelegate(delegator, toValidatorID, amount, true, false, true);
 
         _syncValidator(toValidatorID, false);
 
@@ -631,7 +713,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
         uint256 selfStakeAfterwards = getSelfStake(toValidatorID);
         if (selfStakeAfterwards != 0 && getValidator[toValidatorID].status == OK_STATUS) {
-            if (!(selfStakeAfterwards >= c.minSelfStake())) {
+            if (selfStakeAfterwards < c.minSelfStake()) {
                 if (forceful) {
                     revert InsufficientSelfStake();
                 } else {
@@ -706,7 +788,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
         _burnFTM(penalty);
 
-        emit Withdrawn(delegator, toValidatorID, wrID, amount);
+        emit Withdrawn(delegator, toValidatorID, wrID, amount - penalty, penalty);
     }
 
     /// Get highest epoch for which can be claimed rewards for the given validator.
@@ -777,24 +859,14 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
     }
 
-    /// Get epoch end time.
-    function epochEndTime(uint256 epoch) internal view returns (uint256) {
-        return getEpochSnapshot[epoch].endTime;
-    }
-
-    /// Check if an address is redirected.
-    function _redirected(address addr) internal view returns (bool) {
-        return getRedirection[addr] != address(0);
-    }
-
     /// Get address which should receive rewards and withdrawn stake for the given delegator.
     /// The delegator is usually the receiver, unless a redirection is created.
     function _receiverOf(address addr) internal view returns (address payable) {
         address to = getRedirection[addr];
         if (to == address(0)) {
-            return payable(address(uint160(addr)));
+            return payable(addr);
         }
-        return payable(address(uint160(to)));
+        return payable(to);
     }
 
     /// Seal epoch - sync validators.
@@ -805,7 +877,8 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         uint256[] memory offlineBlocks
     ) internal {
         // mark offline nodes
-        for (uint256 i = 0; i < validatorIDs.length; i++) {
+        uint256 numberOfValidators = validatorIDs.length;
+        for (uint256 i = 0; i < numberOfValidators; i++) {
             if (
                 offlineBlocks[i] > c.offlinePenaltyThresholdBlocksNum() &&
                 offlineTime[i] >= c.offlinePenaltyThresholdTime()
@@ -848,9 +921,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             ctx.txRewardWeights[i] = (originatedTxsFee * uptimes[i]) / epochDuration;
             ctx.totalTxRewardWeight = ctx.totalTxRewardWeight + ctx.txRewardWeights[i];
             ctx.epochFee = ctx.epochFee + originatedTxsFee;
-        }
 
-        for (uint256 i = 0; i < validatorIDs.length; i++) {
             // baseRewardWeight = {stake} * {uptime ^ 2}
             ctx.baseRewardWeights[i] =
                 (((snapshot.receivedStake[validatorIDs[i]] * uptimes[i]) / epochDuration) * uptimes[i]) /
@@ -900,7 +971,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             totalSupply = 0;
         }
 
-        // transfer 10% of fees to treasury
+        // transfer share of fees to treasury
         if (treasuryAddress != address(0)) {
             uint256 feeShare = (ctx.epochFee * c.treasuryFeeShare()) / Decimal.unit();
             _mintNativeToken(feeShare);
@@ -909,6 +980,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             if (!success) {
                 // ignore treasury transfer failure
                 // the treasury failure must not endanger the epoch sealing
+
+                // store the unresolved treasury fees to be resolved later
+                unresolvedTreasuryFees += feeShare;
             }
         }
     }
@@ -921,7 +995,8 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         uint256[] memory validatorIDs,
         uint256[] memory uptimes
     ) internal {
-        for (uint256 i = 0; i < validatorIDs.length; i++) {
+        uint256 numberOfValidators = validatorIDs.length;
+        for (uint256 i = 0; i < numberOfValidators; i++) {
             uint256 validatorID = validatorIDs[i];
             // compute normalised uptime as a percentage in the fixed-point format
             uint256 normalisedUptime = (uptimes[i] * Decimal.unit()) / epochDuration;
@@ -1005,7 +1080,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         if (deactivatedEpoch != 0) {
             emit DeactivatedValidator(validatorID, deactivatedEpoch, deactivatedTime);
         }
-        if (status != 0) {
+        if (status != OK_STATUS) {
             emit ChangedValidatorStatus(validatorID, status);
         }
     }
@@ -1043,6 +1118,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         // balance will be increased after the transaction is processed
         node.incBalance(address(this), amount);
         totalSupply = totalSupply + amount;
+        emit MintedNativeToken(amount);
     }
 
     /// Notify stake subscriber about staking changes.
@@ -1052,7 +1128,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             // Don't allow announceStakeChange to use up all the gas
             // solhint-disable-next-line avoid-low-level-calls
             (bool success, ) = stakeSubscriberAddress.call{gas: 8000000}(
-                abi.encodeWithSignature("announceStakeChange(address,address)", delegator, validatorAuth)
+                abi.encodeCall(IStakeSubscriber.announceStakeChange, (delegator, validatorAuth))
             );
             // Don't revert if announceStakeChange failed unless strict mode enabled
             if (!success && strict) {
@@ -1111,6 +1187,16 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     /// Derive address from validator private key
     function _pubkeyToAddress(bytes calldata pubkey) private pure returns (address) {
         return address(uint160(uint256(keccak256(pubkey[2:]))));
+    }
+
+    /// Validate pubkey.
+    function _validatePubkey(bytes calldata pubkey) internal view {
+        if (pubkey.length != 66 || pubkey[0] != 0xc0) {
+            revert MalformedPubkey();
+        }
+        if (pubkeyAddressToValidatorID[_pubkeyToAddress(pubkey)] != 0) {
+            revert PubkeyUsedByOtherValidator();
+        }
     }
 
     /// Get current time.

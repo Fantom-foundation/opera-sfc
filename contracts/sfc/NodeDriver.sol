@@ -19,6 +19,7 @@ contract NodeDriver is OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
 
     error NotNode();
     error NotBackend();
+    error ZeroAddress();
 
     /// Callable only by NodeDriverAuth (which mediates calls from SFC and from admins)
     modifier onlyBackend() {
@@ -35,11 +36,19 @@ contract NodeDriver is OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
     event UpdateNetworkVersion(uint256 version);
     event AdvanceEpochs(uint256 num);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /// Initialization is called only once, after the contract deployment.
     /// Because the contract code is written directly into genesis, constructor cannot be used.
     function initialize(address _backend, address _evmWriterAddress, address _owner) external initializer {
         __Ownable_init(_owner);
         __UUPSUpgradeable_init();
+        if (_backend == address(0) || _evmWriterAddress == address(0)) {
+            revert ZeroAddress();
+        }
         backend = NodeDriverAuth(_backend);
         evmWriter = IEVMWriter(_evmWriterAddress);
     }
