@@ -18,15 +18,19 @@ contract ConstantsManager is OwnableUpgradeable {
     uint256 public burntFeeShare;
     // The percentage of fees to transfer to treasury address, e.g., 10%
     uint256 public treasuryFeeShare;
-    // the number of epochs that undelegated stake is locked for
+    // The number of epochs that undelegated stake is locked for
     uint256 public withdrawalPeriodEpochs;
-    // the number of seconds that undelegated stake is locked for
+    // The number of seconds that undelegated stake is locked for
     uint256 public withdrawalPeriodTime;
-
+    // The base reward per second for validators
     uint256 public baseRewardPerSecond;
+    // The number of blocks a validator can be offline before being deactivated
     uint256 public offlinePenaltyThresholdBlocksNum;
+    // The number of seconds a validator can be offline before being deactivated
     uint256 public offlinePenaltyThresholdTime;
+    // The target gas power per second
     uint256 public targetGasPowerPerSecond;
+    // The counterweight for gas price balancing
     uint256 public gasPriceBalancingCounterweight;
 
     // The number of epochs to calculate the average uptime ratio from, acceptable bound [10, 87600].
@@ -35,6 +39,7 @@ contract ConstantsManager is OwnableUpgradeable {
 
     // Minimum average uptime ratio in fixed-point format; acceptable bounds [0,0.9].
     // Zero to disable validators deactivation by this metric.
+    // 0.9 to deactivate validators with average uptime ratio below 90%.
     uint64 public minAverageUptime;
 
     event MinSelfStakeUpdated(uint256 v);

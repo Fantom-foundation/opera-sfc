@@ -704,7 +704,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
         uint256 selfStakeAfterwards = getSelfStake(toValidatorID);
         if (selfStakeAfterwards != 0 && getValidator[toValidatorID].status == OK_STATUS) {
-            if (!(selfStakeAfterwards >= c.minSelfStake())) {
+            if (selfStakeAfterwards < c.minSelfStake()) {
                 if (forceful) {
                     revert InsufficientSelfStake();
                 } else {
@@ -973,7 +973,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             totalSupply = 0;
         }
 
-        // transfer 10% of fees to treasury
+        // transfer share of fees to treasury
         if (treasuryAddress != address(0)) {
             uint256 feeShare = (ctx.epochFee * c.treasuryFeeShare()) / Decimal.unit();
             _mintNativeToken(feeShare);
@@ -1081,7 +1081,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         if (deactivatedEpoch != 0) {
             emit DeactivatedValidator(validatorID, deactivatedEpoch, deactivatedTime);
         }
-        if (status != 0) {
+        if (status != OK_STATUS) {
             emit ChangedValidatorStatus(validatorID, status);
         }
     }
