@@ -368,12 +368,14 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyDriver {
         EpochSnapshot storage snapshot = getEpochSnapshot[currentEpoch()];
         // fill data for the next snapshot
+        uint256 snapshotTotalStake = 0;
         for (uint256 i = 0; i < nextValidatorIDs.length; i++) {
             uint256 validatorID = nextValidatorIDs[i];
             uint256 receivedStake = getValidator[validatorID].receivedStake;
             snapshot.receivedStake[validatorID] = receivedStake;
-            snapshot.totalStake = snapshot.totalStake + receivedStake;
+            snapshotTotalStake += receivedStake;
         }
+        snapshot.totalStake = snapshotTotalStake;
         snapshot.validatorIDs = nextValidatorIDs;
 
         emit SealedEpochValidators(currentEpoch(), snapshot.totalStake, snapshot.validatorIDs);
@@ -868,7 +870,8 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         uint256[] memory offlineBlocks
     ) internal {
         // mark offline nodes
-        for (uint256 i = 0; i < validatorIDs.length; i++) {
+        uint256 numberOfValidators = validatorIDs.length;
+        for (uint256 i = 0; i < numberOfValidators; i++) {
             if (
                 offlineBlocks[i] > c.offlinePenaltyThresholdBlocksNum() &&
                 offlineTime[i] >= c.offlinePenaltyThresholdTime()
@@ -985,7 +988,8 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         uint256[] memory validatorIDs,
         uint256[] memory uptimes
     ) internal {
-        for (uint256 i = 0; i < validatorIDs.length; i++) {
+        uint256 numberOfValidators = validatorIDs.length;
+        for (uint256 i = 0; i < numberOfValidators; i++) {
             uint256 validatorID = validatorIDs[i];
             // compute normalised uptime as a percentage in the fixed-point format
             uint256 normalisedUptime = (uptimes[i] * Decimal.unit()) / epochDuration;
