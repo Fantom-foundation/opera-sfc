@@ -19,6 +19,7 @@ contract NodeDriver is OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
 
     error NotNode();
     error NotBackend();
+    error ZeroAddress();
 
     /// Callable only by NodeDriverAuth (which mediates calls from SFC and from admins)
     modifier onlyBackend() {
@@ -45,6 +46,9 @@ contract NodeDriver is OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
     function initialize(address _backend, address _evmWriterAddress, address _owner) external initializer {
         __Ownable_init(_owner);
         __UUPSUpgradeable_init();
+        if (_backend == address(0) || _evmWriterAddress == address(0)) {
+            revert ZeroAddress();
+        }
         backend = NodeDriverAuth(_backend);
         evmWriter = IEVMWriter(_evmWriterAddress);
     }

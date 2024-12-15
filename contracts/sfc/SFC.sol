@@ -170,6 +170,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version, ISFC {
     error ValidatorNotActive();
     error ValidatorDelegationLimitExceeded();
     error NotDeactivatedStatus();
+    error InvalidValidatorID();
 
     // requests
     error RequestExists();
@@ -263,6 +264,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version, ISFC {
     ) external initializer {
         __Ownable_init(owner);
         __UUPSUpgradeable_init();
+        if (nodeDriver == address(0) || _c == address(0)) {
+            revert ZeroAddress();
+        }
         currentSealedEpoch = sealedEpoch;
         node = NodeDriverAuth(nodeDriver);
         c = ConstantsManager(_c);
@@ -390,6 +394,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version, ISFC {
         bytes calldata pubkey,
         uint256 createdTime
     ) external onlyDriver {
+        if (validatorID == 0) {
+            revert InvalidValidatorID();
+        }
+        _validatePubkey(pubkey);
         _rawCreateValidator(
             auth,
             validatorID,
@@ -417,12 +425,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version, ISFC {
         if (msg.value < c.minSelfStake()) {
             revert InsufficientSelfStake();
         }
-        if (pubkey.length != 66 || pubkey[0] != 0xc0) {
-            revert MalformedPubkey();
-        }
-        if (pubkeyAddressToValidatorID[_pubkeyToAddress(pubkey)] != 0) {
-            revert PubkeyUsedByOtherValidator();
-        }
+        _validatePubkey(pubkey);
         _createValidator(msg.sender, pubkey);
         _delegate(msg.sender, lastValidatorID, msg.value);
     }
@@ -505,6 +508,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version, ISFC {
 
     /// Update consts address.
     function updateConstsAddress(address v) external onlyOwner {
+        if (v == address(0)) {
+            revert ZeroAddress();
+        }
         c = ConstantsManager(v);
         emit ConstantsManagerUpdated(v);
     }
@@ -1181,6 +1187,16 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version, ISFC {
     /// Derive address from validator private key
     function _pubkeyToAddress(bytes calldata pubkey) private pure returns (address) {
         return address(uint160(uint256(keccak256(pubkey[2:]))));
+    }
+
+    /// Validate pubkey.
+    function _validatePubkey(bytes calldata pubkey) internal view {
+        if (pubkey.length != 66 || pubkey[0] != 0xc0) {
+            revert MalformedPubkey();
+        }
+        if (pubkeyAddressToValidatorID[_pubkeyToAddress(pubkey)] != 0) {
+            revert PubkeyUsedByOtherValidator();
+        }
     }
 
     /// Get current time.

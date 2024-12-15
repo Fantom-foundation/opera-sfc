@@ -57,9 +57,11 @@ describe('SFC', () => {
 
   describe('Genesis validator', () => {
     beforeEach(async function () {
+      const validatorPubKey =
+        '0xc000a2941866e485442aa6b17d67d77f8a6c4580bb556894cc1618473eff1e18203d8cce50b563cf4c75e408886079b8f067069442ed52e2ac9e556baa3f8fcc525f';
       const validator = ethers.Wallet.createRandom();
       await this.sfc.enableNonNodeCalls();
-      await this.sfc.setGenesisValidator(validator.address, 1, validator.publicKey, Date.now());
+      await this.sfc.setGenesisValidator(validator.address, 1, validatorPubKey, Date.now());
       await this.sfc.deactivateValidator(1, 1 << 3);
       await this.sfc.disableNonNodeCalls();
     });

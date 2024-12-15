@@ -20,6 +20,7 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
     error SelfCodeHashMismatch();
     error DriverCodeHashMismatch();
     error RecipientNotSFC();
+    error ZeroAddress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -30,6 +31,9 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
     function initialize(address payable _sfc, address _driver, address _owner) external initializer {
         __Ownable_init(_owner);
         __UUPSUpgradeable_init();
+        if (_sfc == address(0) || _driver == address(0)) {
+            revert ZeroAddress();
+        }
         driver = NodeDriver(_driver);
         sfc = ISFC(_sfc);
     }
