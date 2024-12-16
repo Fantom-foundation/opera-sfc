@@ -414,7 +414,8 @@ contract SFCLib is SFCBase {
     }
 
     function _burnFTM(uint256 amount) internal {
-        if (amount != 0 && totalSupply >= amount) {
+        if (amount != 0) {
+            require(totalSupply >= amount, "Amount to burn too large");
             totalSupply -= amount;
             address(0).transfer(amount);
             emit BurntFTM(amount);
