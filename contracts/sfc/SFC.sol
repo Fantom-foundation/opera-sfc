@@ -152,6 +152,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     // values
     error ZeroAmount();
     error ZeroRewards();
+    error ValueTooLarge();
 
     // pubkeys
     error PubkeyUsedByOtherValidator();
@@ -823,7 +824,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     /// Burn native tokens.
     /// The tokens are sent to the zero address.
     function _burnNativeTokens(uint256 amount) internal {
-        if (amount != 0 && totalSupply >= amount) {
+        if (amount != 0) {
+            if (amount > totalSupply) {
+                revert ValueTooLarge();
+            }
             totalSupply -= amount;
             payable(address(0)).transfer(amount);
             emit BurntNativeTokens(amount);

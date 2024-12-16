@@ -8,6 +8,7 @@ import { BlockchainNode, ValidatorMetrics } from './helpers/BlockchainNode';
 describe('SFC', () => {
   const fixture = async () => {
     const [owner, user] = await ethers.getSigners();
+    const totalSupply = ethers.parseEther('100');
     const sfc = await upgrades.deployProxy(await ethers.getContractFactory('UnitTestSFC'), {
       kind: 'uups',
       initializer: false,
@@ -24,7 +25,7 @@ describe('SFC', () => {
     const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
     const initializer: UnitTestNetworkInitializer = await ethers.deployContract('UnitTestNetworkInitializer');
 
-    await initializer.initializeAll(0, ethers.parseEther('100000'), sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
+    await initializer.initializeAll(0, totalSupply, sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
     const constants: UnitTestConstantsManager = await ethers.getContractAt(
       'UnitTestConstantsManager',
       await sfc.constsAddress(),
@@ -39,6 +40,7 @@ describe('SFC', () => {
       nodeDriver,
       nodeDriverAuth,
       constants,
+      totalSupply
     };
   };
 
@@ -61,6 +63,14 @@ describe('SFC', () => {
         this.sfc,
         'ZeroAmount',
       );
+    });
+
+    it('Should revert when amount greater than total supply', async function () {
+      await expect(this.sfc.connect(this.user).burnNativeTokens({ value: this.totalSupply + 1n }))
+        .to.be.revertedWithCustomError(
+          this.sfc,
+          'ValueTooLarge',
+          );
     });
 
     it('Should succeed and burn native tokens', async function () {
