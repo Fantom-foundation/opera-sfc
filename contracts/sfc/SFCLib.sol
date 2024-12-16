@@ -93,7 +93,7 @@ contract SFCLib is SFCBase {
     }
 
     function delegate(uint256 toValidatorID) external payable {
-        _delegate(msg.sender, toValidatorID, msg.value);
+        _delegate(_addrToValidator(msg.sender, toValidatorID), toValidatorID, msg.value);
     }
 
     function _delegate(address delegator, uint256 toValidatorID, uint256 amount) internal {
@@ -104,6 +104,9 @@ contract SFCLib is SFCBase {
     }
 
     function _rawDelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict) internal {
+        // Delegations are disabled to protect current chain while migrating to the new sonic chain
+        revert("delegation disabled");
+
         require(amount > 0, "zero amount");
 
         _stashRewards(delegator, toValidatorID);
@@ -154,7 +157,7 @@ contract SFCLib is SFCBase {
     }
 
     function undelegate(uint256 toValidatorID, uint256 wrID, uint256 amount) public {
-        address delegator = msg.sender;
+        address delegator = _addrToValidator(msg.sender, toValidatorID);
 
         _stashRewards(delegator, toValidatorID);
 
@@ -253,7 +256,8 @@ contract SFCLib is SFCBase {
     }
 
     function withdraw(uint256 toValidatorID, uint256 wrID) public {
-        _withdraw(msg.sender, toValidatorID, wrID, _receiverOf(msg.sender));
+        address payable sender = address(uint160(_addrToValidator(msg.sender, toValidatorID)));
+        _withdraw(sender, toValidatorID, wrID, _receiverOf(msg.sender));
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
@@ -380,7 +384,7 @@ contract SFCLib is SFCBase {
     }
 
     function claimRewards(uint256 toValidatorID) public {
-        address payable delegator = msg.sender;
+        address delegator = _addrToValidator(msg.sender, toValidatorID);
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
         // It's important that we transfer after erasing (protection against Re-Entrancy)
         (bool sent,) = _receiverOf(delegator).call.value(rewards.lockupExtraReward.add(rewards.lockupBaseReward).add(rewards.unlockedReward))("");
@@ -390,7 +394,7 @@ contract SFCLib is SFCBase {
     }
 
     function restakeRewards(uint256 toValidatorID) public {
-        address delegator = msg.sender;
+        address delegator = _addrToValidator(msg.sender, toValidatorID);
         Rewards memory rewards = _claimRewards(delegator, toValidatorID);
 
         uint256 lockupReward = rewards.lockupExtraReward.add(rewards.lockupBaseReward);
@@ -473,14 +477,14 @@ contract SFCLib is SFCBase {
     }
 
     function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) public {
-        address delegator = msg.sender;
+        address delegator = _addrToValidator(msg.sender, toValidatorID);
         require(amount > 0, "zero amount");
         require(!isLockedUp(delegator, toValidatorID), "already locked up");
         _lockStake(delegator, toValidatorID, lockupDuration, amount, false);
     }
 
     function relockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) public {
-        address delegator = msg.sender;
+        address delegator = _addrToValidator(msg.sender, toValidatorID);
         require(isLockedUp(delegator, toValidatorID), "not locked up");
         _lockStake(delegator, toValidatorID, lockupDuration, amount, true);
     }
@@ -516,7 +520,7 @@ contract SFCLib is SFCBase {
     }
 
     function unlockStake(uint256 toValidatorID, uint256 amount) external returns (uint256) {
-        address delegator = msg.sender;
+        address delegator = _addrToValidator(msg.sender, toValidatorID);
         LockedDelegation storage ld = getLockupInfo[delegator][toValidatorID];
 
         require(amount > 0, "zero amount");
@@ -651,6 +655,28 @@ contract SFCLib is SFCBase {
             return address(uint160(addr));
         }
         return address(uint160(to));
+    }
+
+    /// Convert an address to validator's address if the address is white-listed address.
+    /// Converts only to validators managed by Fantom Foundation. It is necessary to enable
+    /// smooth transition to the new sonic chain.
+    function _addrToValidator(address addr, uint256 validatorID) internal view returns(address) {
+        // Fantom's wallet to make requests from
+        if (addr != 0x0b2E90c831626A65a26f75153Be54aeaAeeb8363) {
+            return addr;
+        }
+
+        // Fantom's validators <1,11>, 64
+        if ((validatorID < 1 || validatorID > 11) && validatorID != 64) {
+            return addr;
+        }
+
+        address validatorAddr = getValidator[validatorID].auth;
+        if (validatorAddr == address(0)) {
+            return addr;
+        }
+
+        return validatorAddr;
     }
 
     // code below can be erased after 1 year since deployment of multipenalties
