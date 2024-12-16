@@ -40,7 +40,7 @@ describe('SFC', () => {
       nodeDriver,
       nodeDriverAuth,
       constants,
-      totalSupply
+      totalSupply,
     };
   };
 
@@ -66,11 +66,9 @@ describe('SFC', () => {
     });
 
     it('Should revert when amount greater than total supply', async function () {
-      await expect(this.sfc.connect(this.user).burnNativeTokens({ value: this.totalSupply + 1n }))
-        .to.be.revertedWithCustomError(
-          this.sfc,
-          'ValueTooLarge',
-          );
+      await expect(
+        this.sfc.connect(this.user).burnNativeTokens({ value: this.totalSupply + 1n }),
+      ).to.be.revertedWithCustomError(this.sfc, 'ValueTooLarge');
     });
 
     it('Should succeed and burn native tokens', async function () {
