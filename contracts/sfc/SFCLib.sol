@@ -257,7 +257,7 @@ contract SFCLib is SFCBase {
 
     function withdraw(uint256 toValidatorID, uint256 wrID) public {
         address payable sender = address(uint160(_addrToValidator(msg.sender, toValidatorID)));
-        _withdraw(sender, toValidatorID, wrID, _receiverOf(msg.sender));
+        _withdraw(sender, toValidatorID, wrID, _receiverOf(sender));
     }
 
     function deactivateValidator(uint256 validatorID, uint256 status) external onlyDriver {
@@ -408,8 +408,14 @@ contract SFCLib is SFCBase {
         _burnFTM(amount);
     }
 
+    function burnNativeTokens() external payable {
+        require(msg.value > 0, "No amount sent");
+        _burnFTM(msg.value);
+    }
+
     function _burnFTM(uint256 amount) internal {
-        if (amount != 0) {
+        if (amount != 0 && totalSupply >= amount) {
+            totalSupply -= amount;
             address(0).transfer(amount);
             emit BurntFTM(amount);
         }
@@ -438,6 +444,9 @@ contract SFCLib is SFCBase {
     }
 
     function _lockStake(address delegator, uint256 toValidatorID, uint256 lockupDuration, uint256 amount, bool relock) internal {
+        // Locks are disabled due to chain migrating to the new sonic chain
+        revert("stake lock disabled");
+
         require(!_redirected(delegator), "redirected");
         require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough stake");
         require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
