@@ -2,7 +2,7 @@ import { HardhatUserConfig } from 'hardhat/config';
 import * as dotenv from 'dotenv';
 import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomicfoundation/hardhat-ethers';
-import "@nomicfoundation/hardhat-ignition";
+import '@nomicfoundation/hardhat-ignition';
 import '@openzeppelin/hardhat-upgrades';
 import '@typechain/hardhat';
 import 'hardhat-contract-sizer';
@@ -24,12 +24,29 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {},
+    mainnet: {
+      url: process.env.MAINNET_RPC_URL!,
+      accounts: [process.env.MAINNET_PRIVATE_KEY_DEPLOY!],
+    },
     testnet: {
       url: process.env.TESTNET_RPC_URL!,
-      accounts: [
-        process.env.TESTNET_PRIVATE_KEY_DEPLOY!,
-      ],
-    }
+      accounts: [process.env.TESTNET_PRIVATE_KEY_DEPLOY!],
+    },
+  },
+  etherscan: {
+    apiKey: {
+      mainnet: process.env.SONICSCAN_API_KEY!,
+    },
+    customChains: [
+      {
+        network: 'mainnet',
+        chainId: 146,
+        urls: {
+          apiURL: 'https://api.sonicscan.org/api',
+          browserURL: 'https://sonicscan.org',
+        },
+      },
+    ],
   },
   gasReporter: {
     currency: 'USD',

@@ -1,8 +1,8 @@
-import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+import { buildModule } from '@nomicfoundation/hardhat-ignition/modules';
 
-// npx hardhat ignition deploy ./ignition/modules/ConstantsManager.ts --network testnet --parameters ignition/params.json
+// npx hardhat ignition deploy ./ignition/modules/ConstantsManager.ts --network testnet --deployment-id manager --parameters ignition/params.json
 
-export default buildModule("ConstantsManager", (m) => {
+export default buildModule('ConstantsManager', m => {
   const deployAccount = m.getAccount(0);
 
   const minSelfStake = m.getParameter('minSelfStake');
@@ -20,22 +20,26 @@ export default buildModule("ConstantsManager", (m) => {
   const averageUptimeEpochWindow = m.getParameter('averageUptimeEpochWindow');
   const updateMinAverageUptime = m.getParameter('updateMinAverageUptime');
 
-  const constantsManager = m.contract("ConstantsManager", [deployAccount]);
+  const constantsManager = m.contract('ConstantsManager', [deployAccount]);
 
-  m.call(constantsManager, "updateMinSelfStake", [minSelfStake], {from: deployAccount});
-  m.call(constantsManager, "updateMaxDelegatedRatio", [maxDelegatedRatio], {from: deployAccount});
-  m.call(constantsManager, "updateValidatorCommission", [validatorCommissions], {from: deployAccount});
-  m.call(constantsManager, "updateBurntFeeShare", [burntFeeShare], {from: deployAccount});
-  m.call(constantsManager, "updateTreasuryFeeShare", [treasuryFeeShare], {from: deployAccount});
-  m.call(constantsManager, "updateWithdrawalPeriodEpochs", [withdrawalPeriodEpochs], {from: deployAccount});
-  m.call(constantsManager, "updateWithdrawalPeriodTime", [withdrawalPeriodTime], {from: deployAccount});
-  m.call(constantsManager, "updateBaseRewardPerSecond", [baseRewardPerSecond], {from: deployAccount});
-  m.call(constantsManager, "updateOfflinePenaltyThresholdTime", [offlinePenaltyThresholdTime], {from: deployAccount});
-  m.call(constantsManager, "updateOfflinePenaltyThresholdBlocksNum", [offlinePenaltyThresholdBlocksNumber], {from: deployAccount});
-  m.call(constantsManager, "updateTargetGasPowerPerSecond", [targetGasPowerPerSecond], {from: deployAccount});
-  m.call(constantsManager, "updateGasPriceBalancingCounterweight", [gasPriceBalancingCounterweights], {from: deployAccount});
-  m.call(constantsManager, "updateAverageUptimeEpochWindow", [averageUptimeEpochWindow], {from: deployAccount});
-  m.call(constantsManager, "updateMinAverageUptime", [updateMinAverageUptime], {from: deployAccount});
+  m.call(constantsManager, 'updateMinSelfStake', [minSelfStake], { from: deployAccount });
+  m.call(constantsManager, 'updateMaxDelegatedRatio', [maxDelegatedRatio], { from: deployAccount });
+  m.call(constantsManager, 'updateValidatorCommission', [validatorCommissions], { from: deployAccount });
+  m.call(constantsManager, 'updateBurntFeeShare', [burntFeeShare], { from: deployAccount });
+  m.call(constantsManager, 'updateTreasuryFeeShare', [treasuryFeeShare], { from: deployAccount });
+  m.call(constantsManager, 'updateWithdrawalPeriodEpochs', [withdrawalPeriodEpochs], { from: deployAccount });
+  m.call(constantsManager, 'updateWithdrawalPeriodTime', [withdrawalPeriodTime], { from: deployAccount });
+  m.call(constantsManager, 'updateBaseRewardPerSecond', [baseRewardPerSecond], { from: deployAccount });
+  m.call(constantsManager, 'updateOfflinePenaltyThresholdTime', [offlinePenaltyThresholdTime], { from: deployAccount });
+  m.call(constantsManager, 'updateOfflinePenaltyThresholdBlocksNum', [offlinePenaltyThresholdBlocksNumber], {
+    from: deployAccount,
+  });
+  m.call(constantsManager, 'updateTargetGasPowerPerSecond', [targetGasPowerPerSecond], { from: deployAccount });
+  m.call(constantsManager, 'updateGasPriceBalancingCounterweight', [gasPriceBalancingCounterweights], {
+    from: deployAccount,
+  });
+  m.call(constantsManager, 'updateAverageUptimeEpochWindow', [averageUptimeEpochWindow], { from: deployAccount });
+  m.call(constantsManager, 'updateMinAverageUptime', [updateMinAverageUptime], { from: deployAccount });
 
   return { constantsManager };
 });

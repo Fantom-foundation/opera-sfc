@@ -1,8 +1,8 @@
-import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+import { buildModule } from '@nomicfoundation/hardhat-ignition/modules';
 
-// npx hardhat ignition deploy ./ignition/modules/NodeDriver.ts --network testnet --parameters ignition/params.json
+// npx hardhat ignition deploy ./ignition/modules/NodeDriver.ts --network testnet --deployment-id nodeDriver --parameters ignition/params.json
 
-export default buildModule("NodeDriver", (m) => {
-  const nodeDriver = m.contract("NodeDriver");
+export default buildModule('NodeDriver', m => {
+  const nodeDriver = m.contract('NodeDriver');
   return { nodeDriver };
 });
