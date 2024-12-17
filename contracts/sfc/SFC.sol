@@ -152,6 +152,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     // values
     error ZeroAmount();
     error ZeroRewards();
+    error ValueTooLarge();
 
     // pubkeys
     error PubkeyUsedByOtherValidator();
@@ -216,7 +217,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     );
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
-    event BurntFTM(uint256 amount);
+    event BurntNativeTokens(uint256 amount);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
     event AnnouncedRedirection(address indexed from, address indexed to);
@@ -459,9 +460,12 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         emit TreasuryFeesResolved(fees);
     }
 
-    /// burnFTM allows SFC to burn an arbitrary amount of FTM tokens.
-    function burnFTM(uint256 amount) external onlyOwner {
-        _burnFTM(amount);
+    /// Burn native tokens by sending them to the SFC contract.
+    function burnNativeTokens() external payable {
+        if (msg.value == 0) {
+            revert ZeroAmount();
+        }
+        _burnNativeTokens(msg.value);
     }
 
     /// Issue tokens to the issued tokens recipient as a counterparty to the burnt FTM tokens.
@@ -753,7 +757,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         if (!sent) {
             revert TransferFailed();
         }
-        _burnFTM(penalty);
+        _burnNativeTokens(penalty);
 
         emit Withdrawn(delegator, toValidatorID, wrID, amount - penalty, penalty);
     }
@@ -817,12 +821,16 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         return rewards;
     }
 
-    /// Burn FTM tokens.
+    /// Burn native tokens.
     /// The tokens are sent to the zero address.
-    function _burnFTM(uint256 amount) internal {
+    function _burnNativeTokens(uint256 amount) internal {
         if (amount != 0) {
+            if (amount > totalSupply) {
+                revert ValueTooLarge();
+            }
+            totalSupply -= amount;
             payable(address(0)).transfer(amount);
-            emit BurntFTM(amount);
+            emit BurntNativeTokens(amount);
         }
     }
 
