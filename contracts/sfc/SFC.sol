@@ -162,7 +162,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     // redirections
     error AlreadyRedirected();
     error SameRedirectionAuthorizer();
-    error Redirected();
 
     // validators
     error ValidatorNotExists();
@@ -220,12 +219,11 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event BurntNativeTokens(uint256 amount);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
-    event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
     event AnnouncedRedirection(address indexed from, address indexed to);
     event TreasuryFeesResolved(uint256 amount);
 
     modifier onlyDriver() {
-        if (!_isNode(msg.sender)) {
+        if (!_isNodeDriverAuth(msg.sender)) {
             revert NotDriverAuth();
         }
         _;
@@ -363,11 +361,8 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             auth,
             validatorID,
             pubkey,
-            OK_STATUS,
             0, // createdEpoch
-            createdTime,
-            0, // deactivatedEpoch - not deactivated
-            0 // deactivatedTime - not deactivated
+            createdTime
         );
         if (validatorID > lastValidatorID) {
             lastValidatorID = validatorID;
@@ -631,7 +626,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Check if an address is the NodeDriverAuth contract.
-    function _isNode(address addr) internal view virtual returns (bool) {
+    function _isNodeDriverAuth(address addr) internal view virtual returns (bool) {
         return addr == address(node);
     }
 
@@ -843,11 +838,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
     }
 
-    /// Check if an address is redirected.
-    function _redirected(address addr) internal view returns (bool) {
-        return getRedirection[addr] != address(0);
-    }
-
     /// Get address which should receive rewards and withdrawn stake for the given delegator.
     /// The delegator is usually the receiver, unless a redirection is created.
     function _receiverOf(address addr) internal view returns (address payable) {
@@ -1039,7 +1029,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     /// Create a new validator.
     function _createValidator(address auth, bytes calldata pubkey) internal {
         uint256 validatorID = ++lastValidatorID;
-        _rawCreateValidator(auth, validatorID, pubkey, OK_STATUS, currentEpoch(), _now(), 0, 0);
+        _rawCreateValidator(auth, validatorID, pubkey, currentEpoch(), _now());
     }
 
     /// Create a new validator without incrementing lastValidatorID.
@@ -1047,32 +1037,23 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         address auth,
         uint256 validatorID,
         bytes calldata pubkey,
-        uint256 status,
         uint256 createdEpoch,
-        uint256 createdTime,
-        uint256 deactivatedEpoch,
-        uint256 deactivatedTime
+        uint256 createdTime
     ) internal {
         if (getValidatorID[auth] != 0) {
             revert ValidatorExists();
         }
         getValidatorID[auth] = validatorID;
-        getValidator[validatorID].status = status;
+        getValidator[validatorID].status = OK_STATUS;
         getValidator[validatorID].createdEpoch = createdEpoch;
         getValidator[validatorID].createdTime = createdTime;
-        getValidator[validatorID].deactivatedTime = deactivatedTime;
-        getValidator[validatorID].deactivatedEpoch = deactivatedEpoch;
+        getValidator[validatorID].deactivatedTime = 0;
+        getValidator[validatorID].deactivatedEpoch = 0;
         getValidator[validatorID].auth = auth;
         getValidatorPubkey[validatorID] = pubkey;
         pubkeyAddressToValidatorID[_pubkeyToAddress(pubkey)] = validatorID;
 
         emit CreatedValidator(validatorID, auth, createdEpoch, createdTime);
-        if (deactivatedEpoch != 0) {
-            emit DeactivatedValidator(validatorID, deactivatedEpoch, deactivatedTime);
-        }
-        if (status != 0) {
-            emit ChangedValidatorStatus(validatorID, status);
-        }
     }
 
     /// Calculate raw validator epoch transaction reward.

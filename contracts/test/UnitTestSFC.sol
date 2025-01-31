@@ -40,11 +40,11 @@ contract UnitTestSFC is SFC {
         return time;
     }
 
-    function _isNode(address addr) internal view override returns (bool) {
+    function _isNodeDriverAuth(address addr) internal view override returns (bool) {
         if (allowedNonNodeCalls) {
             return true;
         }
-        return SFC._isNode(addr);
+        return SFC._isNodeDriverAuth(addr);
     }
 
     function syncValidator(uint256 validatorID, bool syncPubkey) public {
