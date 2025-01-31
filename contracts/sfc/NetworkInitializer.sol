@@ -25,18 +25,16 @@ contract NetworkInitializer {
         NodeDriverAuth(_auth).initialize(_sfc, _driver, _owner);
 
         ConstantsManager consts = new ConstantsManager(address(this));
-        consts.updateMinSelfStake(500000 * Decimal.unit());
+        consts.updateMinSelfStake(500_000 * Decimal.unit());
         consts.updateMaxDelegatedRatio(16 * Decimal.unit());
         consts.updateValidatorCommission((15 * Decimal.unit()) / 100);
-        consts.updateBurntFeeShare((20 * Decimal.unit()) / 100);
-        consts.updateTreasuryFeeShare((10 * Decimal.unit()) / 100);
+        consts.updateBurntFeeShare(0);
+        consts.updateTreasuryFeeShare((90 * Decimal.unit()) / 100);
         consts.updateWithdrawalPeriodEpochs(3);
         consts.updateWithdrawalPeriodTime(60 * 60 * 24 * 7);
-        consts.updateBaseRewardPerSecond(2668658453701531600);
+        consts.updateBaseRewardPerSecond(1_000);
         consts.updateOfflinePenaltyThresholdTime(5 days);
-        consts.updateOfflinePenaltyThresholdBlocksNum(1000);
-        consts.updateTargetGasPowerPerSecond(2000000);
-        consts.updateGasPriceBalancingCounterweight(3600);
+        consts.updateOfflinePenaltyThresholdBlocksNum(1_000);
         consts.updateAverageUptimeEpochWindow(100);
         consts.updateMinAverageUptime(0); // check disabled by default
         consts.transferOwnership(_owner);

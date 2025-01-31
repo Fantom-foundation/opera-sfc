@@ -830,7 +830,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
                 revert ValueTooLarge();
             }
             totalSupply -= amount;
-            payable(address(0)).transfer(amount);
+            (bool sent, ) = payable(address(0)).call{value: amount}("");
+            if (!sent) {
+                revert TransferFailed();
+            }
             emit BurntNativeTokens(amount);
         }
     }
@@ -840,9 +843,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     function _receiverOf(address addr) internal view returns (address payable) {
         address to = getRedirection[addr];
         if (to == address(0)) {
-            return payable(address(uint160(addr)));
+            return payable(addr);
         }
-        return payable(address(uint160(to)));
+        return payable(to);
     }
 
     /// Seal epoch - sync validators.
