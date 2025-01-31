@@ -21,6 +21,11 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
     error DriverCodeHashMismatch();
     error RecipientNotSFC();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     // Initialize NodeDriverAuth, NodeDriver and SFC in one call to allow fewer genesis transactions
     function initialize(address payable _sfc, address _driver, address _owner) external initializer {
         __Ownable_init(_owner);
@@ -53,7 +58,6 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
         _transferOwnership(executable);
         INodeDriverExecutable(executable).execute();
         _transferOwnership(newOwner);
-        //require(driver.backend() == address(this), "ownership of driver is lost");
         if (_getCodeHash(address(this)) != selfCodeHash) {
             revert SelfCodeHashMismatch();
         }
@@ -63,7 +67,7 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /// Execute a batch update of network configuration.
-    /// Run given contract with a permission of the NodeDriverAuth owner.
+    /// The executable will run with the privileges of the NodeDriverAuth owner.
     /// Does not allow changing NodeDriver and NodeDriverAuth code.
     function execute(address executable) external onlyOwner {
         _execute(executable, owner(), _getCodeHash(address(this)), _getCodeHash(address(driver)));
@@ -83,13 +87,10 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
 
     /// Mint native token. To be used by SFC for minting validators rewards.
     function incBalance(address acc, uint256 diff) external onlySFC {
-        if (acc != address(sfc)) {
-            revert RecipientNotSFC();
-        }
         driver.setBalance(acc, address(acc).balance + diff);
     }
 
-    /// Upgrade code of given contract by coping it from other deployed contract.
+    /// Upgrade code of given contract by copying it from other deployed contract.
     /// Avoids setting code to an external address.
     function upgradeCode(address acc, address from) external onlyOwner {
         if (!isContract(acc) || !isContract(from)) {
@@ -98,7 +99,7 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
         driver.copyCode(acc, from);
     }
 
-    /// Upgrade code of given contract by coping it from other deployed contract.
+    /// Upgrade code of given contract by copying it from other deployed contract.
     /// Does not avoid setting code to an external address. (DANGEROUS!)
     function copyCode(address acc, address from) external onlyOwner {
         driver.copyCode(acc, from);
@@ -171,19 +172,12 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function isContract(address account) internal view returns (bool) {
-        uint256 size;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
+        return account.code.length > 0;
     }
 
     function _getCodeHash(address addr) internal view returns (bytes32) {
-        bytes32 codeHash;
-        assembly {
-            codeHash := extcodehash(addr)
-        }
-        return codeHash;
+        return addr.codehash;
     }
+
+    uint256[50] private __gap;
 }
