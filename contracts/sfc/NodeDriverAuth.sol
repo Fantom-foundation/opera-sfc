@@ -87,7 +87,7 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
 
     /// Mint native token. To be used by SFC for minting validators rewards.
     function incBalance(address acc, uint256 diff) external onlySFC {
-        driver.setBalance(acc, address(acc).balance + diff);
+        driver.setBalance(acc, acc.balance + diff);
     }
 
     /// Upgrade code of given contract by copying it from other deployed contract.
