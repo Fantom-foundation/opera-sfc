@@ -835,7 +835,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
                 revert ValueTooLarge();
             }
             totalSupply -= amount;
-            payable(address(0)).transfer(amount);
+            (bool sent, ) = payable(address(0)).call{value: amount}("");
+            if (!sent) {
+                revert TransferFailed();
+            }
             emit BurntNativeTokens(amount);
         }
     }
