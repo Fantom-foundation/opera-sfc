@@ -7,6 +7,7 @@ import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {Version} from "../version/Version.sol";
+import {IStakeSubscriber} from "../interfaces/IStakeSubscriber.sol";
 
 /**
  * @title Special Fee Contract for Sonic network
@@ -1113,7 +1114,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             // Don't allow announceStakeChange to use up all the gas
             // solhint-disable-next-line avoid-low-level-calls
             (bool success, ) = stakeSubscriberAddress.call{gas: 8000000}(
-                abi.encodeWithSignature("announceStakeChange(address,address)", delegator, validatorAuth)
+                abi.encodeCall(IStakeSubscriber.announceStakeChange, (delegator, validatorAuth))
             );
             // Don't revert if announceStakeChange failed unless strict mode enabled
             if (!success && strict) {
