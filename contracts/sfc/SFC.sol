@@ -835,11 +835,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
     }
 
-    /// Check if an address is redirected.
-    function _redirected(address addr) internal view returns (bool) {
-        return getRedirection[addr] != address(0);
-    }
-
     /// Get address which should receive rewards and withdrawn stake for the given delegator.
     /// The delegator is usually the receiver, unless a redirection is created.
     function _receiverOf(address addr) internal view returns (address payable) {
