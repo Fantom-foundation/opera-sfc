@@ -8,6 +8,7 @@ import { BlockchainNode, ValidatorMetrics } from './helpers/BlockchainNode';
 describe('SFC', () => {
   const fixture = async () => {
     const [owner, user] = await ethers.getSigners();
+    const totalSupply = ethers.parseEther('100');
     const sfc = await upgrades.deployProxy(await ethers.getContractFactory('UnitTestSFC'), {
       kind: 'uups',
       initializer: false,
@@ -24,7 +25,7 @@ describe('SFC', () => {
     const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
     const initializer: UnitTestNetworkInitializer = await ethers.deployContract('UnitTestNetworkInitializer');
 
-    await initializer.initializeAll(0, 0, sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
+    await initializer.initializeAll(0, totalSupply, sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
     const constants: UnitTestConstantsManager = await ethers.getContractAt(
       'UnitTestConstantsManager',
       await sfc.constsAddress(),
@@ -39,6 +40,7 @@ describe('SFC', () => {
       nodeDriver,
       nodeDriverAuth,
       constants,
+      totalSupply,
     };
   };
 
@@ -53,6 +55,32 @@ describe('SFC', () => {
         value: 1,
       }),
     ).to.revertedWithCustomError(this.sfc, 'TransfersNotAllowed');
+  });
+
+  describe('Burn native tokens', () => {
+    it('Should revert when no amount sent', async function () {
+      await expect(this.sfc.connect(this.user).burnNativeTokens()).to.be.revertedWithCustomError(
+        this.sfc,
+        'ZeroAmount',
+      );
+    });
+
+    it('Should revert when amount greater than total supply', async function () {
+      await expect(
+        this.sfc.connect(this.user).burnNativeTokens({ value: this.totalSupply + 1n }),
+      ).to.be.revertedWithCustomError(this.sfc, 'ValueTooLarge');
+    });
+
+    it('Should succeed and burn native tokens', async function () {
+      const amount = ethers.parseEther('1.5');
+      const totalSupply = await this.sfc.totalSupply();
+      const tx = await this.sfc.connect(this.user).burnNativeTokens({ value: amount });
+      await expect(tx).to.emit(this.sfc, 'BurntNativeTokens').withArgs(amount);
+      expect(await this.sfc.totalSupply()).to.equal(totalSupply - amount);
+      await expect(tx).to.changeEtherBalance(this.sfc, 0);
+      await expect(tx).to.changeEtherBalance(this.user, -amount);
+      await expect(tx).to.changeEtherBalance(ethers.ZeroAddress, amount);
+    });
   });
 
   describe('Genesis validator', () => {
