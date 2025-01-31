@@ -67,7 +67,7 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /// Execute a batch update of network configuration.
-    /// Run given contract with a permission of the NodeDriverAuth owner.
+    /// The executable will run with the privileges of the NodeDriverAuth owner.
     /// Does not allow changing NodeDriver and NodeDriverAuth code.
     function execute(address executable) external onlyOwner {
         _execute(executable, owner(), _getCodeHash(address(this)), _getCodeHash(address(driver)));
@@ -90,7 +90,7 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
         driver.setBalance(acc, address(acc).balance + diff);
     }
 
-    /// Upgrade code of given contract by coping it from other deployed contract.
+    /// Upgrade code of given contract by copying it from other deployed contract.
     /// Avoids setting code to an external address.
     function upgradeCode(address acc, address from) external onlyOwner {
         if (!isContract(acc) || !isContract(from)) {
@@ -99,7 +99,7 @@ contract NodeDriverAuth is OwnableUpgradeable, UUPSUpgradeable {
         driver.copyCode(acc, from);
     }
 
-    /// Upgrade code of given contract by coping it from other deployed contract.
+    /// Upgrade code of given contract by copying it from other deployed contract.
     /// Does not avoid setting code to an external address. (DANGEROUS!)
     function copyCode(address acc, address from) external onlyOwner {
         driver.copyCode(acc, from);
