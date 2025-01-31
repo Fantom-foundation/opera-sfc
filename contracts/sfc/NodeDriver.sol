@@ -35,6 +35,11 @@ contract NodeDriver is OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
     event UpdateNetworkVersion(uint256 version);
     event AdvanceEpochs(uint256 num);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /// Initialization is called only once, after the contract deployment.
     /// Because the contract code is written directly into genesis, constructor cannot be used.
     function initialize(address _backend, address _evmWriterAddress, address _owner) external initializer {
@@ -144,4 +149,6 @@ contract NodeDriver is OwnableUpgradeable, UUPSUpgradeable, INodeDriver {
     function sealEpochValidators(uint256[] calldata nextValidatorIDs) external onlyNode {
         backend.sealEpochValidators(nextValidatorIDs);
     }
+
+    uint256[50] private __gap;
 }

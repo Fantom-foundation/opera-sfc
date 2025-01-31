@@ -8,6 +8,7 @@ import { BlockchainNode, ValidatorMetrics } from './helpers/BlockchainNode';
 describe('SFC', () => {
   const fixture = async () => {
     const [owner, user] = await ethers.getSigners();
+    const totalSupply = ethers.parseEther('100');
     const sfc = await upgrades.deployProxy(await ethers.getContractFactory('UnitTestSFC'), {
       kind: 'uups',
       initializer: false,
@@ -24,7 +25,7 @@ describe('SFC', () => {
     const evmWriter: IEVMWriter = await ethers.deployContract('StubEvmWriter');
     const initializer: UnitTestNetworkInitializer = await ethers.deployContract('UnitTestNetworkInitializer');
 
-    await initializer.initializeAll(0, 0, sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
+    await initializer.initializeAll(0, totalSupply, sfc, nodeDriverAuth, nodeDriver, evmWriter, owner);
     const constants: UnitTestConstantsManager = await ethers.getContractAt(
       'UnitTestConstantsManager',
       await sfc.constsAddress(),
@@ -39,6 +40,7 @@ describe('SFC', () => {
       nodeDriver,
       nodeDriverAuth,
       constants,
+      totalSupply,
     };
   };
 
@@ -55,6 +57,32 @@ describe('SFC', () => {
     ).to.revertedWithCustomError(this.sfc, 'TransfersNotAllowed');
   });
 
+  describe('Burn native tokens', () => {
+    it('Should revert when no amount sent', async function () {
+      await expect(this.sfc.connect(this.user).burnNativeTokens()).to.be.revertedWithCustomError(
+        this.sfc,
+        'ZeroAmount',
+      );
+    });
+
+    it('Should revert when amount greater than total supply', async function () {
+      await expect(
+        this.sfc.connect(this.user).burnNativeTokens({ value: this.totalSupply + 1n }),
+      ).to.be.revertedWithCustomError(this.sfc, 'ValueTooLarge');
+    });
+
+    it('Should succeed and burn native tokens', async function () {
+      const amount = ethers.parseEther('1.5');
+      const totalSupply = await this.sfc.totalSupply();
+      const tx = await this.sfc.connect(this.user).burnNativeTokens({ value: amount });
+      await expect(tx).to.emit(this.sfc, 'BurntNativeTokens').withArgs(amount);
+      expect(await this.sfc.totalSupply()).to.equal(totalSupply - amount);
+      await expect(tx).to.changeEtherBalance(this.sfc, 0);
+      await expect(tx).to.changeEtherBalance(this.user, -amount);
+      await expect(tx).to.changeEtherBalance(ethers.ZeroAddress, amount);
+    });
+  });
+
   describe('Genesis validator', () => {
     beforeEach(async function () {
       const validator = ethers.Wallet.createRandom();
@@ -65,7 +93,7 @@ describe('SFC', () => {
     });
 
     it('Should succeed and set genesis validator with bad status', async function () {
-      await this.sfc._syncValidator(1, false);
+      await this.sfc.syncValidator(1, false);
     });
 
     it('Should revert when sealEpoch not called by node', async function () {
@@ -128,6 +156,30 @@ describe('SFC', () => {
 
     it('Should succeed and return version of the current implementation', async function () {
       expect(await this.sfc.version()).to.equal('0x040000');
+    });
+  });
+
+  describe('Issue tokens', () => {
+    it('Should revert when not owner', async function () {
+      await expect(this.sfc.connect(this.user).issueTokens(ethers.parseEther('100'))).to.be.revertedWithCustomError(
+        this.sfc,
+        'OwnableUnauthorizedAccount',
+      );
+    });
+
+    it('Should revert when recipient is not set', async function () {
+      await expect(this.sfc.connect(this.owner).issueTokens(ethers.parseEther('100'))).to.be.revertedWithCustomError(
+        this.sfc,
+        'ZeroAddress',
+      );
+    });
+
+    it('Should succeed and issue tokens', async function () {
+      await this.constants.updateIssuedTokensRecipient(this.user);
+      const supply = await this.sfc.totalSupply();
+      const amount = ethers.parseEther('100');
+      await this.sfc.connect(this.owner).issueTokens(amount);
+      expect(await this.sfc.totalSupply()).to.equal(supply + amount);
     });
   });
 
@@ -644,10 +696,10 @@ describe('SFC', () => {
     });
 
     it('Should succeed and seal epochs', async function () {
-      const validatorsMetrics: Map<number, ValidatorMetrics> = new Map();
+      const validatorsMetrics: Map<bigint, ValidatorMetrics> = new Map();
       const validatorIDs = await this.sfc.lastValidatorID();
 
-      for (let i = 0; i < validatorIDs; i++) {
+      for (let i = 1n; i <= validatorIDs; i++) {
         validatorsMetrics.set(i, {
           offlineTime: 0,
           offlineBlocks: 0,
@@ -661,8 +713,8 @@ describe('SFC', () => {
       const offlineBlocks = [];
       const uptimes = [];
       const originatedTxsFees = [];
-      for (let i = 0; i < validatorIDs; i++) {
-        allValidators.push(i + 1);
+      for (let i = 1n; i <= validatorIDs; i++) {
+        allValidators.push(i);
         offlineTimes.push(validatorsMetrics.get(i)!.offlineTime);
         offlineBlocks.push(validatorsMetrics.get(i)!.offlineBlocks);
         uptimes.push(validatorsMetrics.get(i)!.uptime);
@@ -674,11 +726,69 @@ describe('SFC', () => {
       await this.sfc.sealEpochValidators(allValidators);
     });
 
+    describe('Treasury', () => {
+      it('Should revert when treasury is not set', async function () {
+        await expect(this.sfc.resolveTreasuryFees()).to.be.revertedWithCustomError(this.sfc, 'TreasuryNotSet');
+      });
+
+      it('Should revert when no unresolved treasury fees are available', async function () {
+        const treasury = ethers.Wallet.createRandom();
+        await this.sfc.connect(this.owner).updateTreasuryAddress(treasury);
+        await expect(this.sfc.resolveTreasuryFees()).to.be.revertedWithCustomError(
+          this.sfc,
+          'NoUnresolvedTreasuryFees',
+        );
+      });
+
+      it('Should succeed and resolve treasury fees', async function () {
+        // set treasury as failing receiver to trigger treasury fee accumulation
+        const failingReceiver = await ethers.deployContract('FailingReceiver');
+        await this.sfc.connect(this.owner).updateTreasuryAddress(failingReceiver);
+
+        // set validators metrics and their fees
+        const validatorsMetrics: Map<bigint, ValidatorMetrics> = new Map();
+        const validatorIDs = await this.sfc.lastValidatorID();
+        for (let i = 1n; i <= validatorIDs; i++) {
+          validatorsMetrics.set(i, {
+            offlineTime: 0,
+            offlineBlocks: 0,
+            uptime: 24 * 60 * 60,
+            originatedTxsFee: ethers.parseEther('100'),
+          });
+        }
+
+        // seal epoch to trigger fees calculation and distribution
+        await this.blockchainNode.sealEpoch(24 * 60 * 60, validatorsMetrics);
+
+        const fees =
+          (validatorIDs * ethers.parseEther('100') * (await this.constants.treasuryFeeShare())) / BigInt(1e18);
+        expect(await this.sfc.unresolvedTreasuryFees()).to.equal(fees);
+
+        // update treasury to a valid receiver
+        const treasury = ethers.Wallet.createRandom();
+        await this.sfc.connect(this.owner).updateTreasuryAddress(treasury);
+
+        // set sfc some balance to cover treasury fees
+        // the funds cannot be sent directly as it rejects any incoming transfers
+        await ethers.provider.send('hardhat_setBalance', [
+          await this.sfc.getAddress(),
+          ethers.toBeHex(ethers.parseEther('1000')),
+        ]);
+
+        // resolve treasury fees
+        const tx = await this.sfc.resolveTreasuryFees();
+        await expect(tx).to.emit(this.sfc, 'TreasuryFeesResolved').withArgs(fees);
+        await expect(tx).to.changeEtherBalance(treasury, fees);
+        await expect(tx).to.changeEtherBalance(this.sfc, -fees);
+        expect(await this.sfc.unresolvedTreasuryFees()).to.equal(0);
+      });
+    });
+
     it('Should succeed and seal epoch on Validators', async function () {
-      const validatorsMetrics: Map<number, ValidatorMetrics> = new Map();
+      const validatorsMetrics: Map<bigint, ValidatorMetrics> = new Map();
       const validatorIDs = await this.sfc.lastValidatorID();
 
-      for (let i = 0; i < validatorIDs; i++) {
+      for (let i = 1n; i <= validatorIDs; i++) {
         validatorsMetrics.set(i, {
           offlineTime: 0,
           offlineBlocks: 0,
@@ -692,8 +802,8 @@ describe('SFC', () => {
       const offlineBlocks = [];
       const uptimes = [];
       const originatedTxsFees = [];
-      for (let i = 0; i < validatorIDs; i++) {
-        allValidators.push(i + 1);
+      for (let i = 1n; i <= validatorIDs; i++) {
+        allValidators.push(i);
         offlineTimes.push(validatorsMetrics.get(i)!.offlineTime);
         offlineBlocks.push(validatorsMetrics.get(i)!.offlineBlocks);
         uptimes.push(validatorsMetrics.get(i)!.uptime);
@@ -746,10 +856,10 @@ describe('SFC', () => {
       });
 
       it('Should revert when calling sealEpoch if not NodeDriver', async function () {
-        const validatorsMetrics: Map<number, ValidatorMetrics> = new Map();
+        const validatorsMetrics: Map<bigint, ValidatorMetrics> = new Map();
         const validatorIDs = await this.sfc.lastValidatorID();
 
-        for (let i = 0; i < validatorIDs; i++) {
+        for (let i = 1n; i <= validatorIDs; i++) {
           validatorsMetrics.set(i, {
             offlineTime: 0,
             offlineBlocks: 0,
@@ -763,8 +873,8 @@ describe('SFC', () => {
         const offlineBlocks = [];
         const uptimes = [];
         const originatedTxsFees = [];
-        for (let i = 0; i < validatorIDs; i++) {
-          allValidators.push(i + 1);
+        for (let i = 1n; i <= validatorIDs; i++) {
+          allValidators.push(i);
           offlineTimes.push(validatorsMetrics.get(i)!.offlineTime);
           offlineBlocks.push(validatorsMetrics.get(i)!.offlineBlocks);
           uptimes.push(validatorsMetrics.get(i)!.uptime);
@@ -946,7 +1056,7 @@ describe('SFC', () => {
     });
 
     it('Should revert when syncing if validator does not exist', async function () {
-      await expect(this.sfc._syncValidator(33, false)).to.be.revertedWithCustomError(this.sfc, 'ValidatorNotExists');
+      await expect(this.sfc.syncValidator(33, false)).to.be.revertedWithCustomError(this.sfc, 'ValidatorNotExists');
     });
   });
 
@@ -982,7 +1092,7 @@ describe('SFC', () => {
       // validator online 100% of time in the first epoch => average 100%
       await this.blockchainNode.sealEpoch(
         100,
-        new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 100, 0n)]]),
+        new Map<bigint, ValidatorMetrics>([[this.validatorId, new ValidatorMetrics(0, 0, 100, 0n)]]),
       );
       expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
         1000000000000000000n,
@@ -991,7 +1101,7 @@ describe('SFC', () => {
       // validator online 20% of time in the second epoch => average 60%
       await this.blockchainNode.sealEpoch(
         100,
-        new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 20, 0n)]]),
+        new Map<bigint, ValidatorMetrics>([[this.validatorId, new ValidatorMetrics(0, 0, 20, 0n)]]),
       );
       expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
         600000000000000000n,
@@ -1000,7 +1110,7 @@ describe('SFC', () => {
       // validator online 30% of time in the third epoch => average 50%
       await this.blockchainNode.sealEpoch(
         100,
-        new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 30, 0n)]]),
+        new Map<bigint, ValidatorMetrics>([[this.validatorId, new ValidatorMetrics(0, 0, 30, 0n)]]),
       );
       expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
         500000000000000000n,
@@ -1010,7 +1120,7 @@ describe('SFC', () => {
       for (let i = 0; i < 10; i++) {
         await this.blockchainNode.sealEpoch(
           100,
-          new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 50, 0n)]]),
+          new Map<bigint, ValidatorMetrics>([[this.validatorId, new ValidatorMetrics(0, 0, 50, 0n)]]),
         );
         expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
           500000000000000000n,
@@ -1020,7 +1130,7 @@ describe('SFC', () => {
       // (50 * 10 + 28) / 11 = 48
       await this.blockchainNode.sealEpoch(
         100,
-        new Map<number, ValidatorMetrics>([[this.validatorId as number, new ValidatorMetrics(0, 0, 28, 0n)]]),
+        new Map<bigint, ValidatorMetrics>([[this.validatorId, new ValidatorMetrics(0, 0, 28, 0n)]]),
       );
       expect(await this.sfc.getEpochAverageUptime(await this.sfc.currentSealedEpoch(), this.validatorId)).to.equal(
         480000000000000000n,

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.27;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Decimal} from "../common/Decimal.sol";
 
 /**
  * @custom:security-contact security@fantom.foundation
  */
-contract ConstantsManager is OwnableUpgradeable {
+contract ConstantsManager is Ownable {
     // Minimum amount of stake for a validator, i.e., 500000 FTM
     uint256 public minSelfStake;
     // Maximum ratio of delegations a validator can have, say, 15 times of self-stake
@@ -37,6 +37,10 @@ contract ConstantsManager is OwnableUpgradeable {
     // Zero to disable validators deactivation by this metric.
     uint64 public minAverageUptime;
 
+    // The address of the recipient that receives issued tokens
+    // as a counterparty to the burnt FTM tokens
+    address public issuedTokensRecipient;
+
     /**
      * @dev Given value is too small
      */
@@ -47,15 +51,13 @@ contract ConstantsManager is OwnableUpgradeable {
      */
     error ValueTooLarge();
 
-    constructor(address owner) initializer {
-        __Ownable_init(owner);
-    }
+    constructor(address owner) Ownable(owner) {}
 
     function updateMinSelfStake(uint256 v) external virtual onlyOwner {
-        if (v < 100000 * 1e18) {
+        if (v < 100000 * Decimal.unit()) {
             revert ValueTooSmall();
         }
-        if (v > 10000000 * 1e18) {
+        if (v > 10000000 * Decimal.unit()) {
             revert ValueTooLarge();
         }
         minSelfStake = v;
@@ -113,10 +115,10 @@ contract ConstantsManager is OwnableUpgradeable {
     }
 
     function updateBaseRewardPerSecond(uint256 v) external virtual onlyOwner {
-        if (v < 0.5 * 1e18) {
+        if (v < Decimal.unit() / 2) {
             revert ValueTooSmall();
         }
-        if (v > 32 * 1e18) {
+        if (v > 32 * Decimal.unit()) {
             revert ValueTooLarge();
         }
         baseRewardPerSecond = v;
@@ -178,5 +180,9 @@ contract ConstantsManager is OwnableUpgradeable {
             revert ValueTooLarge();
         }
         minAverageUptime = v;
+    }
+
+    function updateIssuedTokensRecipient(address v) external virtual onlyOwner {
+        issuedTokensRecipient = v;
     }
 }
