@@ -15,7 +15,13 @@ interface ISFC {
     );
     event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
     event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
-    event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
+    event Withdrawn(
+        address indexed delegator,
+        uint256 indexed toValidatorID,
+        uint256 indexed wrID,
+        uint256 amount,
+        uint256 penalty
+    );
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event BurntFTM(uint256 amount);
@@ -120,6 +126,8 @@ interface ISFC {
     function getEpochOfflineBlocks(uint256 epoch, uint256 validatorID) external view returns (uint256);
 
     function getEpochEndBlock(uint256 epoch) external view returns (uint256);
+
+    function epochEndTime(uint256 epoch) external view returns (uint256);
 
     function rewardsStash(address delegator, uint256 validatorID) external view returns (uint256);
 

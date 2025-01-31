@@ -7,6 +7,7 @@ import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {Version} from "../version/Version.sol";
+import {IStakeSubscriber} from "../interfaces/IStakeSubscriber.sol";
 
 /**
  * @title Special Fee Contract for Sonic network
@@ -50,6 +51,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     // total stake of active (OK_STATUS) validators (total weight)
     uint256 public totalActiveStake;
 
+    // unresolved fees that failed to be send to the treasury
+    uint256 public unresolvedTreasuryFees;
+
     // delegator => validator ID => stashed rewards (to be claimed/restaked)
     mapping(address delegator => mapping(uint256 validatorID => uint256 stashedRewards)) internal _rewardsStash;
 
@@ -81,17 +85,17 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
     struct EpochSnapshot {
         // validator ID => validator weight in the epoch
-        mapping(uint256 => uint256) receivedStake;
+        mapping(uint256 validatorID => uint256) receivedStake;
         // validator ID => accumulated ( delegatorsReward * 1e18 / receivedStake )
-        mapping(uint256 => uint256) accumulatedRewardPerToken;
+        mapping(uint256 validatorID => uint256) accumulatedRewardPerToken;
         // validator ID => accumulated online time
-        mapping(uint256 => uint256) accumulatedUptime;
+        mapping(uint256 validatorID => uint256) accumulatedUptime;
         // validator ID => average uptime as a percentage
-        mapping(uint256 => AverageUptime) averageUptime;
+        mapping(uint256 validatorID => AverageUptime) averageUptime;
         // validator ID => gas fees from txs originated by the validator
-        mapping(uint256 => uint256) accumulatedOriginatedTxsFee;
-        mapping(uint256 => uint256) offlineTime;
-        mapping(uint256 => uint256) offlineBlocks;
+        mapping(uint256 validatorID => uint256) accumulatedOriginatedTxsFee;
+        mapping(uint256 validatorID => uint256) offlineTime;
+        mapping(uint256 validatorID => uint256) offlineBlocks;
         uint256[] validatorIDs;
         uint256 endTime;
         uint256 endBlock;
@@ -149,6 +153,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     // values
     error ZeroAmount();
     error ZeroRewards();
+    error ValueTooLarge();
 
     // pubkeys
     error PubkeyUsedByOtherValidator();
@@ -190,6 +195,10 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     error ValidatorNotSlashed();
     error RefundRatioTooHigh();
 
+    // treasury
+    error TreasuryNotSet();
+    error NoUnresolvedTreasuryFees();
+
     event DeactivatedValidator(uint256 indexed validatorID, uint256 deactivatedEpoch, uint256 deactivatedTime);
     event ChangedValidatorStatus(uint256 indexed validatorID, uint256 status);
     event CreatedValidator(
@@ -200,19 +209,31 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     );
     event Delegated(address indexed delegator, uint256 indexed toValidatorID, uint256 amount);
     event Undelegated(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
-    event Withdrawn(address indexed delegator, uint256 indexed toValidatorID, uint256 indexed wrID, uint256 amount);
+    event Withdrawn(
+        address indexed delegator,
+        uint256 indexed toValidatorID,
+        uint256 indexed wrID,
+        uint256 amount,
+        uint256 penalty
+    );
     event ClaimedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
-    event BurntFTM(uint256 amount);
+    event BurntNativeTokens(uint256 amount);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
     event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
     event AnnouncedRedirection(address indexed from, address indexed to);
+    event TreasuryFeesResolved(uint256 amount);
 
     modifier onlyDriver() {
-        if (!isNode(msg.sender)) {
+        if (!_isNode(msg.sender)) {
             revert NotDriverAuth();
         }
         _;
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
     /// Initialization is called only once, after the contract deployment.
@@ -273,7 +294,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Accept redirection proposal.
-    /// Redirection must by accepted by the validator key holder before it start to be applied.
+    /// Redirection must by accepted by the validator key holder before it starts to be applied.
     function redirect(address to) external {
         address from = msg.sender;
         if (to == address(0)) {
@@ -419,9 +440,42 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
     }
 
-    /// burnFTM allows SFC to burn an arbitrary amount of FTM tokens.
-    function burnFTM(uint256 amount) external onlyOwner {
-        _burnFTM(amount);
+    /// Resolve failed treasury transfers and send the unresolved fees to the treasury address.
+    function resolveTreasuryFees() external {
+        if (treasuryAddress == address(0)) {
+            revert TreasuryNotSet();
+        }
+        if (unresolvedTreasuryFees == 0) {
+            revert NoUnresolvedTreasuryFees();
+        }
+
+        // zero the fees before sending to prevent re-entrancy
+        uint256 fees = unresolvedTreasuryFees;
+        unresolvedTreasuryFees = 0;
+
+        (bool success, ) = treasuryAddress.call{value: fees, gas: 1000000}("");
+        if (!success) {
+            revert TransferFailed();
+        }
+
+        emit TreasuryFeesResolved(fees);
+    }
+
+    /// Burn native tokens by sending them to the SFC contract.
+    function burnNativeTokens() external payable {
+        if (msg.value == 0) {
+            revert ZeroAmount();
+        }
+        _burnNativeTokens(msg.value);
+    }
+
+    /// Issue tokens to the issued tokens recipient as a counterparty to the burnt FTM tokens.
+    function issueTokens(uint256 amount) external onlyOwner {
+        if (c.issuedTokensRecipient() == address(0)) {
+            revert ZeroAddress();
+        }
+        node.incBalance(c.issuedTokensRecipient(), amount);
+        totalSupply += amount;
     }
 
     /// Update treasury address.
@@ -552,6 +606,11 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         return getEpochSnapshot[epoch].endBlock;
     }
 
+    /// Get epoch end time.
+    function epochEndTime(uint256 epoch) public view returns (uint256) {
+        return getEpochSnapshot[epoch].endTime;
+    }
+
     /// Check whether the given validator is slashed - the stake (or its part) cannot
     /// be withdrawn because of misbehavior (double-sign) of the validator.
     function isSlashed(uint256 validatorID) public view returns (bool) {
@@ -572,7 +631,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Check if an address is the NodeDriverAuth contract.
-    function isNode(address addr) internal view virtual returns (bool) {
+    function _isNode(address addr) internal view virtual returns (bool) {
         return addr == address(node);
     }
 
@@ -649,7 +708,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Get slashing penalty for a stake.
-    function getSlashingPenalty(
+    function _getSlashingPenalty(
         uint256 amount,
         bool isCheater,
         uint256 refundRatio
@@ -693,7 +752,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
         uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID].amount;
         bool isCheater = isSlashed(toValidatorID);
-        uint256 penalty = getSlashingPenalty(amount, isCheater, slashingRefundRatio[toValidatorID]);
+        uint256 penalty = _getSlashingPenalty(amount, isCheater, slashingRefundRatio[toValidatorID]);
         delete getWithdrawalRequest[delegator][toValidatorID][wrID];
 
         if (amount <= penalty) {
@@ -704,9 +763,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         if (!sent) {
             revert TransferFailed();
         }
-        _burnFTM(penalty);
+        _burnNativeTokens(penalty);
 
-        emit Withdrawn(delegator, toValidatorID, wrID, amount);
+        emit Withdrawn(delegator, toValidatorID, wrID, amount - penalty, penalty);
     }
 
     /// Get highest epoch for which can be claimed rewards for the given validator.
@@ -768,18 +827,17 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         return rewards;
     }
 
-    /// Burn FTM tokens.
+    /// Burn native tokens.
     /// The tokens are sent to the zero address.
-    function _burnFTM(uint256 amount) internal {
+    function _burnNativeTokens(uint256 amount) internal {
         if (amount != 0) {
+            if (amount > totalSupply) {
+                revert ValueTooLarge();
+            }
+            totalSupply -= amount;
             payable(address(0)).transfer(amount);
-            emit BurntFTM(amount);
+            emit BurntNativeTokens(amount);
         }
-    }
-
-    /// Get epoch end time.
-    function epochEndTime(uint256 epoch) internal view returns (uint256) {
-        return getEpochSnapshot[epoch].endTime;
     }
 
     /// Check if an address is redirected.
@@ -909,6 +967,9 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             if (!success) {
                 // ignore treasury transfer failure
                 // the treasury failure must not endanger the epoch sealing
+
+                // store the unresolved treasury fees to be resolved later
+                unresolvedTreasuryFees += feeShare;
             }
         }
     }
@@ -962,6 +1023,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
         if (cur.averageUptime > Decimal.unit()) {
             cur.averageUptime = uint64(Decimal.unit());
+            cur.remainder = 0; // reset the remainder when capping the averageUptime
         }
         if (prev.epochs < c.averageUptimeEpochWindow()) {
             cur.epochs = prev.epochs + 1;
@@ -1045,6 +1107,22 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         totalSupply = totalSupply + amount;
     }
 
+    /// Sync validator with node.
+    function _syncValidator(uint256 validatorID, bool syncPubkey) internal {
+        if (!_validatorExists(validatorID)) {
+            revert ValidatorNotExists();
+        }
+        // emit special log for node
+        uint256 weight = getValidator[validatorID].receivedStake;
+        if (getValidator[validatorID].status != OK_STATUS) {
+            weight = 0;
+        }
+        node.updateValidatorWeight(validatorID, weight);
+        if (syncPubkey && weight != 0) {
+            node.updateValidatorPubkey(validatorID, getValidatorPubkey[validatorID]);
+        }
+    }
+
     /// Notify stake subscriber about staking changes.
     /// Used to recount votes from delegators in the governance contract.
     function _notifyStakeSubscriber(address delegator, address validatorAuth, bool strict) internal {
@@ -1052,7 +1130,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             // Don't allow announceStakeChange to use up all the gas
             // solhint-disable-next-line avoid-low-level-calls
             (bool success, ) = stakeSubscriberAddress.call{gas: 8000000}(
-                abi.encodeWithSignature("announceStakeChange(address,address)", delegator, validatorAuth)
+                abi.encodeCall(IStakeSubscriber.announceStakeChange, (delegator, validatorAuth))
             );
             // Don't revert if announceStakeChange failed unless strict mode enabled
             if (!success && strict) {
@@ -1082,22 +1160,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         }
     }
 
-    /// Sync validator with node.
-    function _syncValidator(uint256 validatorID, bool syncPubkey) public {
-        if (!_validatorExists(validatorID)) {
-            revert ValidatorNotExists();
-        }
-        // emit special log for node
-        uint256 weight = getValidator[validatorID].receivedStake;
-        if (getValidator[validatorID].status != OK_STATUS) {
-            weight = 0;
-        }
-        node.updateValidatorWeight(validatorID, weight);
-        if (syncPubkey && weight != 0) {
-            node.updateValidatorPubkey(validatorID, getValidatorPubkey[validatorID]);
-        }
-    }
-
     /// Check if a validator exists.
     function _validatorExists(uint256 validatorID) internal view returns (bool) {
         return getValidator[validatorID].createdTime != 0;
@@ -1117,4 +1179,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     function _now() internal view virtual returns (uint256) {
         return block.timestamp;
     }
+
+    uint256[50] private __gap;
 }
