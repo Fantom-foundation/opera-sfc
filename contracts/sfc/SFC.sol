@@ -7,6 +7,7 @@ import {Decimal} from "../common/Decimal.sol";
 import {NodeDriverAuth} from "./NodeDriverAuth.sol";
 import {ConstantsManager} from "./ConstantsManager.sol";
 import {Version} from "../version/Version.sol";
+import {IStakeSubscriber} from "../interfaces/IStakeSubscriber.sol";
 
 /**
  * @title Special Fee Contract for Sonic network
@@ -84,17 +85,17 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
     struct EpochSnapshot {
         // validator ID => validator weight in the epoch
-        mapping(uint256 => uint256) receivedStake;
+        mapping(uint256 validatorID => uint256) receivedStake;
         // validator ID => accumulated ( delegatorsReward * 1e18 / receivedStake )
-        mapping(uint256 => uint256) accumulatedRewardPerToken;
+        mapping(uint256 validatorID => uint256) accumulatedRewardPerToken;
         // validator ID => accumulated online time
-        mapping(uint256 => uint256) accumulatedUptime;
+        mapping(uint256 validatorID => uint256) accumulatedUptime;
         // validator ID => average uptime as a percentage
-        mapping(uint256 => AverageUptime) averageUptime;
+        mapping(uint256 validatorID => AverageUptime) averageUptime;
         // validator ID => gas fees from txs originated by the validator
-        mapping(uint256 => uint256) accumulatedOriginatedTxsFee;
-        mapping(uint256 => uint256) offlineTime;
-        mapping(uint256 => uint256) offlineBlocks;
+        mapping(uint256 validatorID => uint256) accumulatedOriginatedTxsFee;
+        mapping(uint256 validatorID => uint256) offlineTime;
+        mapping(uint256 validatorID => uint256) offlineBlocks;
         uint256[] validatorIDs;
         uint256 endTime;
         uint256 endBlock;
@@ -224,7 +225,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     event TreasuryFeesResolved(uint256 amount);
 
     modifier onlyDriver() {
-        if (!isNode(msg.sender)) {
+        if (!_isNode(msg.sender)) {
             revert NotDriverAuth();
         }
         _;
@@ -293,7 +294,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Accept redirection proposal.
-    /// Redirection must by accepted by the validator key holder before it start to be applied.
+    /// Redirection must by accepted by the validator key holder before it starts to be applied.
     function redirect(address to) external {
         address from = msg.sender;
         if (to == address(0)) {
@@ -605,6 +606,11 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         return getEpochSnapshot[epoch].endBlock;
     }
 
+    /// Get epoch end time.
+    function epochEndTime(uint256 epoch) public view returns (uint256) {
+        return getEpochSnapshot[epoch].endTime;
+    }
+
     /// Check whether the given validator is slashed - the stake (or its part) cannot
     /// be withdrawn because of misbehavior (double-sign) of the validator.
     function isSlashed(uint256 validatorID) public view returns (bool) {
@@ -625,7 +631,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Check if an address is the NodeDriverAuth contract.
-    function isNode(address addr) internal view virtual returns (bool) {
+    function _isNode(address addr) internal view virtual returns (bool) {
         return addr == address(node);
     }
 
@@ -702,7 +708,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     }
 
     /// Get slashing penalty for a stake.
-    function getSlashingPenalty(
+    function _getSlashingPenalty(
         uint256 amount,
         bool isCheater,
         uint256 refundRatio
@@ -746,7 +752,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
         uint256 amount = getWithdrawalRequest[delegator][toValidatorID][wrID].amount;
         bool isCheater = isSlashed(toValidatorID);
-        uint256 penalty = getSlashingPenalty(amount, isCheater, slashingRefundRatio[toValidatorID]);
+        uint256 penalty = _getSlashingPenalty(amount, isCheater, slashingRefundRatio[toValidatorID]);
         delete getWithdrawalRequest[delegator][toValidatorID][wrID];
 
         if (amount <= penalty) {
@@ -832,11 +838,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             payable(address(0)).transfer(amount);
             emit BurntNativeTokens(amount);
         }
-    }
-
-    /// Get epoch end time.
-    function epochEndTime(uint256 epoch) internal view returns (uint256) {
-        return getEpochSnapshot[epoch].endTime;
     }
 
     /// Check if an address is redirected.
@@ -1022,6 +1023,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
 
         if (cur.averageUptime > Decimal.unit()) {
             cur.averageUptime = uint64(Decimal.unit());
+            cur.remainder = 0; // reset the remainder when capping the averageUptime
         }
         if (prev.epochs < c.averageUptimeEpochWindow()) {
             cur.epochs = prev.epochs + 1;
@@ -1105,6 +1107,22 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
         totalSupply = totalSupply + amount;
     }
 
+    /// Sync validator with node.
+    function _syncValidator(uint256 validatorID, bool syncPubkey) internal {
+        if (!_validatorExists(validatorID)) {
+            revert ValidatorNotExists();
+        }
+        // emit special log for node
+        uint256 weight = getValidator[validatorID].receivedStake;
+        if (getValidator[validatorID].status != OK_STATUS) {
+            weight = 0;
+        }
+        node.updateValidatorWeight(validatorID, weight);
+        if (syncPubkey && weight != 0) {
+            node.updateValidatorPubkey(validatorID, getValidatorPubkey[validatorID]);
+        }
+    }
+
     /// Notify stake subscriber about staking changes.
     /// Used to recount votes from delegators in the governance contract.
     function _notifyStakeSubscriber(address delegator, address validatorAuth, bool strict) internal {
@@ -1112,7 +1130,7 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
             // Don't allow announceStakeChange to use up all the gas
             // solhint-disable-next-line avoid-low-level-calls
             (bool success, ) = stakeSubscriberAddress.call{gas: 8000000}(
-                abi.encodeWithSignature("announceStakeChange(address,address)", delegator, validatorAuth)
+                abi.encodeCall(IStakeSubscriber.announceStakeChange, (delegator, validatorAuth))
             );
             // Don't revert if announceStakeChange failed unless strict mode enabled
             if (!success && strict) {
@@ -1139,22 +1157,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
                 );
             }
             emit ChangedValidatorStatus(validatorID, status);
-        }
-    }
-
-    /// Sync validator with node.
-    function _syncValidator(uint256 validatorID, bool syncPubkey) public {
-        if (!_validatorExists(validatorID)) {
-            revert ValidatorNotExists();
-        }
-        // emit special log for node
-        uint256 weight = getValidator[validatorID].receivedStake;
-        if (getValidator[validatorID].status != OK_STATUS) {
-            weight = 0;
-        }
-        node.updateValidatorWeight(validatorID, weight);
-        if (syncPubkey && weight != 0) {
-            node.updateValidatorPubkey(validatorID, getValidatorPubkey[validatorID]);
         }
     }
 

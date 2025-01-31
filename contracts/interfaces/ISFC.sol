@@ -127,6 +127,8 @@ interface ISFC {
 
     function getEpochEndBlock(uint256 epoch) external view returns (uint256);
 
+    function epochEndTime(uint256 epoch) external view returns (uint256);
+
     function rewardsStash(address delegator, uint256 validatorID) external view returns (uint256);
 
     function createValidator(bytes calldata pubkey) external payable;

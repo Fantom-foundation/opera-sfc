@@ -52,10 +52,10 @@ contract ConstantsManager is Ownable {
     constructor(address owner) Ownable(owner) {}
 
     function updateMinSelfStake(uint256 v) external virtual onlyOwner {
-        if (v < 100000 * 1e18) {
+        if (v < 100000 * Decimal.unit()) {
             revert ValueTooSmall();
         }
-        if (v > 10000000 * 1e18) {
+        if (v > 10000000 * Decimal.unit()) {
             revert ValueTooLarge();
         }
         minSelfStake = v;
@@ -113,7 +113,7 @@ contract ConstantsManager is Ownable {
     }
 
     function updateBaseRewardPerSecond(uint256 v) external virtual onlyOwner {
-        if (v > 32 * 1e18) {
+        if (v > 32 * Decimal.unit()) {
             revert ValueTooLarge();
         }
         baseRewardPerSecond = v;

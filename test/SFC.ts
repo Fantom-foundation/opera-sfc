@@ -93,7 +93,7 @@ describe('SFC', () => {
     });
 
     it('Should succeed and set genesis validator with bad status', async function () {
-      await this.sfc._syncValidator(1, false);
+      await this.sfc.syncValidator(1, false);
     });
 
     it('Should revert when sealEpoch not called by node', async function () {
@@ -1056,7 +1056,7 @@ describe('SFC', () => {
     });
 
     it('Should revert when syncing if validator does not exist', async function () {
-      await expect(this.sfc._syncValidator(33, false)).to.be.revertedWithCustomError(this.sfc, 'ValidatorNotExists');
+      await expect(this.sfc.syncValidator(33, false)).to.be.revertedWithCustomError(this.sfc, 'ValidatorNotExists');
     });
   });
 
