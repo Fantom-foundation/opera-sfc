@@ -139,7 +139,7 @@ contract ConstantsManager is Ownable {
         offlinePenaltyThresholdBlocksNum = v;
     }
 
-    function updateAverageUptimeEpochWindow(uint32 v) external virtual onlyOwner {
+    function updateAverageUptimeEpochWindow(uint32 v) external onlyOwner {
         if (v < 10) {
             // needs to be long enough to allow permissible downtime for validators maintenance
             revert ValueTooSmall();
@@ -157,7 +157,7 @@ contract ConstantsManager is Ownable {
         minAverageUptime = v;
     }
 
-    function updateIssuedTokensRecipient(address v) external virtual onlyOwner {
+    function updateIssuedTokensRecipient(address v) external onlyOwner {
         issuedTokensRecipient = v;
     }
 }
