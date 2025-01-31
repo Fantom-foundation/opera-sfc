@@ -162,7 +162,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     // redirections
     error AlreadyRedirected();
     error SameRedirectionAuthorizer();
-    error Redirected();
 
     // validators
     error ValidatorNotExists();
@@ -220,7 +219,6 @@ contract SFC is OwnableUpgradeable, UUPSUpgradeable, Version {
     event RestakedRewards(address indexed delegator, uint256 indexed toValidatorID, uint256 rewards);
     event BurntNativeTokens(uint256 amount);
     event UpdatedSlashingRefundRatio(uint256 indexed validatorID, uint256 refundRatio);
-    event RefundedSlashedLegacyDelegation(address indexed delegator, uint256 indexed validatorID, uint256 amount);
     event AnnouncedRedirection(address indexed from, address indexed to);
     event TreasuryFeesResolved(uint256 amount);
 
