@@ -105,8 +105,8 @@ contract SFCLib is SFCBase {
 
     function _rawDelegate(address delegator, uint256 toValidatorID, uint256 amount, bool strict) internal {
         // Delegations are disabled to protect current chain while migrating to the new sonic chain
-        revert("delegation disabled");
-
+        // Only network guardians are allowed to modify the stake to prevent a potential network hijacking
+        require(isGuardianAccount(delegator), "delegation disabled");
         require(amount > 0, "zero amount");
 
         _stashRewards(delegator, toValidatorID);
@@ -447,7 +447,7 @@ contract SFCLib is SFCBase {
     function _lockStake(address delegator, uint256 toValidatorID, uint256 lockupDuration, uint256 amount, bool relock) internal {
         // Locks are disabled due to chain migrating to the new sonic chain
         revert("stake lock disabled");
-
+        /*
         require(!_redirected(delegator), "redirected");
         require(amount <= getUnlockedStake(delegator, toValidatorID), "not enough stake");
         require(getValidator[toValidatorID].status == OK_STATUS, "validator isn't active");
@@ -484,6 +484,7 @@ contract SFCLib is SFCBase {
         ld.duration = lockupDuration;
 
         emit LockedUpStake(delegator, toValidatorID, lockupDuration, amount);
+        */
     }
 
     function lockStake(uint256 toValidatorID, uint256 lockupDuration, uint256 amount) public {
@@ -783,5 +784,24 @@ contract SFCLib is SFCBase {
             r.lockupExtraReward = r.lockupExtraReward.mul(maxReasonablePenalty).div(storedPenalty);
             r.lockupBaseReward = r.lockupBaseReward.mul(maxReasonablePenalty).div(storedPenalty);
         }
+    }
+
+    function guardians() public pure returns(address[] memory) {
+        address[] memory list = new address[](4);
+        list[0] = 0x9a5C9EC1E9a10E2fc5fBDDB2D0F37286Ab2fE262;
+        list[1] = 0xc4D0207D48d96E1f08B3d30eA1f6BE53980E3c56;
+        list[2] = 0x1e276A3BB8CEeD82deB263Fda2a0575BC7107636;
+        list[3] = 0x68faE19105C979e5dA7dF4ed55A06B48222b275E;
+        return list;
+    }
+
+    function isGuardianAccount(address addr) public pure returns (bool) {
+        address[] memory list = guardians();
+        for (uint256 i = 0; i < list.length; i++) {
+            if (addr == list[i]) {
+                return true;
+            }
+        }
+        return false;
     }
 }
